@@ -6,8 +6,14 @@
     npm install
     npm run dev
 
-## Backend
+## Database
 2. Navigate to the `backend` directory:
+    cd backend
+    mkdir database
+    (now create a new file inside database, db.sqlite)
+
+## Backend
+3. Navigate to the `backend` directory:
     cd backend
     npm install
     npm start
