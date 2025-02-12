@@ -7,7 +7,7 @@ const AuctionList = () => {
   const [error, setError] = useState(null);
 
   useEffect(() => {
-    axios.get('http://localhost:5000/api/auctions') // Update the URL to match your backend server
+    axios.get('/api/auctions') // Update the URL to match your backend server
       .then(response => {
         console.log('Fetched data:', response.data); // Log the fetched data
         const data = Array.isArray(response.data) ? response.data : [];
