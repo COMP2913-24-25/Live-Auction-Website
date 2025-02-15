@@ -7,8 +7,14 @@ const sqlite3 = require('sqlite3').verbose();
 const app = express();
 const db = new sqlite3.Database('./database/db.sqlite');
 
+// Import routes
+const uploadRoutes = require('./routes/upload');
+
 app.use(cors());
 app.use(bodyParser.json());
+
+// Use the upload route
+app.use('/api', uploadRoutes);
 
 // Example route
 app.get('/', (req, res) => {
