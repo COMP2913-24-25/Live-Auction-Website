@@ -5,7 +5,8 @@
   "scripts": {
     "start": "cross-env NODE_ENV=production node src/server.js",
     "dev": "cross-env NODE_ENV=development nodemon src/server.js",
-    "test": "cross-env NODE_ENV=test jest"
+    "test": "cross-env NODE_ENV=test jest",
+    "db:reset": "npx knex migrate:rollback --all && npx knex migrate:latest && npx knex seed:run"
   },
   "keywords": [],
   "author": "",
@@ -15,6 +16,7 @@
     "body-parser": "^1.20.3",
     "cors": "^2.8.5",
     "express": "^4.21.2",
+    "knex": "^3.1.0",
     "sqlite3": "^5.1.7"
   },
   "devDependencies": {
