@@ -49,7 +49,8 @@ exports.seed = async function (knex) {
 
   // Insert Item Images
   await knex("item_images").insert([
-    { id: 1, item_id: 1, image_url: "https://example.com/image1.jpg" },
-    { id: 2, item_id: 2, image_url: "https://example.com/image2.jpg" }
+    { id: 1, item_id: 1, image_url: "https://i.imgur.com/ZXIK1MS.jpeg" },
+    { id: 2, item_id: 2, image_url: "https://i.imgur.com/skksYdg.jpeg" },
+    { id: 3, item_id: 1, image_url: "https://i.imgur.com/daadjeF.jpeg" }
   ]);
 };
