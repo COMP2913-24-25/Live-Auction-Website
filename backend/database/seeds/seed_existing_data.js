@@ -14,7 +14,7 @@ exports.seed = async function (knex) {
     { id: 1, username: "user1", email: "user1@example.com", password_hash: "hashedpassword", role: 1 },
     { id: 2, username: "expert1", email: "expert1@example.com", password_hash: "hashedpassword", role: 2 },
     { id: 3, username: "manager", email: "manager@example.com", password_hash: "hashedpassword", role: 3 },
-    { id: 4, username: "user2", email: "user1@example.com", password_hash: "hashedpassword", role: 1 },
+    { id: 4, username: "user2", email: "user2@example.com", password_hash: "hashedpassword", role: 1 },
     { id: 5, username: "expert2", email: "expert2@example.com", password_hash: "hashedpassword", role: 2 }
   ]);
 
@@ -22,7 +22,7 @@ exports.seed = async function (knex) {
   await knex("items").insert([
     { id: 1, user_id: 1, title: "Vintage Clock", description: "An old clock", min_price: 50.0, duration: 3, end_time: "2025-02-20 12:00:00", authenticated: false },
     { id: 2, user_id: 4, title: "Antique Vase", description: "A rare vase", min_price: 100.0, duration: 2, end_time: "2025-02-22 15:00:00", authenticated: true },
-    { id: 3, user_id: 1, title: "Rare Coin", description: "A valuable coin", min_price: 200.0, duration: 1, end_time: "2025-02-23 18>00:00", authenticated: false },
+    { id: 3, user_id: 1, title: "Rare Coin", description: "A valuable coin", min_price: 200.0, duration: 1, end_time: "2025-02-23 18:00:00", authenticated: false },
     { id: 4, user_id: 4, title: "Vintage Camera", description: "An old camera", min_price: 150.0, duration: 4, end_time: "2025-02-24 21:00:00", authenticated: true }
   ]);
 
