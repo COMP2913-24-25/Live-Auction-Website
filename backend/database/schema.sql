@@ -9,9 +9,6 @@ CREATE TABLE
     );
 
 CREATE TABLE
-    sqlite_sequence (name, seq);
-
-CREATE TABLE
     items (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         user_id INTEGER NOT NULL,
