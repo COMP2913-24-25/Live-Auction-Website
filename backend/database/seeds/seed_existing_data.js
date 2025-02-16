@@ -23,7 +23,10 @@ exports.seed = async function (knex) {
     { id: 1, user_id: 1, title: "Vintage Clock", description: "An old clock", min_price: 50.0, duration: 3, end_time: "2025-02-20 12:00:00", authenticated: false },
     { id: 2, user_id: 4, title: "Antique Vase", description: "A rare vase", min_price: 100.0, duration: 2, end_time: "2025-02-22 15:00:00", authenticated: true },
     { id: 3, user_id: 1, title: "Rare Coin", description: "A valuable coin", min_price: 200.0, duration: 1, end_time: "2025-02-23 18:00:00", authenticated: false },
-    { id: 4, user_id: 4, title: "Vintage Camera", description: "An old camera", min_price: 150.0, duration: 4, end_time: "2025-02-24 21:00:00", authenticated: true }
+    { id: 4, user_id: 4, title: "Vintage Camera", description: "An old camera", min_price: 150.0, duration: 4, end_time: "2025-02-24 21:00:00", authenticated: true },
+    { id: 5, user_id: 1, title: "Rare Stamp", description: "A valuable stamp", min_price: 250.0, duration: 5, end_time: "2025-02-25 00:00:00", authenticated: false },
+    { id: 6, user_id: 4, title: "Vintage Typewriter", description: "An old typewriter", min_price: 300.0, duration: 5, end_time: "2025-02-26 03:00:00", authenticated: true },
+    { id: 7, user_id: 1, title: "Rare Book", description: "A valuable book", min_price: 350.0, duration: 5, end_time: "2025-02-27 06:00:00", authenticated: false }
   ]);
 
   // Insert Bids
@@ -61,6 +64,13 @@ exports.seed = async function (knex) {
     { id: 5, item_id: 3, image_url: "https://i.imgur.com/lUQig7M.jpeg" },
     { id: 6, item_id: 4, image_url: "https://i.imgur.com/SapGyvm.jpeg" },
     { id: 7, item_id: 4, image_url: "https://i.imgur.com/yP5Q3IV.jpeg" },
-    { id: 8, item_id: 4, image_url: "https://i.imgur.com/lOy8kxH.jpeg" }
+    { id: 8, item_id: 4, image_url: "https://i.imgur.com/lOy8kxH.jpeg" },
+    { id: 9, item_id: 5, image_url: "https://i.imgur.com/VAaNH6x.jpeg" },
+    { id: 10, item_id: 6, image_url: "https://i.imgur.com/HZu0UlW.jpeg" },
+    { id: 11, item_id: 6, image_url: "https://i.imgur.com/Q2oRb6E.jpeg" },
+    { id: 12, item_id: 7, image_url: "https://i.imgur.com/1Xo53am.jpeg" },
+    { id: 13, item_id: 7, image_url: "https://i.imgur.com/3gBPkYp.jpeg" },
+    { id: 14, item_id: 7, image_url: "https://i.imgur.com/r9IRuHY.jpeg" },
+    { id: 15, item_id: 7, image_url: "https://i.imgur.com/CUEk71d.jpeg" }
   ]);
 };
