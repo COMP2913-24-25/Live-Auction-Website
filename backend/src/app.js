@@ -5,7 +5,15 @@ const cors = require('cors');
 const sqlite3 = require('sqlite3').verbose();
 
 const app = express();
-const db = new sqlite3.Database('./database/db.sqlite');
+
+// Connect to your SQLite database
+const db = new sqlite3.Database('./database/db.sqlite', (err) => {
+  if (err) {
+    console.error('Error connecting to the database:', err);
+  } else {
+    console.log('Connected to the SQLite database.');
+  }
+});
 
 // Import routes
 const uploadRoutes = require('./routes/upload');
@@ -24,11 +32,30 @@ app.get('/', (req, res) => {
 // Fetch all active auctions
 app.get('/api/auctions', (req, res) => {
   const sql = `
-    SELECT items.*, users.username AS seller_name
-    FROM items
-    JOIN users ON items.user_id = users.id
-    WHERE end_time > datetime('now')
-    ORDER BY created_at DESC`
+    SELECT
+      icb.item_id AS id,
+      icb.title,
+      icb.description,
+      icb.min_price,
+      icb.end_time,
+      icb.authenticated,
+      icb.current_bid,
+      GROUP_CONCAT(ii.image_url) AS image_urls,
+      u.username AS seller_name
+    FROM
+      item_current_bids icb
+    LEFT JOIN
+      items i ON icb.item_id = i.id
+    LEFT JOIN
+      users u ON i.user_id = u.id
+    LEFT JOIN
+      item_images ii ON icb.item_id = ii.item_id
+    WHERE
+      icb.end_time > datetime('now')
+    GROUP BY
+      icb.item_id
+    ORDER BY
+      i.created_at DESC`
 
   db.all(sql, [], (err, rows) => {
     if (err) {

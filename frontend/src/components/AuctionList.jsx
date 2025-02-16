@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react';
 import axios from 'axios';
+import Carousel from 'react-multi-carousel';
+import 'react-multi-carousel/lib/styles.css';
 
 const AuctionList = () => {
   const [auctions, setAuctions] = useState([]);
@@ -9,16 +11,15 @@ const AuctionList = () => {
   useEffect(() => {
     axios.get('/api/auctions')
       .then(response => {
-        console.log('Fetched data:', response.data);
         const data = Array.isArray(response.data) ? response.data.map(auction => ({
           ...auction,
+          imageUrls: auction.image_urls ? auction.image_urls.split(',') : [],
           remainingTime: calculateTimeRemaining(auction.end_time)
         })) : [];
         setAuctions(data);
         setLoading(false);
       })
       .catch(error => {
-        console.error('Error fetching data:', error);
         setError(error);
         setLoading(false);
       });
@@ -49,6 +50,12 @@ const AuctionList = () => {
     return `${hours}h ${minutes}m ${seconds}s`;
   };
 
+  const responsive = {
+    desktop: { breakpoint: { max: 3000, min: 1024 }, items: 1 },
+    tablet: { breakpoint: { max: 1024, min: 640 }, items: 1 },
+    mobile: { breakpoint: { max: 640, min: 0 }, items: 1 }
+  };
+
   if (loading) {
     return <div>Loading...</div>;
   }
@@ -58,19 +65,42 @@ const AuctionList = () => {
   }
 
   return (
-    <div>
-      <h1>Available Auctions</h1>
-      <ul>
+    <div className="w-full px-8">
+      <h1 className="text-2xl font-bold mb-4 text-center">Available Auctions</h1>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
         {auctions.map(auction => (
-          <li key={auction.id}>
-            <h2>{auction.title}</h2>
-            <p>{auction.description}</p>
-            <p>Minimum Price: ${auction.min_price}</p>
-            <p>Seller: {auction.seller_name}</p>
-            <p>Time Remaining: {auction.remainingTime}</p>
-          </li>
+          <div key={auction.id} className="bg-white shadow-md rounded-lg overflow-hidden">
+            <div className="relative">
+              {auction.imageUrls.length > 0 && (
+                <Carousel
+                  responsive={responsive}
+                  infinite={true}
+                  autoPlay={false}
+                  itemClass="w-full"
+                  containerClass="relative"
+                >
+                  {auction.imageUrls.map((url, index) => (
+                    <div key={index} className="flex justify-center">
+                      <img
+                        src={url}
+                        alt={`${auction.title} image ${index + 1}`}
+                        className="object-cover h-96 w-full"
+                      />
+                    </div>
+                  ))}
+                </Carousel>
+              )}
+              <div className="absolute bottom-2 right-2 bg-gray-800 text-white text-sm px-2 py-1 rounded">
+                {auction.remainingTime}
+              </div>
+            </div>
+            <div className="p-4 text-center">
+              <h2 className="text-2xl font-semibold text-navy">{auction.title}</h2>
+              <p className="text-sm text-gray-600">Current bid: £{auction.current_bid}</p>
+            </div>
+          </div>
         ))}
-      </ul>
+      </div>
     </div>
   );
 };
