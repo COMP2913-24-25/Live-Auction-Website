@@ -1,4 +1,14 @@
+@import 'tailwindcss/base';
+@import 'tailwindcss/components';
+@import 'tailwindcss/utilities';
+
+/* 只保留基础样式 */
 :root {
+  --color-navy: #1E2A38;
+  --color-off-white: #F8F9FA;
+  --color-teal: #008080;
+  --color-gold: #7F6200;
+  --color-charcoal: #4A4A4A;
   font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
   line-height: 1.5;
   font-weight: 400;
@@ -13,6 +23,27 @@
   -moz-osx-font-smoothing: grayscale;
 }
 
+body {
+  background-color: var(--color-off-white);
+  min-height: 100vh;
+}
+
+/* 添加动画 */
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-slideIn {
+  animation: slideIn 0.5s ease-out;
+}
+
 a {
   font-weight: 500;
   color: #646cff;
@@ -20,14 +51,6 @@ a {
 }
 a:hover {
   color: #535bf2;
-}
-
-body {
-  margin: 0;
-  display: flex;
-  place-items: center;
-  min-width: 320px;
-  min-height: 100vh;
 }
 
 h1 {
