@@ -65,11 +65,11 @@ const AuctionList = () => {
   }
 
   return (
-    <div className="w-full px-8">
+    <div className="w-full px-8 pb-20">
       <h1 className="text-2xl font-bold mb-4 text-center">Available Auctions</h1>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
         {auctions.map(auction => (
-          <div key={auction.id} className="bg-white shadow-md rounded-lg overflow-hidden">
+          <div key={auction.id} className="bg-white shadow-lg rounded-lg overflow-hidden">
             <div className="relative">
               {auction.imageUrls.length > 0 && (
                 <Carousel
