@@ -103,7 +103,7 @@ const AuctionList = () => {
                         src={url}
                         alt={`${auction.title} image ${index + 1}`}
                         className="object-cover h-96 w-full cursor-pointer"
-                        onClick={() => navigate(`/items/${auction.id}`)}
+                        onClick={() => navigate(`/auction/${auction.id}`)}
                       />
                     </div>
                   ))}
