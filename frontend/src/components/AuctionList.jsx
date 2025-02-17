@@ -2,12 +2,14 @@ import { useEffect, useState } from 'react';
 import axios from 'axios';
 import Carousel from 'react-multi-carousel';
 import 'react-multi-carousel/lib/styles.css';
+import { useNavigate } from 'react-router-dom';
 import authenticated from '../assets/authenticated.png';
 
 const AuctionList = () => {
   const [auctions, setAuctions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const navigate = useNavigate();
 
   useEffect(() => {
     axios.get('/api/auctions')
@@ -70,14 +72,22 @@ const AuctionList = () => {
       <h1 className="text-2xl font-bold mb-4 text-center">Available Auctions</h1>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
         {auctions.map(auction => (
-          <div key={auction.id} className="bg-white shadow-lg rounded-lg overflow-hidden">
+          <div 
+            key={auction.id} 
+            className="bg-white shadow-lg rounded-lg overflow-hidden cursor-pointer" 
+            onClick={(e) => {
+              if (e.target.closest('object-cover') && !e.target.closest('.react-multi-carousel-arrow') && !e.target.closest('.react-multi-carousel-dot')) {
+                navigate(`/items/${auction.id}`);
+              }
+            }}
+          >
             <div className="relative">
               {auction.authenticated == true ? (
-                  <img
-                    src={authenticated}
-                    alt="Authenticated Badge"
-                    className="absolute top-2 left-2 w-12 h-12 z-10 opacity-90"
-                  />
+                <img
+                  src={authenticated}
+                  alt="Authenticated Badge"
+                  className="absolute top-2 left-2 w-12 h-12 z-10 opacity-90"
+                />
               ) : null}
               {auction.imageUrls.length > 0 && (
                 <Carousel
@@ -92,7 +102,8 @@ const AuctionList = () => {
                       <img
                         src={url}
                         alt={`${auction.title} image ${index + 1}`}
-                        className="object-cover h-96 w-full"
+                        className="object-cover h-96 w-full cursor-pointer"
+                        onClick={() => navigate(`/items/${auction.id}`)}
                       />
                     </div>
                   ))}
@@ -102,7 +113,7 @@ const AuctionList = () => {
                 {auction.remainingTime}
               </div>
             </div>
-            <div className="p-4 text-center">
+            <div className="p-4 text-center" onClick={() => navigate(`/items/${auction.id}`)}>
               <h2 className="text-2xl font-semibold text-navy">{auction.title}</h2>
               <p className="text-sm text-gray-600">Current bid: £{auction.current_bid}</p>
             </div>
