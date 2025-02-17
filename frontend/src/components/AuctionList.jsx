@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import axios from 'axios';
 import Carousel from 'react-multi-carousel';
 import 'react-multi-carousel/lib/styles.css';
+import authenticated from '../assets/authenticated.png';
 
 const AuctionList = () => {
   const [auctions, setAuctions] = useState([]);
@@ -71,6 +72,13 @@ const AuctionList = () => {
         {auctions.map(auction => (
           <div key={auction.id} className="bg-white shadow-lg rounded-lg overflow-hidden">
             <div className="relative">
+              {auction.authenticated == true ? (
+                  <img
+                    src={authenticated}
+                    alt="Authenticated Badge"
+                    className="absolute top-2 left-2 w-12 h-12 z-10 opacity-90"
+                  />
+              ) : null}
               {auction.imageUrls.length > 0 && (
                 <Carousel
                   responsive={responsive}
