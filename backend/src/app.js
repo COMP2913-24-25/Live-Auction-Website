@@ -25,7 +25,7 @@ app.use(bodyParser.json());
 // Use the upload route
 app.use('/api', uploadRoutes);
 // Use the auction route
-app.use('/api/auction', auctionRoutes);
+app.use('/api/auctions', auctionRoutes);
 
 // Example route
 app.get('/', (req, res) => {
