@@ -17,12 +17,15 @@ const db = new sqlite3.Database('./database/db.sqlite', (err) => {
 
 // Import routes
 const uploadRoutes = require('./routes/upload');
+const auctionRoutes = require('./routes/auction');
 
 app.use(cors());
 app.use(bodyParser.json());
 
 // Use the upload route
 app.use('/api', uploadRoutes);
+// Use the auction route
+app.use('/api/auction', auctionRoutes);
 
 // Example route
 app.get('/', (req, res) => {
