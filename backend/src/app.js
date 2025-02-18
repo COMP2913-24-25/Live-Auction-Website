@@ -2,10 +2,6 @@ const express = require('express');
 const bodyParser = require('body-parser');
 const cors = require('cors');
 const sqlite3 = require('sqlite3').verbose();
-const authRoutes = require('./routes/auth');
-const categoriesRoutes = require('./routes/categories');
-const searchRoutes = require('./routes/search');
-const path = require('path');
 
 const app = express();
 
@@ -21,19 +17,19 @@ const db = new sqlite3.Database('./database/db.sqlite', (err) => {
 // Import routes
 const uploadRoutes = require('./routes/upload');
 const auctionRoutes = require('./routes/auction');
+const authRoutes = require('./routes/auth');
+const categoriesRoutes = require('./routes/categories');
+const searchRoutes = require('./routes/search');
 
 app.use(cors({
-  origin: 'http://localhost:5173',
+  origin: 'http://localhost:5174',
   credentials: true
 }));
 app.use(bodyParser.json());
 
-// Use the upload route
-app.use('/api', uploadRoutes);
-// Use the auction route
-app.use('/api/auctions', auctionRoutes);
-
 // Mount routes
+app.use('/api', uploadRoutes);
+app.use('/api/auctions', auctionRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api', categoriesRoutes);
 app.use('/api', searchRoutes);
