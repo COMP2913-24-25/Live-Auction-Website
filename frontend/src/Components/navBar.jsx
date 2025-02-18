@@ -84,7 +84,7 @@ function Navbar() {
                         onClick={() => setIsNotificationOpen(!isNotificationOpen)}
                       >
                         <Bell className="h-5 w-5" />
-                        <span className="absolute top-2 right-1 h-4 w-4 bg-accent rounded-full text-xs flex items-center justify-center text-white">
+                        <span className="absolute -top-1 -right-1 h-4 w-4 bg-accent rounded-full text-xs flex items-center justify-center text-white">
                           {notifications.length}
                         </span>
                       </button>

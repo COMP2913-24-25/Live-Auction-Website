@@ -73,3 +73,7 @@ h1 {
     transform: scale(1);
   }
 }
+
+.react-multiple-carousel__arrow {
+  z-index: 5; /* Adjust this value as needed */
+}
