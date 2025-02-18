@@ -4,6 +4,7 @@ import Carousel from "react-multi-carousel";
 import "react-multi-carousel/lib/styles.css";
 import { Star } from "lucide-react";
 import { useParams } from "react-router-dom";
+import authenticated from "../assets/authenticated.png";
 
 const responsive = {
   desktop: { breakpoint: { max: 3000, min: 1024 }, items: 1 },
@@ -11,12 +12,36 @@ const responsive = {
   mobile: { breakpoint: { max: 464, min: 0 }, items: 1 },
 };
 
+const calculateTimeRemaining = (endTime) => {
+  if (!endTime) return "Auction Ended";
+
+  const now = new Date().getTime();
+  const end = new Date(endTime).getTime();
+  const difference = end - now;
+
+  if (difference <= 0) return "Auction Ended";
+
+  const days = Math.floor(difference / (1000 * 60 * 60 * 24));
+  
+  if (days >= 1) {
+    return `${days} day${days > 1 ? "s" : ""} left`;
+  }
+
+  const hours = Math.floor((difference / (1000 * 60 * 60)) % 24);
+  const minutes = Math.floor((difference / (1000 * 60)) % 60);
+  const seconds = Math.floor((difference / 1000) % 60);
+
+  return `${hours}h ${minutes}m ${seconds}s`;
+};
+
+
 const AuctionDetails = () => {
   const { id } = useParams();
   const [auction, setAuction] = useState(null);
   const [bidAmount, setBidAmount] = useState(0);
   const [isFavorite, setIsFavorite] = useState(false);
-  const [maxHeight, setMaxHeight] = useState("auto"); // Dynamic height
+  const [maxHeight, setMaxHeight] = useState("auto");
+  const [remainingTime, setRemainingTime] = useState("");
 
   const section1Ref = useRef(null);
   const section2Ref = useRef(null);
@@ -34,7 +59,21 @@ const AuctionDetails = () => {
   }, [id]);
 
   useEffect(() => {
-    // Adjust heights dynamically after rendering
+    if (!auction?.end_time) return; // Ensure end_time exists before setting the interval
+
+    const updateRemainingTime = () => {
+      setRemainingTime(calculateTimeRemaining(auction.end_time));
+    };
+
+    updateRemainingTime(); // Set initial value immediately
+
+    const interval = setInterval(updateRemainingTime, 1000);
+
+    return () => clearInterval(interval);
+  }, [auction?.end_time]); // Run effect when auction.end_time changes
+
+  
+  useEffect(() => {
     const adjustHeight = () => {
       if (section1Ref.current && section2Ref.current) {
         const height1 = section1Ref.current.clientHeight;
@@ -56,9 +95,16 @@ const AuctionDetails = () => {
         {/* Section 1 - Carousel */}
         <div
           ref={section1Ref}
-          className="flex justify-center items-center w-full md:w-1/2 border border-black p-2"
+          className="relative flex justify-center items-center w-full md:w-1/2 border border-black p-2"
           style={{ minHeight: maxHeight }}
         >
+          {auction.authenticated && (
+            <img
+              src={authenticated}
+              alt="Authenticated Badge"
+              className="absolute top-2 left-2 w-12 h-12 z-10 opacity-90"
+            />
+          )}
           <Carousel
             responsive={responsive}
             showDots={true}
@@ -79,6 +125,9 @@ const AuctionDetails = () => {
               <p>No images available</p>
             )}
           </Carousel>
+          <div className="absolute bottom-2 right-2 bg-gray-800 text-white text-sm px-2 py-1 rounded">
+            {remainingTime}
+          </div>
         </div>
 
         {/* Section 2 - Auction Details */}

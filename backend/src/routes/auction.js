@@ -22,7 +22,6 @@ router.get('/:id', async (req, res) => {
     const { id } = req.params;
 
     try {
-        // Fetch auction details
         const auction = await knex('item_current_bids')
             .select(
                 'item_id AS id',
@@ -30,7 +29,7 @@ router.get('/:id', async (req, res) => {
                 'description',
                 'current_bid',
                 'authenticated',
-                'end_time',
+                'end_time',  // Ensure this is a valid timestamp
                 'min_price'
             )
             .where({ item_id: id })
@@ -40,14 +39,12 @@ router.get('/:id', async (req, res) => {
             return res.status(404).json({ error: 'Auction item not found' });
         }
 
-        // Fetch seller name
         const seller = await knex('items')
             .select('users.username AS seller_name', 'items.created_at')
             .join('users', 'items.user_id', 'users.id')
             .where('items.id', id)
             .first();
 
-        // Fetch item images
         const images = await knex('item_images')
             .select('image_url')
             .where({ item_id: id });
@@ -60,7 +57,7 @@ router.get('/:id', async (req, res) => {
             authenticated: auction.authenticated,
             seller_name: seller?.seller_name || "Unknown",
             posting_date: seller?.created_at || "Unknown",
-            remaining_time: calculateTimeRemaining(auction.end_time),
+            end_time: auction.end_time, // Send as raw timestamp
             images: images.map(img => img.image_url)
         });
     } catch (error) {
@@ -68,5 +65,6 @@ router.get('/:id', async (req, res) => {
         res.status(500).json({ error: 'Internal server error' });
     }
 });
+
 
 module.exports = router;
