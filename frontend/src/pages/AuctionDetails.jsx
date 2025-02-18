@@ -90,8 +90,8 @@ const AuctionDetails = () => {
   if (!auction) return <p>Loading auction details...</p>;
 
   return (
-    <div className="flex justify-center items-center min-h-screen p-4">
-      <div className="flex flex-col md:flex-row items-stretch gap-6 p-4 max-w-3xl w-full mx-auto">
+    <div className="flex justify-center items-center min-h-screen p-4 -mt-16">
+      <div className="flex flex-col md:flex-row items-stretch gap-6 p-4 max-w-5xl w-full mx-auto mt-16">
         {/* Section 1 - Carousel */}
         <div
           ref={section1Ref}
