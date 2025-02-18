@@ -98,13 +98,13 @@ const AuctionDetails = () => {
           className="relative flex justify-center items-center w-full md:w-1/2 border border-black p-2"
           style={{ minHeight: maxHeight }}
         >
-          {auction.authenticated && (
+          {auction.authenticated == true ? (
             <img
               src={authenticated}
               alt="Authenticated Badge"
               className="absolute top-2 left-2 w-12 h-12 z-10 opacity-90"
             />
-          )}
+          ) : null }
           <Carousel
             responsive={responsive}
             showDots={true}
