@@ -78,7 +78,6 @@ const AuctionList = () => {
 
   return (
     <div className="w-full min-h-screen max-w-7xl mx-auto px-12 pb-20">
-      <h1 className="text-2xl font-bold mb-4 text-center">Available Auctions</h1>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
         {auctions.map(auction => (
           <div 
