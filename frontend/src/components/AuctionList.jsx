@@ -77,7 +77,7 @@ const AuctionList = () => {
             className="bg-white shadow-lg overflow-hidden cursor-pointer" 
             onClick={(e) => {
               if (e.target.closest('object-cover') && !e.target.closest('.react-multi-carousel-arrow') && !e.target.closest('.react-multi-carousel-dot')) {
-                navigate(`/items/${auction.id}`);
+                navigate(`/auctions/${auction.id}`);
               }
             }}
           >
@@ -103,7 +103,7 @@ const AuctionList = () => {
                         src={url}
                         alt={`${auction.title} image ${index + 1}`}
                         className="object-cover h-96 w-full cursor-pointer"
-                        onClick={() => navigate(`/auction/${auction.id}`)}
+                        onClick={() => navigate(`/auctions/${auction.id}`)}
                       />
                     </div>
                   ))}
