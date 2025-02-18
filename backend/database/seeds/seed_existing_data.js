@@ -8,6 +8,7 @@ exports.seed = async function (knex) {
   await knex("bids").del();
   await knex("items").del();
   await knex("users").del();
+  await knex("categories").del();
 
   // Insert Users
   await knex("users").insert([
@@ -22,15 +23,41 @@ exports.seed = async function (knex) {
     { id: 9, username: "kim", email: "kim@user.com", password_hash: "$2b$10$RK0M4GXF7erh1UJR4ReMBeIhHuqhGcrcZ9183cc/Px/Iyls7yw.lC", role: 1 }
   ]);
 
+  // Insert Categories
+  await knex("categories").insert([
+    { id: 1, name: "Art" },
+    { id: 2, name: "Antiques" },
+    { id: 3, name: "Jewelry" },
+    { id: 4, name: "Clothing" },
+    { id: 5, name: "Collectibles" },
+    { id: 6, name: "Electronics" },
+    { id: 7, name: "Home & Garden" },
+    { id: 8, name: "Sports Equipment" },
+    { id: 9, name: "Toys & Games" },
+    { id: 10, name: "Vehicles" },
+    { id: 11, name: "Books" },
+    { id: 12, name: "Other" }
+  ]);
+
+  // Insert Expert Categories
+  await knex("expert_categories").insert([
+    { expert_id: 2, category_id: 2 },
+    { expert_id: 2, category_id: 5 },
+    { expert_id: 2, category_id: 6 },
+    { expert_id: 3, category_id: 2 },
+    { expert_id: 3, category_id: 5 },
+    { expert_id: 3, category_id: 11 }
+  ]);
+
   // Insert Items
   await knex("items").insert([
-    { id: 1, user_id: 4, title: "Vintage Clock", description: "An old clock", min_price: 50.0, duration: 3, end_time: "2025-02-20 12:00:00", authenticated: false },
-    { id: 2, user_id: 4, title: "Antique Vase", description: "A rare vase", min_price: 100.0, duration: 2, end_time: "2025-02-22 15:00:00", authenticated: true },
-    { id: 3, user_id: 5, title: "Rare Coin", description: "A valuable coin", min_price: 200.0, duration: 1, end_time: "2025-02-23 18:00:00", authenticated: false },
-    { id: 4, user_id: 4, title: "Vintage Camera", description: "An old camera", min_price: 150.0, duration: 4, end_time: "2025-02-24 21:00:00", authenticated: true },
-    { id: 5, user_id: 6, title: "Rare Stamp", description: "A valuable stamp", min_price: 250.0, duration: 5, end_time: "2025-02-25 00:00:00", authenticated: false },
-    { id: 6, user_id: 5, title: "Vintage Typewriter", description: "An old typewriter", min_price: 300.0, duration: 5, end_time: "2025-02-26 03:00:00", authenticated: true },
-    { id: 7, user_id: 7, title: "Rare Book", description: "A valuable book", min_price: 350.0, duration: 5, end_time: "2025-02-27 06:00:00", authenticated: false }
+    { id: 1, user_id: 4, title: "Vintage Clock", description: "An old clock", min_price: 50.0, duration: 3, category_id: 2, end_time: "2025-02-20 12:00:00", authenticated: false },
+    { id: 2, user_id: 4, title: "Antique Vase", description: "A rare vase", min_price: 100.0, duration: 2, category_id: 2, end_time: "2025-02-22 15:00:00", authenticated: true },
+    { id: 3, user_id: 5, title: "Rare Coin", description: "A valuable coin", min_price: 200.0, duration: 1, category_id: 5, end_time: "2025-02-23 18:00:00", authenticated: false },
+    { id: 4, user_id: 4, title: "Vintage Camera", description: "An old camera", min_price: 150.0, duration: 4, category_id: 6, end_time: "2025-02-24 21:00:00", authenticated: true },
+    { id: 5, user_id: 6, title: "Rare Stamp", description: "A valuable stamp", min_price: 250.0, duration: 5, category_id: 5, end_time: "2025-02-25 00:00:00", authenticated: false },
+    { id: 6, user_id: 5, title: "Vintage Typewriter", description: "An old typewriter", min_price: 300.0, duration: 1, category_id: 6, end_time: "2025-02-26 03:00:00", authenticated: true },
+    { id: 7, user_id: 7, title: "Rare Book", description: "A valuable book", min_price: 350.0, duration: 2, category_id: 11, end_time: "2025-02-27 06:00:00", authenticated: false }
   ]);
 
   // Insert Bids
