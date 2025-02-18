@@ -94,6 +94,7 @@ const AuctionList = () => {
                   responsive={responsive}
                   infinite={true}
                   autoPlay={false}
+                  showDots={true}
                   itemClass="w-full"
                   containerClass="relative"
                 >
