@@ -74,7 +74,7 @@ const AuctionList = () => {
         {auctions.map(auction => (
           <div 
             key={auction.id} 
-            className="bg-white shadow-lg rounded-lg overflow-hidden cursor-pointer" 
+            className="bg-white shadow-lg overflow-hidden cursor-pointer" 
             onClick={(e) => {
               if (e.target.closest('object-cover') && !e.target.closest('.react-multi-carousel-arrow') && !e.target.closest('.react-multi-carousel-dot')) {
                 navigate(`/items/${auction.id}`);
