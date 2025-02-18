@@ -36,10 +36,11 @@ a:hover {
 body {
   margin: 0;
   display: flex;
-  place-items: center;
-  min-width: 320px;
+  flex-direction: column; /* Centers horizontally */
+  align-items: center; /* Centers vertically */
   min-height: 100vh;
-  @apply bg-off-white text-charcoal;
+  background-color: #f8f9fa; /* Use your Tailwind bg-off-white */
+  color: #4A4A4A; /* Use your Tailwind text-charcoal */
 }
 
 h1 {
