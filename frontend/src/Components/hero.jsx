@@ -2,14 +2,13 @@ import { Search } from "lucide-react";
 
 function Hero() {
   return (
-    <div className="bg-gradient-to-r from-primary to-primary/80 text-white pt-16">
-      <div className="max-w-7xl mx-auto px-4 py-16">
-        <div className="text-center max-w-3xl mx-auto">
+    <div className="bg-gradient-to-r from-primary to-primary/80 text-white pt-16 w-full">
+      <div className="py-16 px-10">
+        <div className="text-center">
           <h2 className="text-4xl font-bold mb-4">Discover Unique Treasures</h2>
           <p className="text-xl mb-8 text-white/90">
             Find exclusive items and bid with confidence on our secure platform
           </p>
-          
           <div className="relative max-w-2xl mx-auto">
             <input
               type="text"
