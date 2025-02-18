@@ -11,7 +11,6 @@ import ProtectedRoute from "./components/protectedRoute";
 import AuctionDetails from './pages/AuctionDetails';
 
 const App = () => (
-  <Router>
     <AuthProvider>
       <div className="min-h-screen bg-background">
         <Navbar />
@@ -19,7 +18,7 @@ const App = () => (
           <Route path="/" element={<Home />} />
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
-          <Route path="/upload/" element={<UploadTest />} />
+          <Route path="/upload" element={<UploadTest />} />
           <Route path="/list" element={<AuctionList />} />
           <Route path="/auctions/:id" element={<AuctionDetails />} />
           <Route
@@ -35,7 +34,6 @@ const App = () => (
         </Routes>
       </div>
     </AuthProvider>
-  </Router>
 );
 
 export default App;
