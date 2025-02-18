@@ -7,6 +7,13 @@
   --color-teal: #008080;
   --color-gold: #7F6200;
   --color-charcoal: #4A4A4A;
+  --color-primary: #2C3E50;    /* Professional Dark Blue */
+  --color-secondary: #3498DB;   /* Professional Blue */
+  --color-accent: #E67E22;      /* Warm Orange */
+  --color-background: #F5F6FA;  /* Light Gray */
+  --color-text: #2D3436;        /* Near Black */
+  --color-error: #E74C3C;       /* Red */
+  --color-success: #27AE60;     /* Green */
 }
 
 :root {
@@ -46,14 +53,6 @@ body {
 h1 {
   font-size: 3.2em;
   line-height: 1.1;
-}
-  --color-primary: #2C3E50;    /* Professional Dark Blue */
-  --color-secondary: #3498DB;   /* Professional Blue */
-  --color-accent: #E67E22;      /* Warm Orange */
-  --color-background: #F5F6FA;  /* Light Gray */
-  --color-text: #2D3436;        /* Near Black */
-  --color-error: #E74C3C;       /* Red */
-  --color-success: #27AE60;     /* Green */
 }
 
 @layer base {
