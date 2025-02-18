@@ -21,7 +21,7 @@ const AuctionDetails = () => {
     axios.get(`/api/auctions/${id}`)
       .then(response => {
         setAuction(response.data);
-        setBidAmount(response.data.currentBid + 5);
+        setBidAmount(response.data.current_bid + 5);
       })
       .catch(error => console.error("Error fetching auction details:", error));
   }, [id]);
@@ -39,14 +39,21 @@ const AuctionDetails = () => {
   return (
     <div className="flex flex-col md:flex-row gap-8 p-6">
       {/* Carousel Section */}
-      <div className="md:w-1/2 border border-black p-2">
-        <Carousel responsive={responsive} showDots infinite autoPlay>
+      <div className="md:w-1/2 border border-black p-2 overflow-hidden" style={{ maxWidth: "600px", height: "400px" }}>
+        <Carousel 
+            responsive={responsive} 
+            showDots={true} 
+            infinite={true} 
+            autoPlay={false}
+            itemClass="w-full"
+            containerClass="relative"
+        >
           {auction.images.map((image, index) => (
             <img
               key={index}
               src={image}
               alt={`Auction Image ${index + 1}`}
-              className="w-full h-auto max-h-96 object-cover rounded-md"
+              className="w-full h-40 object-cover rounded-md" // Corrected object-fit to object-cover
             />
           ))}
         </Carousel>
@@ -56,14 +63,14 @@ const AuctionDetails = () => {
       <div className="md:w-1/2">
         <h1 className="text-2xl font-bold">{auction.title}</h1>
         <p className="text-gray-700 mt-2">{auction.description}</p>
-        <p className="text-sm text-gray-500 mt-4">Posted on {new Date(auction.postedDate).toLocaleDateString()}</p>
+        <p className="text-sm text-gray-500 mt-4">Posted on {new Date(auction.posting_date).toLocaleDateString()}</p>
 
         {/* Current Bid Section */}
         <div className="border border-gray-300 p-4 mt-2 rounded-md">
           <div className="flex justify-between items-center">
             <div>
               <p className="text-sm text-gray-600">Current Bid</p>
-              <p className="text-xl font-semibold">${auction.currentBid}</p>
+              <p className="text-xl font-semibold">${auction.current_bid}</p>
             </div>
             <button onClick={() => setIsFavorite(!isFavorite)}>
               {isFavorite ? <Star fill="bg-yellow-500" className="text-yellow-500" /> : <Star className="text-gray-500" />}
@@ -77,7 +84,7 @@ const AuctionDetails = () => {
               value={bidAmount}
               onChange={handleBidChange}
               className="w-full border rounded-md p-2"
-              placeholder={`$${auction.currentBid + 5}`}
+              placeholder={`$${auction.current_bid + 5}`}
             />
             <button
               onClick={handlePlaceBid}
@@ -88,7 +95,7 @@ const AuctionDetails = () => {
           </div>
 
           <p className="text-center text-gray-600 mt-4">
-            Selected by <span className="underline">{auction.sellerName}</span>
+            Selected by <span className="underline">{auction.seller_name}</span>
           </p>
         </div>
       </div>
