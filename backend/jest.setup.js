@@ -2,8 +2,9 @@ const { beforeEach } = require('@jest/globals');
 const sqlite3 = require('sqlite3').verbose();
 
 // 在每次测试之前清理数据库
+// Clean the database before each test
 beforeEach(async () => {
-  const db = new sqlite3.Database(':memory:'); // 使用内存数据库进行测试
+  const db = new sqlite3.Database(':memory:'); // 使用内存数据库进行测试 // Use an in-memory database for testing
   
   await new Promise((resolve, reject) => {
     db.run(`
