@@ -40,8 +40,8 @@ app.use('/uploads', express.static('uploads'));
 app.use('/api', uploadRoutes);
 app.use('/api/auctions', auctionRoutes);
 app.use('/api/auth', authRoutes);
-app.use('/api/categories', categoriesRoutes);
-app.use('/api/search', searchRoutes);
+app.use('/api/', categoriesRoutes);
+app.use('/api/', searchRoutes);
 
 // Example route
 app.get('/', (req, res) => {
