@@ -18,6 +18,14 @@
     "react-dom": "^18.2.0",
     "react-multi-carousel": "^2.8.5",
     "react-router-dom": "^7.1.5"
+    "@tailwindcss/vite": "^4.0.7",
+    "axios": "^1.7.9",
+    "lucide-react": "^0.475.0",
+    "prop-types": "^15.8.1",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "react-multi-carousel": "^2.8.5",
+    "react-router-dom": "^7.1.5"
   },
   "devDependencies": {
     "@types/react": "^18.2.55",
@@ -28,6 +36,6 @@
     "eslint-plugin-react": "^7.33.2",
     "eslint-plugin-react-hooks": "^4.6.0",
     "eslint-plugin-react-refresh": "^0.4.5",
-    "vite": "^5.0.8"
+    "vite": "^5.1.0"
   }
 }

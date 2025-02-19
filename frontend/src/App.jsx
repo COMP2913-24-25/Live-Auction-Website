@@ -1,14 +1,38 @@
+import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
+import { AuthProvider } from "./context/authContext";
+import AuctionList from './components/AuctionList';
+import UploadTest from './components/UploadTest';
+import Home from "./components/home";
+import Login from "./components/login";
+import Register from "./components/register";
+import Dashboard from "./components/dashboard";  
+import Navbar from "./components/navBar";
+import ProtectedRoute from "./components/protectedRoute";
+import AuctionDetails from './pages/AuctionDetails';
 import AuctionForm from './components/auction/AuctionForm'
 
-function App() {
-  return (
-    <div className="min-h-screen bg-off-white text-charcoal pt-16">
-      <div className="fixed top-0 left-0 right-0 h-1 bg-gradient-to-r from-navy via-teal to-gold z-50" />
-      <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-        <AuctionForm />
-      </div>
-    </div>
-  )
-}
+const App = () => (
+  <AuthProvider>
+    <Navbar />
+    <Routes>
+      <Route path="/" element={<Home />} />
+      <Route path="/login" element={<Login />} />
+      <Route path="/register" element={<Register />} />
+      <Route path="/create-auction" element={<AuctionForm />} />
+      <Route path="/list" element={<AuctionList />} />
+      <Route path="/auctions/:id" element={<AuctionDetails />} />
+      <Route
+        path="/dashboard"
+        element={
+          <ProtectedRoute>
+            <div className="pt-16 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+              <Dashboard />
+            </div>
+          </ProtectedRoute>
+        }
+      />
+    </Routes>
+  </AuthProvider>
+);
 
-export default App
+export default App;
