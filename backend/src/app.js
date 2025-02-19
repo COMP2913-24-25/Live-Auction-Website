@@ -2,8 +2,6 @@ const express = require('express');
 const bodyParser = require('body-parser');
 const cors = require('cors');
 const sqlite3 = require('sqlite3').verbose();
-const multer = require('multer');
-const path = require('path');
 
 const app = express();
 
@@ -27,8 +25,6 @@ const searchRoutes = require('./routes/search');
 app.use(cors({
   origin: 'http://localhost:5174',
   credentials: true,
-  methods: ['GET', 'POST'],
-  allowedHeaders: ['Content-Type']
 }));
 app.use(bodyParser.json());
 
