@@ -1,7 +1,6 @@
 import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
 import { AuthProvider } from "./context/authContext";
 import AuctionList from './components/AuctionList';
-import UploadTest from './components/UploadTest';
 import Home from "./components/home";
 import Login from "./components/login";
 import Register from "./components/register";
