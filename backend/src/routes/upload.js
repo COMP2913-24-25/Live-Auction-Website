@@ -1,4 +1,3 @@
-// routes/upload.js
 const express = require('express');
 const multer = require('multer');
 const path = require('path');
@@ -32,16 +31,18 @@ const upload = multer({
 
 // Create a new auction
 router.post('/auctions', upload.single('image'), async (req, res) => {
-  const { title, description, starting_price, start_time, end_time } = req.body;
+  const { title, description, starting_price } = req.body;
   const image_url = req.file ? `/uploads/${req.file.filename}` : null;
 
   // Data validation
   if (!title) {
     return res.status(400).json({ error: 'The item name cannot be empty' });
   }
-
   if (!starting_price || starting_price <= 0) {
     return res.status(400).json({ error: 'The starting price must be greater than 0' });
+  }
+  if (!min_increment || min_increment <= 0) {
+    return res.status(400).json({ error: 'The minimum price increment must be greater than 0' });
   }
 
   const startDate = new Date(start_time);
@@ -53,39 +54,23 @@ router.post('/auctions', upload.single('image'), async (req, res) => {
   }
 
   try {
-    // Temporarily use user_id = 1; in a real application, retrieve this from the authenticated user
     const [id] = await knex('items').insert({
-      user_id: 4,
+      user_id: 4, // Temporary: should come from authenticated user
       title,
       description,
       min_price: starting_price,
+      min_increment,
       duration,
+      start_time,
       end_time,
       authenticated: false,
       image_url
     }).returning('id');
 
-    res.json({
-      message: 'Auction item created successfully',
-      id
-    });
+    res.json({ message: 'Auction item created successfully', id });
   } catch (err) {
     console.error('Database error:', err);
     res.status(500).json({ error: 'An error occurred while creating the auction item' });
-  }
-});
-
-// Get all auction items
-router.get('/auctions', async (req, res) => {
-  try {
-    const items = await knex('items')
-      .select('id', 'user_id', 'title', 'description', 'min_price', 'duration', 'created_at', 'end_time', 'authenticated', 'image_url')
-      .orderBy('created_at', 'desc');
-
-    res.json(items);
-  } catch (err) {
-    console.error('Database query error:', err);
-    res.status(500).json({ error: 'An error occurred while retrieving auction items' });
   }
 });
 
