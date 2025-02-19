@@ -1,75 +1,114 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 function AuctionForm() {
   const [formData, setFormData] = useState({
     title: '',
     description: '',
-    starting_price: '',
-    min_increment: '',
-    start_time: '',
-    end_time: ''
+    min_price: '',
+    duration: '',
+    category: ''
   });
-  
-  const [imageFile, setImageFile] = useState(null);
-  const [imagePreview, setImagePreview] = useState(null);
-  const [fileName, setFileName] = useState('No file chosen');
+
+  const [imageFiles, setImageFiles] = useState([]);
+  const [imagePreviews, setImagePreviews] = useState([]);
+  const [fileNames, setFileNames] = useState('No files chosen');
+  const [categories, setCategories] = useState([]);
+
+  // Fetch categories from backend
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        const response = await fetch(`${import.meta.env.VITE_API_URL}/api/categories`);
+        const data = await response.json();
+        setCategories(data); // Assuming API returns an array of { id, name }
+      } catch (error) {
+        console.error("Error fetching categories:", error);
+      }
+    };
+
+    fetchCategories();
+  }, []);
 
   const handleImageChange = (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      // 验证文件类型
-      if (!file.type.match('image.*')) {
-        alert('Please select an image file (jpg, png, gif)');
-        return;
-      }
-      // 验证文件大小 (最大 5MB)
-      if (file.size > 5 * 1024 * 1024) {
-        alert('Image size should be less than 5MB');
-        return;
-      }
-      
-      setImageFile(file);
-      setFileName(file.name);
-      // 创建预览URL
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setImagePreview(reader.result);
-      };
-      reader.readAsDataURL(file);
+    const files = Array.from(e.target.files);
+  
+    if (imageFiles.length >= 6) {
+      alert("You can only upload up to 6 images.");
+      return;
     }
+  
+    const validFiles = files.filter(file => file.type.match('image.*') && file.size <= 5 * 1024 * 1024);
+  
+    if (validFiles.length !== files.length) {
+      alert("Some files were invalid (wrong format or size > 5MB). Only valid images were selected.");
+    }
+  
+    const newFiles = validFiles.filter(
+      newFile => !imageFiles.some(existingFile => existingFile.name === newFile.name && existingFile.size === newFile.size)
+    );
+  
+    if (newFiles.length === 0) {
+      alert("No new images selected.");
+      return;
+    }
+  
+    const totalImages = imageFiles.length + newFiles.length;
+    if (totalImages > 6) {
+      alert(`You can only upload 6 images. You selected ${totalImages - 6} too many.`);
+      newFiles.splice(6 - imageFiles.length); // Keep only enough files to reach 6
+    }
+  
+    setImageFiles(prevFiles => [...prevFiles, ...newFiles]);
+    setFileNames(prevNames => {
+      const newFileNames = newFiles.map(file => file.name).join(', ');
+      return prevNames === 'No files chosen' ? newFileNames : `${prevNames}, ${newFileNames}`;
+    });
+  
+    // Generate image previews
+    const previews = newFiles.map(file => {
+      const reader = new FileReader();
+      return new Promise(resolve => {
+        reader.onloadend = () => resolve(reader.result);
+        reader.readAsDataURL(file);
+      });
+    });
+  
+    Promise.all(previews).then(newPreviews => {
+      setImagePreviews(prevPreviews => [...prevPreviews, ...newPreviews]);
+    });
+  };   
+
+  const removeImage = (index) => {
+    setImageFiles(prevFiles => {
+      const updatedFiles = prevFiles.filter((_, i) => i !== index);
+      setFileNames(updatedFiles.length > 0 ? updatedFiles.map(file => file.name).join(', ') : 'No files chosen');
+      return updatedFiles;
+    });
+  
+    setImagePreviews(prevPreviews => prevPreviews.filter((_, i) => i !== index));
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      // 创建FormData对象来发送文件
       const submitData = new FormData();
       Object.keys(formData).forEach(key => {
         submitData.append(key, formData[key]);
       });
-      if (imageFile) {
-        submitData.append('image', imageFile);
-      }
+      imageFiles.forEach(file => submitData.append('images', file));
 
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/auctions`, {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/auctions/create`, {
         method: 'POST',
-        body: submitData // 不需要设置 Content-Type，浏览器会自动设置
+        body: submitData
       });
-      
+
       const data = await response.json();
-      
       if (response.ok) {
         alert('Auction item created successfully!');
-        setFormData({
-          title: '',
-          description: '',
-          starting_price: '',
-          min_increment: '',
-          start_time: '',
-          end_time: ''
-        });
-        setImageFile(null);
-        setImagePreview(null);
+        setFormData({ title: '', description: '', min_price: '', duration: '', category: '' });
+        setImageFiles([]);
+        setImagePreviews([]);
+        setFileNames('No files chosen');
       } else {
         throw new Error(data.error || `Submission failed: ${response.status}`);
       }
@@ -81,16 +120,13 @@ function AuctionForm() {
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: value
-    }));
+    setFormData(prev => ({ ...prev, [name]: value }));
   };
 
   return (
     <div className="max-w-3xl mx-auto bg-off-white rounded-3xl shadow-lg p-12 mt-8">
       <h2 className="text-3xl font-bold text-navy text-center mb-12 relative">
-        Create a new auction
+        Create a New Auction
         <div className="absolute bottom-[-8px] left-1/2 transform -translate-x-1/2 w-16 h-1 bg-teal"></div>
       </h2>
 
@@ -120,42 +156,62 @@ function AuctionForm() {
         </div>
 
         <div className="space-y-2">
-          <label className="block text-charcoal font-medium">Item Image:</label>
+          <label className="block text-charcoal font-medium">Category:</label>
+          <select
+            name="category"
+            value={formData.category}
+            onChange={handleChange}
+            required
+            className="w-full px-4 py-3 rounded-lg border border-gray-200 focus:outline-none focus:border-teal focus:ring-1 focus:ring-teal/20 bg-white text-charcoal"
+          >
+            <option value="" disabled>Select a category</option>
+            {categories.map(category => (
+              <option key={category.id} value={category.id}>{category.name}</option>
+            ))}
+          </select>
+        </div>
+
+        <div className="space-y-2">
+          <label className="block text-charcoal font-medium">Item Images:</label>
           <div className="border-2 border-dashed border-teal/30 rounded-lg p-6 bg-white">
             <input
               type="file"
               accept="image/*"
+              multiple
               onChange={handleImageChange}
-              required
               className="hidden"
               id="image-upload"
             />
-            <label 
-              htmlFor="image-upload"
-              className="flex flex-col items-center cursor-pointer"
-            >
-              <span className="text-teal font-medium">Choose File</span>
-              <span className="text-charcoal/60 text-sm mt-2">{fileName}</span>
+            <label htmlFor="image-upload" className="flex flex-col items-center cursor-pointer">
+              <span className="text-teal font-medium">Choose Files</span>
+              <span className="text-charcoal/60 text-sm mt-2">{fileNames}</span>
             </label>
           </div>
-          {imagePreview && (
-            <div className="mt-4">
-              <img 
-                src={imagePreview} 
-                alt="Preview" 
-                className="w-32 h-32 object-cover rounded-lg mx-auto shadow-md"
-              />
+          {imagePreviews.length > 0 && (
+            <div className="mt-4 flex flex-wrap gap-2 overflow-x-auto pb-2">
+              {imagePreviews.map((src, index) => (
+                <div key={index} className="relative w-24 h-24 min-h-[100px] overflow-visible">
+                  <img src={src} alt={`Preview ${index}`} className="w-full h-full object-cover rounded-lg shadow-md" />
+                  <button
+                    type="button"
+                    onClick={() => removeImage(index)}
+                    className="absolute top-1 right-1 bg-red-500 text-white p-1 rounded-full text-xs flex items-center justify-center w-6 h-6"
+                  >
+                    ✕
+                  </button>
+                </div>
+              ))}
             </div>
           )}
         </div>
 
         <div className="grid grid-cols-2 gap-6">
           <div className="space-y-2">
-            <label className="block text-charcoal font-medium">Upset Price:</label>
+            <label className="block text-charcoal font-medium">Minimum Price:</label>
             <input
               type="number"
-              name="starting_price"
-              value={formData.starting_price}
+              name="min_price"
+              value={formData.min_price}
               onChange={handleChange}
               min="0"
               step="1000"
@@ -165,72 +221,23 @@ function AuctionForm() {
           </div>
 
           <div className="space-y-2">
-            <label className="block text-charcoal font-medium">Minimum Price Increase:</label>
+            <label className="block text-charcoal font-medium">Duration:</label>
             <input
               type="number"
-              name="min_increment"
-              value={formData.min_increment}
+              name="duration"
+              value={formData.duration}
               onChange={handleChange}
-              min="0"
-              step="100"
+              min="1"
+              max="5"
               required
               className="w-full px-4 py-3 rounded-lg border border-gray-200 focus:outline-none focus:border-teal focus:ring-1 focus:ring-teal/20 bg-white text-charcoal"
             />
           </div>
         </div>
 
-        <div className="grid grid-cols-2 gap-6">
-          <div className="space-y-2">
-            <label className="block text-charcoal font-medium">Start Time:</label>
-            <div className="relative">
-              <input
-                type="datetime-local"
-                name="start_time"
-                value={formData.start_time}
-                onChange={handleChange}
-                required
-                className="w-full px-4 py-3 rounded-lg border border-gray-200 focus:outline-none focus:border-teal focus:ring-1 focus:ring-teal/20 bg-white text-charcoal [color-scheme:light]"
-              />
-              <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-teal">
-                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
-                  <line x1="16" y1="2" x2="16" y2="6"></line>
-                  <line x1="8" y1="2" x2="8" y2="6"></line>
-                  <line x1="3" y1="10" x2="21" y2="10"></line>
-                </svg>
-              </div>
-            </div>
-          </div>
-
-          <div className="space-y-2">
-            <label className="block text-charcoal font-medium">End Time:</label>
-            <div className="relative">
-              <input
-                type="datetime-local"
-                name="end_time"
-                value={formData.end_time}
-                onChange={handleChange}
-                required
-                className="w-full px-4 py-3 rounded-lg border border-gray-200 focus:outline-none focus:border-teal focus:ring-1 focus:ring-teal/20 bg-white text-charcoal [color-scheme:light]"
-              />
-              <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-teal">
-                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
-                  <line x1="16" y1="2" x2="16" y2="6"></line>
-                  <line x1="8" y1="2" x2="8" y2="6"></line>
-                  <line x1="3" y1="10" x2="21" y2="10"></line>
-                </svg>
-              </div>
-            </div>
-          </div>
-        </div>
-
         <div className="text-center mt-8">
-          <button 
-            type="submit" 
-            className="bg-teal text-white px-8 py-3 rounded-full hover:bg-gold transition-colors duration-300 font-semibold shadow-lg hover:shadow-xl"
-          >
-            Create auction
+          <button type="submit" className="cursor-pointer bg-teal text-white px-8 py-3 rounded-full hover:bg-gold transition-colors duration-300 font-semibold shadow-lg hover:shadow-xl">
+            CREATE
           </button>
         </div>
       </form>
@@ -238,4 +245,4 @@ function AuctionForm() {
   );
 }
 
-export default AuctionForm; 
+export default AuctionForm;
