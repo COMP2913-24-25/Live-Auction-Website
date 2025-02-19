@@ -51,7 +51,7 @@ function AuctionForm() {
         submitData.append('image', imageFile);
       }
 
-      const response = await fetch('http://localhost:5001/api/auctions', {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/auctions`, {
         method: 'POST',
         body: submitData // 不需要设置 Content-Type，浏览器会自动设置
       });
