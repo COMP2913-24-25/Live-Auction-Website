@@ -4,78 +4,54 @@ const cors = require('cors');
 const sqlite3 = require('sqlite3').verbose();
 const multer = require('multer');
 const path = require('path');
-const fs = require('fs');
 
 const app = express();
 
 // 创建数据库连接
-const db = new sqlite3.Database(
-  process.env.NODE_ENV === 'test' ? ':memory:' : './database/db.sqlite',
-  (err) => {
-    if (err) {
-      console.error('Error opening database:', err);
-    } else {
-      console.log('Database connected successfully');
-      
-      // 先删除所有已存在的表
-      const dropTables = `
-        DROP TABLE IF EXISTS notifications;
-        DROP TABLE IF EXISTS watchlist;
-        DROP TABLE IF EXISTS payments;
-        DROP TABLE IF EXISTS authentication_requests;
-        DROP TABLE IF EXISTS bids;
-        DROP TABLE IF EXISTS items;
-        DROP TABLE IF EXISTS users;
-      `;
-      
-      // 先执行删除表，再执行创建表
-      db.exec(dropTables, (err) => {
-        if (err) {
-          console.error('Error dropping tables:', err);
-        } else {
-          console.log('Old tables dropped successfully');
-          
-          // 读取并执行建表语句
-          const initSQL = fs.readFileSync(path.join(__dirname, '../database/init.sql'), 'utf8');
-          console.log('Read SQL file, length:', initSQL.length);
-          
-          // 直接执行整个 SQL 文件
-          db.exec(initSQL, (err) => {
-            if (err) {
-              console.error('Error executing SQL:', err);
-            } else {
-              console.log('SQL executed successfully');
-              // 验证创建的表
-              db.all("SELECT name FROM sqlite_master WHERE type='table'", [], (err, rows) => {
-                if (err) {
-                  console.error('Error checking tables:', err);
-                } else {
-                  console.log('Created tables:', rows.map(r => r.name));
-                }
-              });
-            }
-          });
-        }
-      });
-    }
+//Create a new database in memory for testing
+const db = new sqlite3.Database('./database/db.sqlite', (err) => {
+  if (err) {
+    console.error('Error connecting to the database:', err);
+  } else {
+    console.log('Connected to the SQLite database');
   }
-);
+});
+
+// Import routes
+const uploadRoutes = require('./routes/upload');
+// const auctionRoutes = require('./routes/auctions');
+// const authRoutes = require('./routes/auth');
+// const categoriesRoutes = require('./routes/categories');
+// const searchRoutes = require('./routes/search');
 
 // CORS配置
+//CORS configuration
 app.use(cors({
-  origin: 'http://localhost:5173',
+  origin: 'http://localhost:5174',
+  credentials: true,
   methods: ['GET', 'POST'],
   allowedHeaders: ['Content-Type']
 }));
-
 app.use(bodyParser.json());
 
+//Static file service
+app.use('/uploads', express.static('uploads'));
+
+// Mount routes
+app.use('/api', uploadRoutes);
+// app.use('/api/auctions', auctionRoutes);
+// app.use('/api/auth', authRoutes);
+// app.use('/api/categories', categoriesRoutes);
+// app.use('/api/search', searchRoutes);
+
 // 添加测试路由
+//Add a test route
 app.get('/', (req, res) => {
   res.json({ message: 'Server is running' });
 });
 
 // 文件上传配置
+//File upload configuration
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
     cb(null, './uploads/')
@@ -102,11 +78,12 @@ const upload = multer({
 });
 
 // API端点
+// API endpoints
 app.post('/api/auctions', upload.single('image'), (req, res) => {
   const {
     title,
     description,
-    starting_price,  // 这个会存到 min_price 字段
+    starting_price,  // 这个会存到 min_price 字段 // this will be stored in the min_price field
     start_time,
     end_time
   } = req.body;
@@ -114,6 +91,7 @@ app.post('/api/auctions', upload.single('image'), (req, res) => {
   const image_url = req.file ? `/uploads/${req.file.filename}` : null;
 
   // 数据验证
+  //Data validation
   if (!title) {
     return res.status(400).json({ error: 'The item name cannot be empty' });
   }
@@ -133,6 +111,7 @@ app.post('/api/auctions', upload.single('image'), (req, res) => {
   console.log('Received data:', req.body);
 
   // 使用新的 items 表结构
+  //Use the new items table structure
   const sql = `
     INSERT INTO items (
       user_id, title, description, min_price,
@@ -141,6 +120,7 @@ app.post('/api/auctions', upload.single('image'), (req, res) => {
   `;
 
   // 临时使用 user_id = 1，实际应该从认证中获取
+  //Temporarily use user_id = 1, should be retrieved from authentication
   db.run(sql, 
     [1, title, description, starting_price, duration, end_time, false],
     function(err) {
@@ -157,10 +137,12 @@ app.post('/api/auctions', upload.single('image'), (req, res) => {
 });
 
 // 获取所有拍卖商品
+//Get all auction items
 app.get('/api/auctions', (req, res) => {
   console.log('A request for an auction list was received');
   
   // 修改查询以格式化返回数据
+  //Modify the query to format the returned data
   const sql = `
     SELECT 
       id,
@@ -187,6 +169,5 @@ app.get('/api/auctions', (req, res) => {
 });
 
 // 静态文件服务
-app.use('/uploads', express.static('uploads'));
 
 module.exports = app;

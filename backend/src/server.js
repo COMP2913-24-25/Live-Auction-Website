@@ -6,6 +6,7 @@ app.listen(port, () => {
 });
 
 // 添加进程结束时的清理代码
+// Add cleanup code when the process ends
 process.on('SIGINT', () => {
   db.close(() => {
     console.log('Database connection closed');
