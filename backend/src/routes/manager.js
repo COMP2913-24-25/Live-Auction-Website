@@ -2,8 +2,8 @@ const express = require("express");
 const knex = require("../db");
 const router = express.Router();
 
-// Fetch pending authentication requests
-router.get('/authentication-requests/pending', async (req, res) => {
+// Fetch pending authentication requests not yet assigned to an expert
+router.get('/authentication-requests/pending-unassigned', async (req, res) => {
     try {
         const pendingRequests = await knex('authentication_requests')
             .select(
@@ -15,7 +15,8 @@ router.get('/authentication-requests/pending', async (req, res) => {
             )
             .join('items', 'authentication_requests.item_id', 'items.id')
             .join('categories', 'items.category_id', 'categories.id')
-            .where('authentication_requests.status', 'Pending');
+            .where('authentication_requests.status', 'Pending')
+            .whereNull('authentication_requests.expert_id');
 
         res.json(pendingRequests);
     } catch (error) {
@@ -25,7 +26,7 @@ router.get('/authentication-requests/pending', async (req, res) => {
 });
 
 // Fetch pending authentication requests already assigned to an expert
-router.get('/authentication-requests/pending-with-expert', async (req, res) => {
+router.get('/authentication-requests/pending-assigned', async (req, res) => {
     try {
         const pendingRequests = await knex('authentication_requests')
             .select(
