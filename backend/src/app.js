@@ -12,6 +12,7 @@ const auctionRoutes = require('./routes/auction');
 const authRoutes = require('./routes/auth');
 const categoriesRoutes = require('./routes/categories');
 const searchRoutes = require('./routes/search');
+const managerRoutes = require('./routes/manager');
 
 // CORS configuration
 app.use(cors({
@@ -26,6 +27,7 @@ app.use('/api/auctions', auctionRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api', categoriesRoutes);
 app.use('/api', searchRoutes);
+app.use('/api/manager', managerRoutes);
 
 // Example route
 app.get('/', (req, res) => {
