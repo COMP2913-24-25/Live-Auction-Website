@@ -43,7 +43,7 @@ router.get('/authentication-requests/pending-assigned', async (req, res) => {
             .where('authentication_requests.status', 'Pending')
             .whereNotNull('authentication_requests.expert_id');
 
-        res.json({ success: true, data: pendingRequests });
+        res.json(pendingRequests);
     } catch (error) {
         console.error('Error fetching pending authentication requests with experts:', error);
         res.status(500).json({ success: false, message: 'Internal server error' });
@@ -63,22 +63,6 @@ router.get('/experts/:category_id', async (req, res) => {
         res.json(experts);
     } catch (error) {
         console.error('Error fetching experts:', error);
-        res.status(500).json({ message: 'Server error' });
-    }
-});
-
-// Assign an expert to an item
-router.put('/authentication-requests/assign', async (req, res) => {
-    const { request_id, expert_id } = req.body;
-
-    try {
-        await knex('authentication_requests')
-            .where({ id: request_id })
-            .update({ expert_id });
-
-        res.json({ message: 'Expert assigned successfully' });
-    } catch (error) {
-        console.error('Error assigning expert:', error);
         res.status(500).json({ message: 'Server error' });
     }
 });
@@ -103,6 +87,22 @@ router.get('/authentication-requests/completed', async (req, res) => {
         res.json(completedRequests);
     } catch (error) {
         console.error('Error fetching completed authentication requests:', error);
+        res.status(500).json({ message: 'Server error' });
+    }
+});
+
+// Assign an expert to an item
+router.put('/authentication-requests/assign', async (req, res) => {
+    const { request_id, expert_id } = req.body;
+
+    try {
+        await knex('authentication_requests')
+            .where({ id: request_id })
+            .update({ expert_id });
+
+        res.json({ message: 'Expert assigned successfully' });
+    } catch (error) {
+        console.error('Error assigning expert:', error);
         res.status(500).json({ message: 'Server error' });
     }
 });
