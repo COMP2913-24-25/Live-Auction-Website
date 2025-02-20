@@ -3,84 +3,96 @@ const knex = require("../db");
 const router = express.Router();
 
 // Fetch pending authentication requests
-router.get("/pending-requests", async (req, res) => {
+router.get('/authentication-requests/pending', async (req, res) => {
     try {
-        const pendingRequests = await knex("authentication_requests as ar")
+        const pendingRequests = await knex('authentication_requests')
             .select(
-                "ar.id",
-                "i.title as item_name",
-                "c.name as category",
-                "ar.status"
+                'authentication_requests.id',
+                'items.title as item_name',
+                'categories.name as category',
+                'authentication_requests.status'
             )
-            .join("items as i", "ar.item_id", "i.id")
-            .join("categories as c", "i.category_id", "c.id")
-            .where("ar.status", "Pending");
+            .join('items', 'authentication_requests.item_id', 'items.id')
+            .join('categories', 'items.category_id', 'categories.id')
+            .where('authentication_requests.status', 'Pending');
 
         res.json(pendingRequests);
     } catch (error) {
-        console.error("Error fetching pending authentication requests:", error);
-        res.status(500).json({ error: "Internal Server Error" });
+        console.error('Error fetching pending authentication requests:', error);
+        res.status(500).json({ message: 'Server error' });
     }
 });
 
 // Fetch experts available for a specific category
-router.get("/experts/:category_id", async (req, res) => {
+router.get('/experts/:category_id', async (req, res) => {
+    const { category_id } = req.params;
+
     try {
-        const { category_id } = req.params;
-        const experts = await knex("expert_categories as ec")
-            .select("u.id", "u.username")
-            .join("users as u", "ec.expert_id", "u.id")
-            .where("ec.category_id", category_id);
+        const experts = await knex('expert_categories')
+            .select('users.id', 'users.username')
+            .join('users', 'expert_categories.expert_id', 'users.id')
+            .where('expert_categories.category_id', category_id);
 
         res.json(experts);
     } catch (error) {
-        console.error("Error fetching experts:", error);
-        res.status(500).json({ error: "Internal Server Error" });
+        console.error('Error fetching experts:', error);
+        res.status(500).json({ message: 'Server error' });
     }
 });
 
 // Assign an expert to an item
-router.post("/assign-expert", async (req, res) => {
+router.put('/authentication-requests/assign', async (req, res) => {
+    const { request_id, expert_id } = req.body;
+
     try {
-        const { request_id, expert_id } = req.body;
+        await knex('authentication_requests')
+            .where({ id: request_id })
+            .update({ expert_id });
 
-        const updated = await knex("authentication_requests")
-            .where("id", request_id)
-            .update({
-                expert_id,
-                status: "Approved",
-            });
-
-        if (updated) {
-            res.json({ success: true, message: "Expert assigned successfully" });
-        } else {
-            res.status(400).json({ error: "Invalid request ID" });
-        }
+        res.json({ message: 'Expert assigned successfully' });
     } catch (error) {
-        console.error("Error assigning expert:", error);
-        res.status(500).json({ error: "Internal Server Error" });
+        console.error('Error assigning expert:', error);
+        res.status(500).json({ message: 'Server error' });
     }
 });
 
 // Fetch approved and rejected items
-router.get("/authenticated-items", async (req, res) => {
+router.get('/authentication-requests/completed', async (req, res) => {
     try {
-        const authenticatedItems = await knex("authentication_requests as ar")
+        const completedRequests = await knex('authentication_requests')
             .select(
-                "i.title as item_name",
-                "c.name as category",
-                "ar.status",
-                "u.username as expert"
+                'authentication_requests.id',
+                'items.title as item_name',
+                'categories.name as category',
+                'authentication_requests.status',
+                'authentication_requests.expert_id',
+                'users.username as expert_name'
             )
-            .join("items as i", "ar.item_id", "i.id")
-            .join("categories as c", "i.category_id", "c.id")
-            .leftJoin("users as u", "ar.expert_id", "u.id")
-            .whereNot("ar.status", "Pending");
+            .join('items', 'authentication_requests.item_id', 'items.id')
+            .join('categories', 'items.category_id', 'categories.id')
+            .leftJoin('users', 'authentication_requests.expert_id', 'users.id')
+            .whereIn('authentication_requests.status', ['Approved', 'Rejected']);
 
-        res.json(authenticatedItems);
+        res.json(completedRequests);
     } catch (error) {
-        console.error("Error fetching authenticated items:", error);
-        res.status(500).json({ error: "Internal Server Error" });
+        console.error('Error fetching completed authentication requests:', error);
+        res.status(500).json({ message: 'Server error' });
+    }
+});
+
+// Reassign an expert for an item
+router.put('/authentication-requests/reassign', async (req, res) => {
+    const { request_id, new_expert_id } = req.body;
+
+    try {
+        await knex('authentication_requests')
+            .where({ id: request_id })
+            .update({ expert_id: new_expert_id });
+
+        res.json({ message: 'Expert reassigned successfully' });
+    } catch (error) {
+        console.error('Error reassigning expert:', error);
+        res.status(500).json({ message: 'Server error' });
     }
 });
 
