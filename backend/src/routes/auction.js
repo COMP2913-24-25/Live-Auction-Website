@@ -33,7 +33,7 @@ router.get('/active', async (req, res) => {
       console.error('Database error:', err.message);
       res.status(500).json({ error: err.message });
     }
-  });  
+});  
 
 // Route to get a single auction item
 router.get('/:id', async (req, res) => {
