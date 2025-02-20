@@ -3,21 +3,8 @@ require('dotenv').config({ path: require('path').resolve(__dirname, '../.env') }
 const express = require('express');
 const bodyParser = require('body-parser');
 const cors = require('cors');
-const sqlite3 = require('sqlite3').verbose();
 
 const app = express();
-
-// Use database path from .env or default
-const dbPath = process.env.DATABASE_URL || './database/db.sqlite';
-
-// Connect to your SQLite database
-const db = new sqlite3.Database(dbPath, (err) => {
-  if (err) {
-    console.error('Error connecting to the database:', err);
-  } else {
-    console.log(`Connected to the SQLite database at ${dbPath}.`);
-  }
-});
 
 // Import routes
 const uploadRoutes = require('./routes/upload');
