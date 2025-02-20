@@ -2,20 +2,38 @@ const express = require('express');
 const knex = require('../db'); // Assuming you have a Knex setup in db/knex.js
 const router = express.Router();
 
-// Utility function to calculate remaining time
-const calculateTimeRemaining = (endTime) => {
-    const now = new Date();
-    const end = new Date(endTime);
-    const difference = end - now;
-
-    if (difference <= 0) return "Auction Ended";
-
-    const hours = Math.floor((difference / (1000 * 60 * 60)) % 24);
-    const minutes = Math.floor((difference / (1000 * 60)) % 60);
-    const seconds = Math.floor((difference / 1000) % 60);
-
-    return `${hours}h ${minutes}m ${seconds}s`;
-};
+// Fetch all active auctions
+router.get('/active', async (req, res) => {
+    try {
+      const auctions = await knex('item_current_bids as icb')
+        .select(
+          'icb.item_id as id',
+          'icb.title',
+          'icb.description',
+          'icb.min_price',
+          'icb.end_time',
+          'icb.authenticated',
+          'icb.current_bid',
+          knex.raw('GROUP_CONCAT(ii.image_url) as image_urls'),
+          'u.username as seller_name'
+        )
+        .leftJoin('items as i', 'icb.item_id', 'i.id')
+        .leftJoin('users as u', 'i.user_id', 'u.id')
+        .leftJoin('item_images as ii', 'icb.item_id', 'ii.item_id')
+        .where('icb.end_time', '>', knex.raw("datetime('now')"))
+        .groupBy('icb.item_id')
+        .orderBy('i.created_at', 'desc');
+  
+      if (auctions.length === 0) {
+        return res.status(404).json({ error: 'No active auctions found' });
+      }
+  
+      res.json(auctions);
+    } catch (err) {
+      console.error('Database error:', err.message);
+      res.status(500).json({ error: err.message });
+    }
+  });  
 
 // Route to get a single auction item
 router.get('/:id', async (req, res) => {
@@ -65,6 +83,5 @@ router.get('/:id', async (req, res) => {
         res.status(500).json({ error: 'Internal server error' });
     }
 });
-
 
 module.exports = router;
