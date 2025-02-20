@@ -9,17 +9,32 @@ CREATE TABLE
     );
 
 CREATE TABLE
+    categories (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT UNIQUE NOT NULL
+    );
+
+CREATE TABLE
     items (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         user_id INTEGER NOT NULL,
         title TEXT NOT NULL,
         description TEXT,
         min_price REAL NOT NULL,
-        duration INTEGER NOT NULL CHECK (duration BETWEEN 1 AND 5),
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         end_time TIMESTAMP NOT NULL,
         authenticated BOOLEAN DEFAULT FALSE,
+        category_id INTEGER NOT NULL REFERENCES categories (id),
         FOREIGN KEY (user_id) REFERENCES users (id)
+    );
+
+CREATE TABLE
+    expert_categories (
+        expert_id INTEGER NOT NULL,
+        category_id INTEGER NOT NULL,
+        PRIMARY KEY (expert_id, category_id),
+        FOREIGN KEY (expert_id) REFERENCES users (id) ON DELETE CASCADE,
+        FOREIGN KEY (category_id) REFERENCES categories (id) ON DELETE CASCADE
     );
 
 CREATE TABLE
