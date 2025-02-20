@@ -1,11 +1,15 @@
 import { useState, useEffect } from 'react';
+import { useAuth } from '../../context/authContext';
 
 function AuctionForm() {
+  const { user } = useAuth();
+
   const [formData, setFormData] = useState({
+    user_id: user?.id, // Attach current user ID to the form data
     title: '',
     description: '',
     min_price: '',
-    duration: '',
+    duration: 1,
     category: ''
   });
 
@@ -90,6 +94,7 @@ function AuctionForm() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    console.log(`User ID: ${user.id}`); // Debugging log
     try {
       const submitData = new FormData();
       Object.keys(formData).forEach(key => {
@@ -97,7 +102,7 @@ function AuctionForm() {
       });
       imageFiles.forEach(file => submitData.append('images', file));
 
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/auctions/create`, {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/upload`, {
         method: 'POST',
         body: submitData
       });
@@ -207,21 +212,20 @@ function AuctionForm() {
 
         <div className="grid grid-cols-2 gap-6">
           <div className="space-y-2">
-            <label className="block text-charcoal font-medium">Minimum Price:</label>
+            <label className="block text-charcoal font-medium">Minimum Price (£):</label>
             <input
               type="number"
               name="min_price"
               value={formData.min_price}
               onChange={handleChange}
-              min="0"
-              step="1000"
+              min="1"
               required
               className="w-full px-4 py-3 rounded-lg border border-gray-200 focus:outline-none focus:border-teal focus:ring-1 focus:ring-teal/20 bg-white text-charcoal"
             />
           </div>
 
           <div className="space-y-2">
-            <label className="block text-charcoal font-medium">Duration:</label>
+            <label className="block text-charcoal font-medium">Duration (1-5 days):</label>
             <input
               type="number"
               name="duration"
