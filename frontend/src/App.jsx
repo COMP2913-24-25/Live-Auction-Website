@@ -17,7 +17,14 @@ const App = () => (
       <Route path="/" element={<Home />} />
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
-      <Route path="/create-auction" element={<AuctionForm />} />
+      <Route 
+        path="/create-auction" 
+        element={
+          <ProtectedRoute>
+            <AuctionForm />
+          </ProtectedRoute>
+        }
+      />
       <Route path="/list" element={<AuctionList />} />
       <Route path="/auctions/:id" element={<AuctionDetails />} />
       <Route
