@@ -7,9 +7,10 @@ router.get('/authentication-requests/pending', async (req, res) => {
     try {
         const pendingRequests = await knex('authentication_requests')
             .select(
-                'authentication_requests.id',
+                'items.id as item_id',
                 'items.title as item_name',
-                'categories.name as category',
+                'categories.id as category_id',
+                'categories.name as category_name',
                 'authentication_requests.status'
             )
             .join('items', 'authentication_requests.item_id', 'items.id')
@@ -20,6 +21,31 @@ router.get('/authentication-requests/pending', async (req, res) => {
     } catch (error) {
         console.error('Error fetching pending authentication requests:', error);
         res.status(500).json({ message: 'Server error' });
+    }
+});
+
+// Fetch pending authentication requests already assigned to an expert
+router.get('/authentication-requests/pending-with-expert', async (req, res) => {
+    try {
+        const pendingRequests = await knex('authentication_requests')
+            .select(
+                'authentication_requests.id',
+                'items.title as item_name',
+                'categories.id as category_id',
+                'categories.name as category_name',
+                'users.id as expert_id',
+                'users.username as assigned_expert'
+            )
+            .join('items', 'authentication_requests.item_id', 'items.id')
+            .join('categories', 'items.category_id', 'categories.id')
+            .join('users', 'authentication_requests.expert_id', 'users.id')
+            .where('authentication_requests.status', 'Pending')
+            .whereNotNull('authentication_requests.expert_id');
+
+        res.json({ success: true, data: pendingRequests });
+    } catch (error) {
+        console.error('Error fetching pending authentication requests with experts:', error);
+        res.status(500).json({ success: false, message: 'Internal server error' });
     }
 });
 
@@ -77,29 +103,6 @@ router.get('/authentication-requests/completed', async (req, res) => {
     } catch (error) {
         console.error('Error fetching completed authentication requests:', error);
         res.status(500).json({ message: 'Server error' });
-    }
-});
-
-// Fetch pending authentication requests already assigned to an expert
-router.get('/authentication-requests/pending-with-expert', async (req, res) => {
-    try {
-        const pendingRequests = await knex('authentication_requests')
-            .select(
-                'authentication_requests.id',
-                'items.title as item_name',
-                'categories.name as category',
-                'users.username as assigned_expert'
-            )
-            .join('items', 'authentication_requests.item_id', 'items.id')
-            .join('categories', 'items.category_id', 'categories.id')
-            .join('users', 'authentication_requests.expert_id', 'users.id')
-            .where('authentication_requests.status', 'Pending')
-            .whereNotNull('authentication_requests.expert_id');
-
-        res.json({ success: true, data: pendingRequests });
-    } catch (error) {
-        console.error('Error fetching pending authentication requests with experts:', error);
-        res.status(500).json({ success: false, message: 'Internal server error' });
     }
 });
 
