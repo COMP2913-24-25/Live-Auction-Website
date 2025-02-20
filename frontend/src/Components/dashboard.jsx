@@ -16,7 +16,7 @@ export default function ManagerDashboard() {
 
     const fetchPendingRequests = async () => {
         try {
-            const res = await axios.get("/api/manager/authentication-requests/pending");
+            const res = await axios.get("/api/manager/authentication-requests/pending-unassigned");
             setPendingRequests(res.data);
         } catch (error) {
             console.error("Error fetching pending requests", error);
@@ -25,7 +25,7 @@ export default function ManagerDashboard() {
 
     const fetchAssignedRequests = async () => {
         try {
-            const res = await axios.get("/api/manager/authentication-requests/pending-with-expert");
+            const res = await axios.get("/api/manager/authentication-requests/pending-assigned");
             setAssignedRequests(res.data.data);
         } catch (error) {
             console.error("Error fetching assigned requests", error);
