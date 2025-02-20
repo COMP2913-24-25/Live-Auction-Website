@@ -33,9 +33,6 @@ app.use(cors({
 }));
 app.use(bodyParser.json());
 
-//Static file service
-app.use('/uploads', express.static('uploads'));
-
 // Mount routes
 app.use('/api', uploadRoutes);
 app.use('/api/auctions', auctionRoutes);
