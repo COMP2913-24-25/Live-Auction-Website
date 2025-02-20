@@ -80,6 +80,29 @@ router.get('/authentication-requests/completed', async (req, res) => {
     }
 });
 
+// Fetch pending authentication requests already assigned to an expert
+router.get('/authentication-requests/pending-with-expert', async (req, res) => {
+    try {
+        const pendingRequests = await knex('authentication_requests')
+            .select(
+                'authentication_requests.id',
+                'items.title as item_name',
+                'categories.name as category',
+                'users.username as assigned_expert'
+            )
+            .join('items', 'authentication_requests.item_id', 'items.id')
+            .join('categories', 'items.category_id', 'categories.id')
+            .join('users', 'authentication_requests.expert_id', 'users.id')
+            .where('authentication_requests.status', 'Pending')
+            .whereNotNull('authentication_requests.expert_id');
+
+        res.json({ success: true, data: pendingRequests });
+    } catch (error) {
+        console.error('Error fetching pending authentication requests with experts:', error);
+        res.status(500).json({ success: false, message: 'Internal server error' });
+    }
+});
+
 // Reassign an expert for an item
 router.put('/authentication-requests/reassign', async (req, res) => {
     const { request_id, new_expert_id } = req.body;
