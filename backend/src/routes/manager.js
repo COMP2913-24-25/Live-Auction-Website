@@ -1,6 +1,6 @@
 const express = require("express");
+const knex = require("../db");
 const router = express.Router();
-const knex = require("../database/knex");
 
 // Fetch pending authentication requests
 router.get("/pending-requests", async (req, res) => {
