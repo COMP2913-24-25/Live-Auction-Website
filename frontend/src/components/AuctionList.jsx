@@ -5,6 +5,28 @@ import 'react-multi-carousel/lib/styles.css';
 import { useNavigate } from 'react-router-dom';
 import authenticated from '../assets/authenticated.png';
 
+const calculateTimeRemaining = (endTime) => {
+  if (!endTime) return "Auction Ended";
+
+  const now = new Date().getTime();
+  const end = new Date(endTime).getTime();
+  const difference = end - now;
+
+  if (difference <= 0) return "Auction Ended";
+
+  const days = Math.floor(difference / (1000 * 60 * 60 * 24));
+  
+  if (days >= 1) {
+    return `${days} day${days > 1 ? "s" : ""} left`;
+  }
+
+  const hours = Math.floor((difference / (1000 * 60 * 60)) % 24);
+  const minutes = Math.floor((difference / (1000 * 60)) % 60);
+  const seconds = Math.floor((difference / 1000) % 60);
+
+  return `${hours}h ${minutes}m ${seconds}s`;
+};
+
 const AuctionList = () => {
   const [auctions, setAuctions] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -12,7 +34,7 @@ const AuctionList = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    axios.get('/api/auctions')
+    axios.get('/api/auctions/active')
       .then(response => {
         const data = Array.isArray(response.data) ? response.data.map(auction => ({
           ...auction,
@@ -38,29 +60,6 @@ const AuctionList = () => {
 
     return () => clearInterval(interval);
   }, []);
-
-  const calculateTimeRemaining = (endTime) => {
-    if (!endTime) return "Auction Ended";
-  
-    const now = new Date().getTime();
-    const end = new Date(endTime).getTime();
-    const difference = end - now;
-  
-    if (difference <= 0) return "Auction Ended";
-  
-    const days = Math.floor(difference / (1000 * 60 * 60 * 24));
-    
-    if (days >= 1) {
-      return `${days} day${days > 1 ? "s" : ""} left`;
-    }
-  
-    const hours = Math.floor((difference / (1000 * 60 * 60)) % 24);
-    const minutes = Math.floor((difference / (1000 * 60)) % 60);
-    const seconds = Math.floor((difference / 1000) % 60);
-  
-    return `${hours}h ${minutes}m ${seconds}s`;
-  };
-  
 
   const responsive = {
     desktop: { breakpoint: { max: 3000, min: 1024 }, items: 1 },
