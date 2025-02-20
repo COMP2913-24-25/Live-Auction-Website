@@ -1,3 +1,5 @@
+require('dotenv').config({ path: require('path').resolve(__dirname, '../../../.env') });
+
 const express = require('express');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
@@ -5,7 +7,6 @@ const cors = require('cors');
 const knex = require('../db');
 
 const router = express.Router();
-const SECRET_KEY = "your_secret_key";
 
 router.use(express.json());
 
@@ -52,8 +53,9 @@ router.post('/login', async (req, res) => {
             return res.status(400).json({ message: 'Invalid credentials' });
         }
 
-        const token = jwt.sign({ id: user.id, username: user.username }, SECRET_KEY, { expiresIn: '1h' });
-        res.json({ token, username: user.username });
+        console.log(`Secret Key: ${process.env.SECRET_KEY}`); // Debugging log
+        const token = jwt.sign({ id: user.id, username: user.username }, process.env.SECRET_KEY, { expiresIn: '1h' });
+        res.json({ id: user.id, token, username: user.username });
     } catch (error) {
         console.error('Login Error:', error);
         res.status(500).json({ message: 'Server error' });

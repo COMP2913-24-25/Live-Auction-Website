@@ -4,7 +4,11 @@ import { AuthContext } from '../context/authContext';
 import PropTypes from 'prop-types';
 
 const ProtectedRoute = ({ children }) => {
-    const { user } = useContext(AuthContext);
+    const { user, loading } = useContext(AuthContext);
+
+    if (loading) {
+        return <div>Loading...</div>; // Show loading indicator instead of redirecting
+    }
 
     if (!user) {
         return <Navigate to="/login" replace />;

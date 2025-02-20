@@ -22,7 +22,7 @@ const Login = () => {
         try {
             const data = await loginUser(form);
             if (data.token) {
-                login({ token: data.token, username: data.username });
+                login({ id: data.id, token: data.token, username: data.username });
                 navigate('/dashboard');
             }
         } catch (err) {
