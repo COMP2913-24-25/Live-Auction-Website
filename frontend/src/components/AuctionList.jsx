@@ -122,7 +122,7 @@ const AuctionList = () => {
                 {auction.remainingTime}
               </div>
             </div>
-            <div className="p-4 text-center" onClick={() => navigate(`/items/${auction.id}`)}>
+            <div className="p-4 text-center" onClick={() => navigate(`/auctions/${auction.id}`)}>
               <h2 className="text-2xl font-semibold text-navy">{auction.title}</h2>
               <p className="text-sm text-gray-600">Current bid: £{auction.current_bid}</p>
             </div>
