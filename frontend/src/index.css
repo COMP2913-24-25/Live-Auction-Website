@@ -1,14 +1,41 @@
-@import 'tailwindcss/base';
-@import 'tailwindcss/components';
-@import 'tailwindcss/utilities';
+@import "tailwindcss";
+@import 'react-multi-carousel/lib/styles.css';
 
-/* 只保留基础样式 */
-:root {
+@theme {
   --color-navy: #1E2A38;
   --color-off-white: #F8F9FA;
   --color-teal: #008080;
   --color-gold: #7F6200;
   --color-charcoal: #4A4A4A;
+  --color-primary: #2C3E50;    /* Professional Dark Blue */
+  --color-secondary: #3498DB;   /* Professional Blue */
+  --color-accent: #E67E22;      /* Warm Orange */
+  --color-background: #F5F6FA;  /* Light Gray */
+  --color-text: #2D3436;        /* Near Black */
+  --color-error: #E74C3C;       /* Red */
+  --color-success: #27AE60;     /* Green */
+}
+
+@import "tailwindcss";
+@import 'react-multi-carousel/lib/styles.css';
+
+@theme {
+  --color-navy: #1E2A38;
+  --color-off-white: #F8F9FA;
+  --color-teal: #008080;
+  --color-gold: #7F6200;
+  --color-charcoal: #4A4A4A;
+  --color-primary: #2C3E50;    /* Professional Dark Blue */
+  --color-secondary: #3498DB;   /* Professional Blue */
+  --color-accent: #E67E22;      /* Warm Orange */
+  --color-background: #F5F6FA;  /* Light Gray */
+  --color-text: #2D3436;        /* Near Black */
+  --color-error: #E74C3C;       /* Red */
+  --color-success: #27AE60;     /* Green */
+}
+
+/* 只保留基础样式 */
+:root {
   font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
   line-height: 1.5;
   font-weight: 400;
@@ -23,9 +50,51 @@
   -moz-osx-font-smoothing: grayscale;
 }
 
+#root {
+  width: 100%;
+}
+
 body {
-  background-color: var(--color-off-white);
+  margin: 0;
+  display: flex;
+  flex-direction: column; /* Centers horizontally */
+  align-items: center; /* Centers vertically */
   min-height: 100vh;
+  background-color: #f8f9fa; /* Use your Tailwind bg-off-white */
+  color: #4A4A4A; /* Use your Tailwind text-charcoal */
+
+  @apply min-h-screen bg-background text-text pt-16;
+  font-family: Inter, system-ui, -apple-system, sans-serif;
+}
+
+h1 {
+  font-size: 3.2em;
+  line-height: 1.1;
+}
+
+.btn {
+  @apply px-4 py-2 rounded-md font-medium transition-colors;
+}
+
+.notification-dropdown {
+  @apply absolute right-0 mt-2 w-80 bg-white rounded-md shadow-lg overflow-hidden;
+  transform-origin: top right;
+  animation: notification-popup 0.2s ease-out;
+}
+
+@keyframes notification-popup {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.react-multiple-carousel__arrow {
+  z-index: 5; /* Adjust this value as needed */
 }
 
 /* 添加动画 */
@@ -44,7 +113,7 @@ body {
   animation: slideIn 0.5s ease-out;
 }
 
-a {
+/* a {
   font-weight: 500;
   color: #646cff;
   text-decoration: inherit;
@@ -58,19 +127,14 @@ h1 {
   line-height: 1.1;
 }
 
-button {
-  border-radius: 8px;
-  border: 1px solid transparent;
-  padding: 0.6em 1.2em;
-  font-size: 1em;
-  font-weight: 500;
-  font-family: inherit;
-  background-color: #1a1a1a;
-  cursor: pointer;
-  transition: border-color 0.25s;
+.btn {
+  @apply px-4 py-2 rounded-md font-medium transition-colors;
 }
-button:hover {
-  border-color: #646cff;
+
+.notification-dropdown {
+  @apply absolute right-0 mt-2 w-80 bg-white rounded-md shadow-lg overflow-hidden;
+  transform-origin: top right;
+  animation: notification-popup 0.2s ease-out;
 }
 button:focus,
 button:focus-visible {
@@ -88,4 +152,4 @@ button:focus-visible {
   button {
     background-color: #f9f9f9;
   }
-}
+} */

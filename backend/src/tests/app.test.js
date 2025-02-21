@@ -4,6 +4,7 @@ const app = require('../app');
 
 describe('API Tests', () => {
   // 基础路由测试
+  // Basic route test
   it('GET / - should return server running message', async () => {
     const response = await request(app).get('/');
     expect(response.statusCode).toBe(200);
@@ -11,6 +12,7 @@ describe('API Tests', () => {
   });
 
   // 创建拍卖项目测试
+  // Create auction item test
   it('POST /api/auctions - should create new auction item', async () => {
     const auctionData = {
       title: 'Test Item',
@@ -30,6 +32,7 @@ describe('API Tests', () => {
   });
 
   // 获取拍卖列表测试
+  // Get auctions list test
   it('GET /api/auctions - should return auction items', async () => {
     const response = await request(app).get('/api/auctions');
     expect(response.statusCode).toBe(200);
