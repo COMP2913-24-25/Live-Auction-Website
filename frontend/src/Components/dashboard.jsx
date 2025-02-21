@@ -26,7 +26,7 @@ export default function ManagerDashboard() {
     const fetchAssignedRequests = async () => {
         try {
             const res = await axios.get("/api/manager/authentication-requests/pending-assigned");
-            setAssignedRequests(res.data.data);
+            setAssignedRequests(res.data);
         } catch (error) {
             console.error("Error fetching assigned requests", error);
         }
