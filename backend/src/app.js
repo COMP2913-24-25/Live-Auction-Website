@@ -186,6 +186,35 @@ app.get('/api/auctions', (req, res) => {
   });
 });
 
+// 添加新的路由处理认证请求
+app.post('/api/authentication-requests', upload.single('supporting_documents'), async (req, res) => {
+  try {
+    const { item_id, description } = req.body;
+    const file = req.file;
+
+    // 验证物品是否存在
+    const item = await db.get('SELECT * FROM items WHERE id = ?', item_id);
+    if (!item) {
+      return res.status(404).json({ error: 'Item not found' });
+    }
+
+    // 创建认证请求
+    const result = await db.run(
+      `INSERT INTO authentication_requests (user_id, item_id, status, request_time)
+       VALUES (?, ?, 'Pending', CURRENT_TIMESTAMP)`,
+      [item.user_id, item_id]
+    );
+
+    res.json({
+      message: 'Authentication request submitted successfully',
+      request_id: result.lastID
+    });
+  } catch (error) {
+    console.error('Error creating authentication request:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 // 静态文件服务
 app.use('/uploads', express.static('uploads'));
 
