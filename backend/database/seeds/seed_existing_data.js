@@ -68,18 +68,13 @@ exports.seed = async function (knex) {
 
   // Insert Authentication Requests
   await knex("authentication_requests").insert([
-    { id: 1, user_id: 5, item_id: 1, status: "Pending", expert_id: 2 },
-    { id: 2, user_id: 6, item_id: 3, status: "Pending", expert_id: 2 },
-    { id: 3, user_id: 5, item_id: 4, status: "Pending", expert_id: 3 },
-    { id: 4, user_id: 7, item_id: 7, status: "Pending", expert_id: 3 },
-    { id: 5, user_id: 4, item_id: 2, status: "Pending", expert_id: null },
-    { id: 6, user_id: 4, item_id: 5, status: "Pending", expert_id: null },
-    { id: 7, user_id: 5, item_id: 6, status: "Pending", expert_id: null },
-    { id: 8, user_id: 7, item_id: 7, status: "Pending", expert_id: null },
-    { id: 9, user_id: 4, item_id: 2, status: "Approved", expert_id: 2 },
-    { id: 10, user_id: 4, item_id: 5, status: "Rejected", expert_id: 2 },
-    { id: 11, user_id: 5, item_id: 6, status: "Approved", expert_id: 3 },
-    { id: 12, user_id: 7, item_id: 7, status: "Rejected", expert_id: 3 }
+    { id: 1, user_id: 4, item_id: 1, status: "Approved", expert_id: 2 },
+    { id: 2, user_id: 4, item_id: 2, status: "Pending", expert_id: null },
+    { id: 3, user_id: 5, item_id: 3, status: "Rejected", expert_id: 3 },
+    { id: 4, user_id: 4, item_id: 4, status: "Pending", expert_id: null },
+    { id: 5, user_id: 6, item_id: 5, status: "Pending", expert_id: null },
+    { id: 6, user_id: 5, item_id: 6, status: "Pending", expert_id: null },
+    { id: 7, user_id: 7, item_id: 7, status: "Pending", expert_id: 3 }
   ]);
 
   // Insert Payments
