@@ -170,7 +170,7 @@ export default function ManagerDashboard() {
                         </thead>
                         <tbody>
                             {pendingRequests.map((req) => (
-                                <tr key={req.item_id} className="border-t">
+                                <tr key={req.item_id} className="odd:bg-white even:bg-gray-200">
                                     <td className="p-2 text-center">
                                         <input
                                             type="checkbox"
@@ -227,7 +227,7 @@ export default function ManagerDashboard() {
                         </thead>
                         <tbody>
                             {assignedRequests.map((req) => (
-                                <tr key={req.item_id} className="border-t">
+                                <tr key={req.item_id} className="odd:bg-white even:bg-gray-200">
                                     <td className="p-2 text-center">
                                         <input
                                             type="checkbox"
@@ -275,7 +275,7 @@ export default function ManagerDashboard() {
                         </thead>
                         <tbody>
                             {completedRequests.map((req) => (
-                                <tr key={req.item_id} className="border-t">
+                                <tr key={req.item_id} className="odd:bg-white even:bg-gray-200">
                                     <td className="p-2 text-center">{req.item_id}</td>
                                     <td className="p-2 text-center">{req.item_name}</td>
                                     <td className="p-2 text-center">{req.category}</td>
