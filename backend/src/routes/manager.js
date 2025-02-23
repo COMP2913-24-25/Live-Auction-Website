@@ -92,11 +92,12 @@ router.get('/authentication-requests/completed', async (req, res) => {
         const completedRequests = await knex('authentication_requests')
             .select(
                 'authentication_requests.id',
+                'items.id as item_id',
                 'items.title as item_name',
                 'categories.name as category',
                 'authentication_requests.status',
                 'authentication_requests.expert_id',
-                'users.username as expert_name'
+                'users.username as assigned_expert_username'
             )
             .join('items', 'authentication_requests.item_id', 'items.id')
             .join('categories', 'items.category_id', 'categories.id')
