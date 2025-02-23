@@ -93,11 +93,11 @@ router.get('/authentication-requests/completed', async (req, res) => {
 
 // Assign an expert to an item
 router.put('/authentication-requests/assign', async (req, res) => {
-    const { request_id, expert_id } = req.body;
+    const { item_id, expert_id } = req.body;
 
     try {
         await knex('authentication_requests')
-            .where({ id: request_id })
+            .where({ item_id: item_id })
             .update({ expert_id });
 
         res.json({ message: 'Expert assigned successfully' });
