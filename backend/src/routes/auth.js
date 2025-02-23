@@ -15,7 +15,7 @@ router.post('/register', async (req, res) => {
     try {
         const { username, email, password } = req.body;
         const hashedPassword = await bcrypt.hash(password, 10);
-        
+
         await knex('users').insert({ username, email, password_hash: hashedPassword });
         res.json({ message: 'User registered successfully' });
     } catch (error) {
@@ -55,7 +55,7 @@ router.post('/login', async (req, res) => {
 
         console.log(`Secret Key: ${process.env.SECRET_KEY}`); // Debugging log
         const token = jwt.sign({ id: user.id, username: user.username }, process.env.SECRET_KEY, { expiresIn: '1h' });
-        res.json({ id: user.id, token, username: user.username });
+        res.json({ id: user.id, token, username: user.username, role: user.role });
     } catch (error) {
         console.error('Login Error:', error);
         res.status(500).json({ message: 'Server error' });
