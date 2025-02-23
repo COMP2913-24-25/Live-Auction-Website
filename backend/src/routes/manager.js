@@ -31,11 +31,12 @@ router.get('/authentication-requests/pending-assigned', async (req, res) => {
         const pendingRequests = await knex('authentication_requests')
             .select(
                 'authentication_requests.id',
+                'items.id as item_id',
                 'items.title as item_name',
                 'categories.id as category_id',
                 'categories.name as category_name',
-                'users.id as expert_id',
-                'users.username as assigned_expert'
+                'users.id as assigned_expert_id',
+                'users.username as assigned_expert_username'
             )
             .join('items', 'authentication_requests.item_id', 'items.id')
             .join('categories', 'items.category_id', 'categories.id')
@@ -59,6 +60,24 @@ router.get('/experts/:category_id', async (req, res) => {
             .select('users.id', 'users.username')
             .join('users', 'expert_categories.expert_id', 'users.id')
             .where('expert_categories.category_id', category_id);
+
+        res.json(experts);
+    } catch (error) {
+        console.error('Error fetching experts:', error);
+        res.status(500).json({ message: 'Server error' });
+    }
+});
+
+// Fetch experts available for reassignment but not the current expert
+router.get('/experts/:category_id/:current_expert_id', async (req, res) => {
+    const { category_id, current_expert_id } = req.params;
+
+    try {
+        const experts = await knex('expert_categories')
+            .select('users.id', 'users.username')
+            .join('users', 'expert_categories.expert_id', 'users.id')
+            .where('expert_categories.category_id', category_id)
+            .whereNot('expert_categories.expert_id', current_expert_id);
 
         res.json(experts);
     } catch (error) {
