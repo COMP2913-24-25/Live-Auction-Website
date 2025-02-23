@@ -110,7 +110,7 @@ export default function ManagerDashboard() {
             ));
             fetchPendingRequests();
             fetchAssignedRequests();
-            setSelectedRequests({});
+            setSelectedPendingRequests({});
         } catch (error) {
             console.error("Error assigning experts", error);
         }
@@ -135,15 +135,15 @@ export default function ManagerDashboard() {
             ));
             fetchPendingRequests();
             fetchAssignedRequests();
-            setSelectedRequests({});
+            setSelectedAssignedRequests({});
         } catch (error) {
             console.error("Error assigning experts", error);
         }
     };
 
     return (
-        <div className="p-6 space-y-6">
-            <h2 className="text-xl font-bold">Manager Dashboard</h2>
+        <div className="p-6 space-y-6 pt-0">
+            <h2 className="text-4xl font-bold">Manager Dashboard</h2>
 
             {/* Pending Unassigned Authentication Requests */}
             <div className="border border-gray-300 p-4 rounded-lg">
@@ -183,7 +183,6 @@ export default function ManagerDashboard() {
                                 <td className="p-2 text-center">{req.category_name}</td>
                                 <td className="p-2 text-center">
                                     <select
-                                        disabled={!selectedPendingRequests[req.item_id]}
                                         onFocus={() => fetchExperts(req.category_id)}
                                         onChange={(e) => handlePendingExpertChange(req.item_id, e.target.value)}
                                         className="border p-1"
@@ -240,7 +239,6 @@ export default function ManagerDashboard() {
                                 <td className="p-2 text-center">{req.assigned_expert_username}</td>
                                 <td className="p-2 text-center">
                                     <select
-                                        disabled={!selectedAssignedRequests[req.item_id]}
                                         onFocus={() => fetchReassignmentExperts(req.category_id, req.assigned_expert_id)}
                                         onChange={(e) => handleAssignedExpertChange(req.item_id, e.target.value)}
                                         className="border p-1"
