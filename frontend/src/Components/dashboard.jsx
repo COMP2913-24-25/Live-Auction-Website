@@ -257,12 +257,29 @@ export default function ManagerDashboard() {
 
             {/* Completed Requests */}
             <div className="border border-gray-300 p-4 rounded-lg">
-                <h3 className="font-semibold mb-2">Completed Requests</h3>
-                <ul>
-                    {completedRequests.map((req) => (
-                        <li key={req.id}>{req.item_name} - {req.status} by {req.expert_name}</li>
-                    ))}
-                </ul>
+                <h3 className="font-semibold mb-2 text-2xl">Completed Requests</h3>
+                <table className="w-full border border-gray-300 border-b-3 border-b-gray-400">
+                    <thead>
+                        <tr className="bg-navy text-off-white font-light">
+                            <th className="p-2">Item ID</th>
+                            <th className="p-2">Item Name</th>
+                            <th className="p-2">Category</th>
+                            <th className="p-2">Status</th>
+                            <th className="p-2">Assigned Expert</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {completedRequests.map((req) => (
+                            <tr key={req.item_id} className="border-t">
+                                <td className="p-2 text-center">{req.item_id}</td>
+                                <td className="p-2 text-center">{req.item_name}</td>
+                                <td className="p-2 text-center">{req.category}</td>
+                                <td className="p-2 text-center">{req.status}</td>
+                                <td className="p-2 text-center">{req.assigned_expert_username}</td>
+                            </tr>
+                        ))}
+                    </tbody>
+                </table>
             </div>
         </div>
     );
