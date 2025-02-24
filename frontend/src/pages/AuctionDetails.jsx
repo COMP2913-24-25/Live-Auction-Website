@@ -1,4 +1,5 @@
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useContext } from "react";
+import { AuthContext } from "../context/authContext";
 import axios from "axios";
 import Carousel from "react-multi-carousel";
 import "react-multi-carousel/lib/styles.css";
@@ -36,6 +37,7 @@ const calculateTimeRemaining = (endTime) => {
 
 
 const AuctionDetails = () => {
+  const { user } = useContext(AuthContext);
   const { id } = useParams();
   const [auction, setAuction] = useState(null);
   const [bidAmount, setBidAmount] = useState(0);
@@ -98,13 +100,18 @@ const AuctionDetails = () => {
           className="relative flex justify-center items-center w-full md:w-1/2 border border-black p-2"
           style={{ minHeight: maxHeight }}
         >
-          {auction.authenticated == true ? (
+          {auction.authenticated ? (
             <img
               src={authenticated}
               alt="Authenticated Badge"
               className="absolute top-2 left-2 w-12 h-12 z-10 opacity-90"
             />
-          ) : null }
+          ) : (user && user.id == auction.seller_id ? (
+            <button className="w-fit rounded-md bg-teal text-white absolute top-2 left-2 z-10 p-1 hover:bg-gold cursor-pointer">
+                Request Authentication
+            </button>
+          ) : null )}
+          
           <Carousel
             responsive={responsive}
             showDots={true}
