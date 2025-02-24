@@ -90,6 +90,12 @@ function AuctionForm() {
     });
   
     setImagePreviews(prevPreviews => prevPreviews.filter((_, i) => i !== index));
+
+    // Reset file input field
+    const fileInput = document.getElementById('image-upload');
+    if (fileInput) {
+      fileInput.value = ''; // Reset input so the same file can be reselected
+    }
   };
 
   const handleSubmit = async (e) => {
@@ -129,122 +135,124 @@ function AuctionForm() {
   };
 
   return (
-    <div className="max-w-3xl mx-auto bg-off-white rounded-3xl shadow-lg p-12 mt-8">
-      <h2 className="text-3xl font-bold text-navy text-center mb-12 relative">
-        Create a New Auction
-        <div className="absolute bottom-[-8px] left-1/2 transform -translate-x-1/2 w-16 h-1 bg-teal"></div>
-      </h2>
+    <div className='px-4'>
+      <div className="max-w-3xl mx-auto bg-off-white rounded-3xl shadow-lg p-12 mt-8 mb-8">
+        <h2 className="text-3xl font-bold text-navy text-center mb-12 relative">
+          Create a New Auction
+          <div className="absolute bottom-[-8px] left-1/2 transform -translate-x-1/2 w-16 h-1 bg-teal"></div>
+        </h2>
 
-      <form onSubmit={handleSubmit} className="space-y-6">
-        <div className="space-y-2">
-          <label className="block text-charcoal font-medium">Item Name:</label>
-          <input
-            type="text"
-            name="title"
-            value={formData.title}
-            onChange={handleChange}
-            required
-            className="w-full px-4 py-3 rounded-lg border border-gray-200 focus:outline-none focus:border-teal focus:ring-1 focus:ring-teal/20 bg-white text-charcoal"
-          />
-        </div>
-
-        <div className="space-y-2">
-          <label className="block text-charcoal font-medium">Item Description:</label>
-          <textarea
-            name="description"
-            value={formData.description}
-            onChange={handleChange}
-            required
-            rows="4"
-            className="w-full px-4 py-3 rounded-lg border border-gray-200 focus:outline-none focus:border-teal focus:ring-1 focus:ring-teal/20 bg-white text-charcoal"
-          />
-        </div>
-
-        <div className="space-y-2">
-          <label className="block text-charcoal font-medium">Category:</label>
-          <select
-            name="category"
-            value={formData.category}
-            onChange={handleChange}
-            required
-            className="w-full px-4 py-3 rounded-lg border border-gray-200 focus:outline-none focus:border-teal focus:ring-1 focus:ring-teal/20 bg-white text-charcoal"
-          >
-            <option value="" disabled>Select a category</option>
-            {categories.map(category => (
-              <option key={category.id} value={category.id}>{category.name}</option>
-            ))}
-          </select>
-        </div>
-
-        <div className="space-y-2">
-          <label className="block text-charcoal font-medium">Item Images:</label>
-          <div className="border-2 border-dashed border-teal/30 rounded-lg p-6 bg-white">
+        <form onSubmit={handleSubmit} className="space-y-6">
+          <div className="space-y-2">
+            <label className="block text-charcoal font-medium">Item Name:</label>
             <input
-              type="file"
-              accept="image/*"
-              multiple
-              onChange={handleImageChange}
-              className="hidden"
-              id="image-upload"
+              type="text"
+              name="title"
+              value={formData.title}
+              onChange={handleChange}
+              required
+              className="w-full px-4 py-3 rounded-lg border border-gray-200 focus:outline-none focus:border-teal focus:ring-1 focus:ring-teal/20 bg-white text-charcoal"
             />
-            <label htmlFor="image-upload" className="flex flex-col items-center cursor-pointer">
-              <span className="text-teal font-medium">Choose Files</span>
-              <span className="text-charcoal/60 text-sm mt-2">{fileNames}</span>
-            </label>
           </div>
-          {imagePreviews.length > 0 && (
-            <div className="mt-4 flex flex-wrap gap-2 overflow-x-auto pb-2">
-              {imagePreviews.map((src, index) => (
-                <div key={index} className="relative w-24 h-24 min-h-[100px] overflow-visible">
-                  <img src={src} alt={`Preview ${index}`} className="w-full h-full object-cover rounded-lg shadow-md" />
-                  <button
-                    type="button"
-                    onClick={() => removeImage(index)}
-                    className="absolute top-1 right-1 bg-red-500 text-white p-1 rounded-full text-xs flex items-center justify-center w-6 h-6"
-                  >
-                    ✕
-                  </button>
-                </div>
+
+          <div className="space-y-2">
+            <label className="block text-charcoal font-medium">Item Description:</label>
+            <textarea
+              name="description"
+              value={formData.description}
+              onChange={handleChange}
+              required
+              rows="4"
+              className="w-full px-4 py-3 rounded-lg border border-gray-200 focus:outline-none focus:border-teal focus:ring-1 focus:ring-teal/20 bg-white text-charcoal"
+            />
+          </div>
+
+          <div className="space-y-2">
+            <label className="block text-charcoal font-medium">Category:</label>
+            <select
+              name="category"
+              value={formData.category}
+              onChange={handleChange}
+              required
+              className="w-full px-4 py-3 rounded-lg border border-gray-200 focus:outline-none focus:border-teal focus:ring-1 focus:ring-teal/20 bg-white text-charcoal"
+            >
+              <option value="" disabled>Select a category</option>
+              {categories.map(category => (
+                <option key={category.id} value={category.id}>{category.name}</option>
               ))}
+            </select>
+          </div>
+
+          <div className="space-y-2">
+            <label className="block text-charcoal font-medium">Item Images:</label>
+            <div className="border-2 border-dashed border-teal/30 rounded-lg p-6 bg-white">
+              <input
+                type="file"
+                accept="image/*"
+                multiple
+                onChange={handleImageChange}
+                className="hidden"
+                id="image-upload"
+              />
+              <label htmlFor="image-upload" className="flex flex-col items-center cursor-pointer">
+                <span className="text-teal font-medium">Choose Files</span>
+                <span className="text-charcoal/60 text-sm mt-2">{fileNames}</span>
+              </label>
             </div>
-          )}
-        </div>
-
-        <div className="grid grid-cols-2 gap-6">
-          <div className="space-y-2">
-            <label className="block text-charcoal font-medium">Minimum Price (£):</label>
-            <input
-              type="number"
-              name="min_price"
-              value={formData.min_price}
-              onChange={handleChange}
-              min="1"
-              required
-              className="w-full px-4 py-3 rounded-lg border border-gray-200 focus:outline-none focus:border-teal focus:ring-1 focus:ring-teal/20 bg-white text-charcoal"
-            />
+            {imagePreviews.length > 0 && (
+              <div className="mt-4 flex flex-wrap gap-2 overflow-x-auto pb-2">
+                {imagePreviews.map((src, index) => (
+                  <div key={index} className="relative w-24 h-24 min-h-[100px] overflow-visible">
+                    <img src={src} alt={`Preview ${index}`} className="w-full h-full object-cover rounded-lg shadow-md" />
+                    <button
+                      type="button"
+                      onClick={() => removeImage(index)}
+                      className="absolute top-1 right-1 bg-red-500 text-white p-1 rounded-full text-xs flex items-center justify-center w-6 h-6"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
-          <div className="space-y-2">
-            <label className="block text-charcoal font-medium">Duration (1-5 days):</label>
-            <input
-              type="number"
-              name="duration"
-              value={formData.duration}
-              onChange={handleChange}
-              min="1"
-              max="5"
-              required
-              className="w-full px-4 py-3 rounded-lg border border-gray-200 focus:outline-none focus:border-teal focus:ring-1 focus:ring-teal/20 bg-white text-charcoal"
-            />
-          </div>
-        </div>
+          <div className="grid grid-cols-2 gap-6">
+            <div className="space-y-2">
+              <label className="block text-charcoal font-medium">Minimum Price (£):</label>
+              <input
+                type="number"
+                name="min_price"
+                value={formData.min_price}
+                onChange={handleChange}
+                min="1"
+                required
+                className="w-full px-4 py-3 rounded-lg border border-gray-200 focus:outline-none focus:border-teal focus:ring-1 focus:ring-teal/20 bg-white text-charcoal"
+              />
+            </div>
 
-        <div className="text-center mt-8">
-          <button type="submit" className="cursor-pointer bg-teal text-white px-8 py-3 rounded-full hover:bg-gold transition-colors duration-300 font-semibold shadow-lg hover:shadow-xl">
-            CREATE
-          </button>
-        </div>
-      </form>
+            <div className="space-y-2">
+              <label className="block text-charcoal font-medium">Duration (1-5 days):</label>
+              <input
+                type="number"
+                name="duration"
+                value={formData.duration}
+                onChange={handleChange}
+                min="1"
+                max="5"
+                required
+                className="w-full px-4 py-3 rounded-lg border border-gray-200 focus:outline-none focus:border-teal focus:ring-1 focus:ring-teal/20 bg-white text-charcoal"
+              />
+            </div>
+          </div>
+
+          <div className="text-center mt-8">
+            <button type="submit" className="cursor-pointer bg-teal text-white px-8 py-3 rounded-full hover:bg-gold transition-colors duration-300 font-semibold shadow-lg hover:shadow-xl">
+              CREATE
+            </button>
+          </div>
+        </form>
+      </div>
     </div>
   );
 }
