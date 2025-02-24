@@ -67,12 +67,18 @@ router.get('/:id', async (req, res) => {
       .select('image_url')
       .where({ item_id: id });
 
+    const requested = await knex('authentication_requests')
+      .select('id')
+      .where({ item_id: id })
+      .first();
+
     res.json({
       id: auction.id,
       title: auction.title,
       description: auction.description,
       current_bid: auction.current_bid,
       authenticated: auction.authenticated,
+      requested_auth: requested ? true : false,
       seller_id: seller?.seller_id,
       seller_name: seller?.seller_name || "Unknown",
       posting_date: seller?.created_at || "Unknown",
