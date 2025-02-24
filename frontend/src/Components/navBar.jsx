@@ -47,9 +47,15 @@ function Navbar() {
                   How It Works
                 </Link>
                 {isAuthenticated && (
-                  <Link to="/dashboard" className="text-white/90 hover:text-white transition-colors">
-                    Dashboard
-                  </Link>
+                  <>
+                    <Link to="/dashboard" className="text-white/90 hover:text-white transition-colors">
+                      Dashboard
+                    </Link>
+                    
+                    <Link to="/create-auction" className="text-white/90 hover:text-white transition-colors">
+                      Create Auction
+                    </Link>
+                  </>
                 )}
               </nav>
 
