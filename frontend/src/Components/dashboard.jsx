@@ -1,7 +1,10 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useContext } from "react";
 import axios from "axios";
+import { AuthContext } from "../context/authContext";
+import { Navigate } from "react-router-dom";
 
 export default function ManagerDashboard() {
+    const { user } = useContext(AuthContext);
     const [pendingRequests, setPendingRequests] = useState([]);
     const [assignedRequests, setAssignedRequests] = useState([]);
     const [completedRequests, setCompletedRequests] = useState([]);
@@ -9,6 +12,14 @@ export default function ManagerDashboard() {
     const [selectedPendingRequests, setSelectedPendingRequests] = useState({});
     const [selectedAssignedRequests, setSelectedAssignedRequests] = useState({});
     const [loading, setLoading] = useState(true);
+
+    if (user) {
+        if (user.role != (3 || 2)) {
+            return <Navigate to="/" replace />;
+        }
+    } else {
+        return <Navigate to="/login" replace />;
+    }
 
     useEffect(() => {
         fetchPendingRequests();
