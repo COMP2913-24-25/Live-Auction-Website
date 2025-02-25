@@ -8,7 +8,8 @@ import Dashboard from "./components/dashboard";
 import Navbar from "./components/navBar";
 import ProtectedRoute from "./components/protectedRoute";
 import AuctionDetails from './pages/AuctionDetails';
-import AuctionForm from './components/auction/AuctionForm'
+import AuctionForm from './components/auction/AuctionForm';
+import Search from './components/search';
 
 const App = () => (
   <AuthProvider>
@@ -37,6 +38,7 @@ const App = () => (
           </ProtectedRoute>
         }
       />
+      <Route path="/search" element={<Search />} />
     </Routes>
   </AuthProvider>
 );
