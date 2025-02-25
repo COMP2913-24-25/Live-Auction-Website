@@ -1,7 +1,7 @@
 import { Navigate, BrowserRouter as Router, Route, Routes } from 'react-router-dom';
 import { AuthProvider } from "./context/AuthContext";
 import AuctionList from './components/AuctionList';
-import Browse from "./components/Browse";
+import Browse from "./pages/Browse";
 import Login from "./components/Login";
 import Register from "./components/Register";
 import Dashboard from "./components/Dashboard";  
