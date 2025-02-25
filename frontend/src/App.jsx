@@ -1,18 +1,18 @@
 import { Navigate, BrowserRouter as Router, Route, Routes } from 'react-router-dom';
-import { AuthProvider } from "./context/authContext";
+import { AuthProvider } from "./context/AuthContext";
 import AuctionList from './components/AuctionList';
 import Browse from "./components/Browse";
-import Login from "./components/login";
-import Register from "./components/register";
-import Dashboard from "./components/dashboard";  
-import Navbar from "./components/navBar";
-import ProtectedRoute from "./components/protectedRoute";
+import Login from "./components/Login";
+import Register from "./components/Register";
+import Dashboard from "./components/Dashboard";  
+import NavBar from "./components/NavBar";
+import ProtectedRoute from "./components/ProtectedRoute";
 import AuctionDetails from './pages/AuctionDetails';
-import AuctionForm from './components/auction/AuctionForm'
+import AuctionForm from './components/auction/AuctionForm';
 
 const App = () => (
   <AuthProvider>
-    <Navbar />
+    <NavBar />
     <Routes>
       <Route path="/" element={<Navigate to="/browse" replace />} />
       <Route path="/browse" element={<Browse />} />

@@ -1,6 +1,6 @@
-import Hero from "./hero";
-import Categories from "./categories";
-import TrustIndicators from "./trust_Indicators";
+import Hero from "./Hero";
+import Categories from "./Categories";
+import TrustIndicators from "./TrustIndicators";
 import AuctionList from "./AuctionList";
 
 function Browse() {
