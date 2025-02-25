@@ -1,6 +1,6 @@
 import { useState, useEffect, useContext } from "react";
 import axios from "axios";
-import { AuthContext } from "../context/authContext";
+import { AuthContext } from "../context/AuthContext";
 import { Navigate } from "react-router-dom";
 
 export default function ManagerDashboard() {
@@ -14,7 +14,7 @@ export default function ManagerDashboard() {
     const [loading, setLoading] = useState(true);
 
     if (user) {
-        if (user.role != (3 || 2)) {
+        if (user.role == 1) {
             return <Navigate to="/" replace />;
         }
     } else {
