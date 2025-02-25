@@ -8,7 +8,7 @@ import Dashboard from "./components/Dashboard";
 import NavBar from "./components/NavBar";
 import ProtectedRoute from "./components/ProtectedRoute";
 import AuctionDetails from './pages/AuctionDetails';
-import AuctionForm from './components/auction/AuctionForm';
+import AuctionForm from './pages/AuctionForm';
 
 const App = () => (
   <AuthProvider>
