@@ -1,19 +1,24 @@
 import { useContext } from 'react';
-import { Navigate } from 'react-router-dom';
+import { Navigate, Outlet } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
 import PropTypes from 'prop-types';
 
-const ProtectedRoute = ({ children }) => {
+const ProtectedRoute = ({ children, allowedRoles }) => {
     const { user, loading } = useContext(AuthContext);
 
     if (loading) {
         return <div>Loading...</div>; // Show loading indicator instead of redirecting
     }
 
-    if (!user) {
+    // If allowedRoles are provided, check if user has access
+    if (user) {
+        if (allowedRoles && !allowedRoles.includes(user.role)) {
+            return <Navigate to={user.role === 1 ? "/browse" : "/dashboard"} replace />;
+        }
+    } else {
         return <Navigate to="/login" replace />;
     }
-
+    
     return children;
 };
 

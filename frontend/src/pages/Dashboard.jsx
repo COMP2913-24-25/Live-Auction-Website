@@ -4,7 +4,6 @@ import { AuthContext } from "../context/AuthContext";
 import { Navigate } from "react-router-dom";
 
 export default function ManagerDashboard() {
-    const { user } = useContext(AuthContext);
     const [pendingRequests, setPendingRequests] = useState([]);
     const [assignedRequests, setAssignedRequests] = useState([]);
     const [completedRequests, setCompletedRequests] = useState([]);
@@ -12,14 +11,6 @@ export default function ManagerDashboard() {
     const [selectedPendingRequests, setSelectedPendingRequests] = useState({});
     const [selectedAssignedRequests, setSelectedAssignedRequests] = useState({});
     const [loading, setLoading] = useState(true);
-
-    if (user) {
-        if (user.role == 1) {
-            return <Navigate to="/browse" replace />;
-        }
-    } else {
-        return <Navigate to="/login" replace />;
-    }
 
     useEffect(() => {
         fetchPendingRequests();

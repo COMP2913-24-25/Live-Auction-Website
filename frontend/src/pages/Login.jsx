@@ -1,4 +1,4 @@
-import { useState, useContext } from 'react';
+import { useState, useContext, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
 import axios from 'axios';
@@ -21,9 +21,15 @@ const Login = () => {
     const navigate = useNavigate();
 
     // Check if user is already logged in
-    if (user) {
-        navigate('/browse');
-    }
+    useEffect(() => {
+        if (user) {
+            if (user.role === 1) {
+                navigate('/browse');
+            } else {
+                navigate('/dashboard');
+            }
+        }
+    }, [user, navigate]);
 
     const [form, setForm] = useState({ email: '', password: '' });
     const [error, setError] = useState('');
