@@ -15,7 +15,7 @@ export default function ManagerDashboard() {
 
     if (user) {
         if (user.role == 1) {
-            return <Navigate to="/" replace />;
+            return <Navigate to="/browse" replace />;
         }
     } else {
         return <Navigate to="/login" replace />;

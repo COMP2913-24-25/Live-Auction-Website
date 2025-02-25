@@ -6,7 +6,7 @@ import axios from 'axios';
 const loginUser = async (credentials) => {
     try {
         const { data } = await axios.post(
-            'http://localhost:5000/api/auth/login', 
+            '/api/auth/login', 
             credentials, 
             { withCredentials: true } // Ensures cookies (if any) are included
         );
@@ -35,7 +35,7 @@ const Login = () => {
         try {
             const data = await loginUser(form);
             if (data.token) {
-                login({ id: data.id, token: data.token, username: data.username });
+                login({ id: data.id, token: data.token, username: data.username, role: data.role });
                 if (data.role == 1) {
                     navigate('/browse');
                 } else {
