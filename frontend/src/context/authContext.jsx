@@ -1,4 +1,5 @@
 import { createContext, useContext, useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import PropTypes from 'prop-types';
 
 const AuthContext = createContext();
@@ -7,6 +8,7 @@ export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [loading, setLoading] = useState(true); // Add loading state
+  const navigate = useNavigate();
 
   // Load user from localStorage
   useEffect(() => {
@@ -28,6 +30,10 @@ export function AuthProvider({ children }) {
     setUser(null);
     setIsAuthenticated(false);
     localStorage.removeItem('user'); // Remove user session
+    
+    setTimeout(() => {
+      navigate('/browse'); // Redirect after state updates
+    }, 0)
   };
 
   return (
