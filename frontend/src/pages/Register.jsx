@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useState, useContext } from 'react';
+import { AuthContext } from '../context/AuthContext';
 import { useNavigate, Link } from 'react-router-dom';
 import axios from 'axios';
 
@@ -16,9 +17,16 @@ const registerUser = async (userData) => {
 };
 
 const Register = () => {
+    const { user } = useContext(AuthContext);
+    const navigate = useNavigate();
+
+    // Check if user is already logged in
+    if (user) {
+        navigate('/browse');
+    }
+
     const [form, setForm] = useState({ username: '', email: '', password: '' });
     const [error, setError] = useState('');
-    const navigate = useNavigate();
 
     const handleChange = (e) => {
         const { name, value } = e.target;

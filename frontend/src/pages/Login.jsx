@@ -17,10 +17,16 @@ const loginUser = async (credentials) => {
 };
 
 const Login = () => {
+    const { user, login } = useContext(AuthContext);
+    const navigate = useNavigate();
+
+    // Check if user is already logged in
+    if (user) {
+        navigate('/browse');
+    }
+
     const [form, setForm] = useState({ email: '', password: '' });
     const [error, setError] = useState('');
-    const { login } = useContext(AuthContext);
-    const navigate = useNavigate();
 
     const handleChange = (e) => {
         const { name, value } = e.target;
