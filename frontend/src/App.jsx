@@ -1,7 +1,7 @@
-import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
+import { Navigate, BrowserRouter as Router, Route, Routes } from 'react-router-dom';
 import { AuthProvider } from "./context/authContext";
 import AuctionList from './components/AuctionList';
-import Home from "./components/home";
+import Browse from "./components/Browse";
 import Login from "./components/login";
 import Register from "./components/register";
 import Dashboard from "./components/dashboard";  
@@ -14,7 +14,8 @@ const App = () => (
   <AuthProvider>
     <Navbar />
     <Routes>
-      <Route path="/" element={<Home />} />
+      <Route path="/" element={<Navigate to="/browse" replace />} />
+      <Route path="/browse" element={<Browse />} />
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
       <Route 
