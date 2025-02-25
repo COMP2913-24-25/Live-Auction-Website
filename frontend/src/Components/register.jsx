@@ -1,6 +1,19 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { registerUser } from '../api/auth';
+import axios from 'axios';
+
+const registerUser = async (userData) => {
+    try {
+        const { data } = await axios.post(
+            `api/auth/register`, 
+            userData, 
+            { withCredentials: true } // Ensures cookies are included
+        );
+        return data;
+    } catch (error) {
+        throw new Error(error.response?.data?.message || 'Registration failed');
+    }
+};
 
 const Register = () => {
     const [form, setForm] = useState({ username: '', email: '', password: '' });

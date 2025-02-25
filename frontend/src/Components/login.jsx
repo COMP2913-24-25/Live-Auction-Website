@@ -1,7 +1,20 @@
 import { useState, useContext } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { loginUser } from '../api/auth';
 import { AuthContext } from '../context/AuthContext';
+import axios from 'axios';
+
+const loginUser = async (credentials) => {
+    try {
+        const { data } = await axios.post(
+            'http://localhost:5000/api/auth/login', 
+            credentials, 
+            { withCredentials: true } // Ensures cookies (if any) are included
+        );
+        return data;
+    } catch (error) {
+        throw new Error(error.response?.data?.message || 'Login failed');
+    }
+};
 
 const Login = () => {
     const [form, setForm] = useState({ email: '', password: '' });
@@ -23,7 +36,11 @@ const Login = () => {
             const data = await loginUser(form);
             if (data.token) {
                 login({ id: data.id, token: data.token, username: data.username });
-                navigate('/dashboard');
+                if (data.role == 1) {
+                    navigate('/browse');
+                } else {
+                    navigate('/dashboard');
+                }
             }
         } catch (err) {
             setError(err.message);
