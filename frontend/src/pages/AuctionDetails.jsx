@@ -117,7 +117,7 @@ const AuctionDetails = () => {
             showDots={true}
             infinite={true}
             autoPlay={false}
-            className="w-full max-w-sm"
+            className="w-full bg-black"
           >
             {auction.images.length > 0 ? (
               auction.images.map((image, index) => (
@@ -132,7 +132,7 @@ const AuctionDetails = () => {
               <p>No images available</p>
             )}
           </Carousel>
-          <div className="absolute bottom-2 right-2 bg-gray-800 text-white text-sm px-2 py-1 rounded">
+          <div className="absolute bottom-4 right-4 bg-gray-800 text-white text-sm px-2 py-1 rounded border border-gray-100">
             {remainingTime}
           </div>
         </div>
