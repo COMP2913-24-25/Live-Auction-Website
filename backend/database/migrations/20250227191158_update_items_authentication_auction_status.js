@@ -5,17 +5,18 @@ exports.up = async function (knex) {
     await knex.schema.alterTable('items', (table) => {
         table.dropColumn('authenticated'); // Remove old boolean field
         table
-            .enu('authentication_status', ['Not Requested', 'Pending', 'Approved', 'Rejected'])
+            .enum('authentication_status', ['Not Requested', 'Pending', 'Approved', 'Rejected'])
             .defaultTo('Not Requested');
         table
-            .enu('auction_status', ['Not Listed', 'Active', 'Ended - Sold', 'Ended - Unsold'])
+            .enum('auction_status', ['Not Listed', 'Active', 'Ended - Sold', 'Ended - Unsold'])
             .defaultTo('Not Listed');
         table.decimal('min_price').notNullable().defaultTo(1).alter(); // Set a safe default
-        table.timestamp('end_time').notNullable().defaultTo(knex.raw("DATETIME('now', '+1 day')")).alter(); // Set default to 1 day later
+        table.timestamp('end_time').notNullable().defaultTo("2025-02-20 12:00:00").alter(); // Set default to 1 day later
     });
 
     await knex.schema.alterTable('authentication_requests', (table) => {
         table.boolean('second_opinion_requested').defaultTo(false);
+        table.integer('new_expert_id').references('id').inTable('users').onDelete('SET NULL');
         table.text('comments').nullable();
         table.timestamp('decision_timestamp').nullable();
     });
