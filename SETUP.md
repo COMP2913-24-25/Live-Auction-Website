@@ -18,4 +18,5 @@
     cd backend
     npm test
 
-If all tests pass, then all good!
+If all tests pass, then all good! 
+Use node.js to open a server!!
