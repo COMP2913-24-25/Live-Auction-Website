@@ -3,16 +3,16 @@ import axios from 'axios';
 import Carousel from 'react-multi-carousel';
 import 'react-multi-carousel/lib/styles.css';
 import { useNavigate } from 'react-router-dom';
-import authenticated from '../assets/authenticated.png';
+import authenticatedIcon from '../assets/authenticatedIcon.png';
 
-const calculateTimeRemaining = (endTime) => {
+const calculateTimeRemaining = (endTime, auctionStatus) => {
   if (!endTime) return "Auction Ended";
 
   const now = new Date().getTime();
   const end = new Date(endTime).getTime();
   const difference = end - now;
 
-  if (difference <= 0) return "Auction Ended";
+  if (difference <= 0) return auctionStatus;
 
   const days = Math.floor(difference / (1000 * 60 * 60 * 24));
   
@@ -54,7 +54,7 @@ const AuctionList = () => {
     const interval = setInterval(() => {
       setAuctions(prevAuctions => prevAuctions.map(auction => ({
         ...auction,
-        remainingTime: calculateTimeRemaining(auction.end_time)
+        remainingTime: calculateTimeRemaining(auction.end_time, auction.auction_status)
       })));
     }, 1000);
 
@@ -89,10 +89,10 @@ const AuctionList = () => {
             }}
           >
             <div className="relative">
-              {auction.authenticated == true ? (
+              {auction.authentication_status == 'Approved' ? (
                 <img
-                  src={authenticated}
-                  alt="Authenticated Badge"
+                  src={authenticatedIcon}
+                  alt="Authenticated Icon"
                   className="absolute top-2 left-2 w-12 h-12 z-10 opacity-90"
                 />
               ) : null}
@@ -117,7 +117,7 @@ const AuctionList = () => {
                   ))}
                 </Carousel>
               )}
-              <div className="absolute bottom-2 right-2 bg-gray-800 text-white text-sm px-2 py-1 rounded">
+              <div className="absolute bottom-2 right-2 bg-gray-800 text-white text-sm px-2 py-1 rounded border border-gray-100">
                 {auction.remainingTime}
               </div>
             </div>

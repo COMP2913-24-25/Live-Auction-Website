@@ -5,7 +5,7 @@ import Carousel from "react-multi-carousel";
 import "react-multi-carousel/lib/styles.css";
 import { Star } from "lucide-react";
 import { useParams } from "react-router-dom";
-import authenticated from "../assets/authenticated.png";
+import authenticatedIcon from "../assets/authenticatedIcon.png";
 
 const responsive = {
   desktop: { breakpoint: { max: 3000, min: 1024 }, items: 1 },
@@ -13,14 +13,14 @@ const responsive = {
   mobile: { breakpoint: { max: 464, min: 0 }, items: 1 },
 };
 
-const calculateTimeRemaining = (endTime) => {
+const calculateTimeRemaining = (endTime, auctionStatus) => {
   if (!endTime) return "Auction Ended";
 
   const now = new Date().getTime();
   const end = new Date(endTime).getTime();
   const difference = end - now;
 
-  if (difference <= 0) return "Auction Ended";
+  if (difference <= 0) return auctionStatus;
 
   const days = Math.floor(difference / (1000 * 60 * 60 * 24));
   
@@ -64,7 +64,7 @@ const AuctionDetails = () => {
     if (!auction?.end_time) return; // Ensure end_time exists before setting the interval
 
     const updateRemainingTime = () => {
-      setRemainingTime(calculateTimeRemaining(auction.end_time));
+      setRemainingTime(calculateTimeRemaining(auction.end_time, auction.auction_status));
     };
 
     updateRemainingTime(); // Set initial value immediately
@@ -100,17 +100,13 @@ const AuctionDetails = () => {
           className="relative flex justify-center items-center w-full md:w-1/2 border border-black p-2"
           style={{ minHeight: maxHeight }}
         >
-          {auction.authenticated ? (
+          {auction.authentication_status == 'Approved' ? (
             <img
-              src={authenticated}
-              alt="Authenticated Badge"
+              src={authenticatedIcon}
+              alt="Authenticated Icon"
               className="absolute top-2 left-2 w-12 h-12 z-10 opacity-90"
             />
-          ) : (user && user.id == auction.seller_id ? (
-            <button className="w-fit rounded-md bg-teal text-white absolute top-2 left-2 z-10 p-1 hover:bg-gold cursor-pointer">
-                Request Authentication
-            </button>
-          ) : null )}
+          ) : null}
           
           <Carousel
             responsive={responsive}
