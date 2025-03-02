@@ -30,7 +30,8 @@ exports.up = async function (knex) {
             i.description,
             i.min_price,
             i.end_time,
-            i.authenticated,
+            i.authentication_status,
+            i.auction_status,
             COALESCE(MAX(b.bid_amount), i.min_price) AS current_bid
         FROM
             items i
