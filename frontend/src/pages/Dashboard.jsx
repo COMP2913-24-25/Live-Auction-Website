@@ -1,7 +1,5 @@
-import { useState, useEffect, useContext } from "react";
+import { useState, useEffect } from "react";
 import axios from "axios";
-import { AuthContext } from "../context/AuthContext";
-import { Navigate } from "react-router-dom";
 
 export default function ManagerDashboard() {
     const [pendingRequests, setPendingRequests] = useState([]);
