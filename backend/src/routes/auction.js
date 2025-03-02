@@ -1,6 +1,7 @@
 const express = require('express');
 const knex = require('../db'); // Assuming you have a Knex setup in db/knex.js
 const router = express.Router();
+const cron = require('node-cron');
 
 // Fetch all active auctions
 router.get('/active', async (req, res) => {
@@ -12,7 +13,8 @@ router.get('/active', async (req, res) => {
         'icb.description',
         'icb.min_price',
         'icb.end_time',
-        'icb.authenticated',
+        'icb.authentication_status',
+        'icb.auction_status',
         'icb.current_bid',
         knex.raw('GROUP_CONCAT(ii.image_url) as image_urls'),
         'u.username as seller_name'
@@ -21,6 +23,7 @@ router.get('/active', async (req, res) => {
       .leftJoin('users as u', 'i.user_id', 'u.id')
       .leftJoin('item_images as ii', 'icb.item_id', 'ii.item_id')
       .where('icb.end_time', '>', knex.raw("datetime('now')"))
+      .where('icb.auction_status', '=', 'Active')
       .groupBy('icb.item_id')
       .orderBy('i.created_at', 'desc');
 
@@ -46,7 +49,8 @@ router.get('/:id', async (req, res) => {
         'title',
         'description',
         'current_bid',
-        'authenticated',
+        'authentication_status',
+        'auction_status',
         'end_time',  // Ensure this is a valid timestamp
         'min_price'
       )
@@ -67,18 +71,13 @@ router.get('/:id', async (req, res) => {
       .select('image_url')
       .where({ item_id: id });
 
-    const requested = await knex('authentication_requests')
-      .select('id')
-      .where({ item_id: id })
-      .first();
-
     res.json({
       id: auction.id,
       title: auction.title,
       description: auction.description,
       current_bid: auction.current_bid,
-      authenticated: auction.authenticated,
-      requested_auth: requested ? true : false,
+      authentication_status: auction.authentication_status,
+      auction_status: auction.auction_status,
       seller_id: seller?.seller_id,
       seller_name: seller?.seller_name || "Unknown",
       posting_date: seller?.created_at || "Unknown",
@@ -88,6 +87,39 @@ router.get('/:id', async (req, res) => {
   } catch (error) {
     console.error('Error fetching auction item:', error);
     res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Runs every minute to check for expired auctions
+cron.schedule('* * * * *', async () => {
+  try {
+    console.log('Checking and updating expired auctions...');
+
+    await knex.transaction(async (trx) => {
+      // Update auctions that have ended but have bids
+      await trx('items')
+        .where('end_time', '<=', knex.raw("datetime('now')"))
+        .whereNotExists(function () {
+          this.select('*')
+            .from('bids')
+            .whereRaw('bids.item_id = items.id');
+        })
+        .update({ auction_status: 'Ended - Unsold' });
+
+      // Update auctions that have ended and have at least one bid
+      await trx('items')
+        .where('end_time', '<=', knex.raw("datetime('now')"))
+        .whereExists(function () {
+          this.select('*')
+            .from('bids')
+            .whereRaw('bids.item_id = items.id');
+        })
+        .update({ auction_status: 'Ended - Sold' });
+    });
+
+    console.log('Expired auctions updated successfully.');
+  } catch (error) {
+    console.error('Error updating auction statuses:', error);
   }
 });
 
