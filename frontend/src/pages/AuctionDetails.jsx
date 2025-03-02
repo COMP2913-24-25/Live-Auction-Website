@@ -129,7 +129,8 @@ const AuctionDetails = () => {
             )}
           </Carousel>
           <div className="absolute bottom-4 right-4 bg-gray-800 text-white text-sm px-2 py-1 rounded border border-gray-100">
-            {remainingTime}
+            {/* If timer runs out, show Ended instead of Active. On reload, will display real auction_status */}
+            {remainingTime == 'Active' ? "Ended" : remainingTime}
           </div>
         </div>
 
