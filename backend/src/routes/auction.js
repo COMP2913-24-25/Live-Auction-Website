@@ -99,6 +99,7 @@ cron.schedule('* * * * *', async () => {
       // Update auctions that have ended but have bids
       await trx('items')
         .where('end_time', '<=', knex.raw("datetime('now')"))
+        .where('auction_status', '=', 'Active')
         .whereNotExists(function () {
           this.select('*')
             .from('bids')
@@ -109,6 +110,7 @@ cron.schedule('* * * * *', async () => {
       // Update auctions that have ended and have at least one bid
       await trx('items')
         .where('end_time', '<=', knex.raw("datetime('now')"))
+        .where('auction_status', '=', 'Active')
         .whereExists(function () {
           this.select('*')
             .from('bids')

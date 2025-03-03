@@ -1,15 +1,13 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 
-function AuctionForm() {
+function ItemAuthenticationForm() {
   const { user } = useAuth();
 
   const [formData, setFormData] = useState({
     user_id: user?.id, // Attach current user ID to the form data
     title: '',
     description: '',
-    min_price: '',
-    duration: 1,
     category: ''
   });
 
@@ -108,7 +106,7 @@ function AuctionForm() {
       });
       imageFiles.forEach(file => submitData.append('images', file));
 
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/create-listing`, {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/authenticate-item`, {
         method: 'POST',
         body: submitData
       });
@@ -116,7 +114,7 @@ function AuctionForm() {
       const data = await response.json();
       if (response.ok) {
         alert('Auction item created successfully!');
-        setFormData({ title: '', description: '', min_price: '', duration: '', category: '' });
+        setFormData({ title: '', description: '', category: '' });
         setImageFiles([]);
         setImagePreviews([]);
         setFileNames('No files chosen');
@@ -138,7 +136,7 @@ function AuctionForm() {
     <div className='px-4'>
       <div className="max-w-3xl mx-auto bg-off-white rounded-3xl shadow-lg p-12 mt-8 mb-8">
         <h2 className="text-3xl font-bold text-navy text-center mb-12 relative">
-          Create a New Auction
+          Item Authentication
           <div className="absolute bottom-[-8px] left-1/2 transform -translate-x-1/2 w-16 h-1 bg-teal"></div>
         </h2>
 
@@ -217,38 +215,9 @@ function AuctionForm() {
             )}
           </div>
 
-          <div className="grid grid-cols-2 gap-6">
-            <div className="space-y-2">
-              <label className="block text-charcoal font-medium">Minimum Price (£):</label>
-              <input
-                type="number"
-                name="min_price"
-                value={formData.min_price}
-                onChange={handleChange}
-                min="1"
-                required
-                className="w-full px-4 py-3 rounded-lg border border-gray-200 focus:outline-none focus:border-teal focus:ring-1 focus:ring-teal/20 bg-white text-charcoal"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <label className="block text-charcoal font-medium">Duration (1-5 days):</label>
-              <input
-                type="number"
-                name="duration"
-                value={formData.duration}
-                onChange={handleChange}
-                min="1"
-                max="5"
-                required
-                className="w-full px-4 py-3 rounded-lg border border-gray-200 focus:outline-none focus:border-teal focus:ring-1 focus:ring-teal/20 bg-white text-charcoal"
-              />
-            </div>
-          </div>
-
           <div className="text-center mt-8">
             <button type="submit" className="cursor-pointer bg-teal text-white px-8 py-3 rounded-full hover:bg-gold transition-colors duration-300 font-semibold shadow-lg hover:shadow-xl">
-              CREATE
+              REQUEST
             </button>
           </div>
         </form>
@@ -257,4 +226,4 @@ function AuctionForm() {
   );
 }
 
-export default AuctionForm;
+export default ItemAuthenticationForm;
