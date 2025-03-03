@@ -8,6 +8,7 @@ import NavBar from "./components/NavBar";
 import ProtectedRoute from "./context/ProtectedRoute";
 import AuctionDetails from './pages/AuctionDetails';
 import AuctionForm from './pages/AuctionForm';
+import ItemAuthenticationForm from './pages/ItemAuthenticationForm';
 
 const App = () => (
   <AuthProvider>
@@ -23,6 +24,16 @@ const App = () => (
       <Route path="/register" element={<Register />} />
 
       {/* Protected Routes */}
+      <Route
+        path="/dashboard"
+        element={
+          <ProtectedRoute allowedRoles={[2, 3]}>
+            <div className="pt-16 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+              <Dashboard />
+            </div>
+          </ProtectedRoute>
+        }
+      />
       <Route 
         path="/create-auction" 
         element={
@@ -31,13 +42,11 @@ const App = () => (
           </ProtectedRoute>
         }
       />
-      <Route
-        path="/dashboard"
+      <Route 
+        path="/authenticate-item" 
         element={
-          <ProtectedRoute allowedRoles={[2, 3]}>
-            <div className="pt-16 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-              <Dashboard />
-            </div>
+          <ProtectedRoute allowedRoles={[1]}>
+            <ItemAuthenticationForm />
           </ProtectedRoute>
         }
       />
