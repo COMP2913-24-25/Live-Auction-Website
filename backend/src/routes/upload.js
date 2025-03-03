@@ -21,9 +21,9 @@ const storage = new CloudinaryStorage({
     folder: 'auction_images', // Cloudinary folder name
     allowed_formats: ['jpg', 'png', 'jpeg', 'webp'],
     transformation: [
-      { 
+      {
         quality: 'auto',
-        fetch_format: 'auto'  
+        fetch_format: 'auto'
       }
     ],
   },
@@ -33,7 +33,7 @@ const upload = multer({ storage });
 
 router.post('/upload', upload.array('images', 6), async (req, res) => {
   try {
-    const { user_id, title, description, min_price, duration, category } = req.body;
+    const { user_id, title, description, min_price, duration, category, auction_status } = req.body;
     if (!title || !description || !min_price || !duration || !category) {
       return res.status(400).json({ error: 'All fields are required.' });
     }
@@ -48,7 +48,7 @@ router.post('/upload', upload.array('images', 6), async (req, res) => {
     // Ensure duration is valid (1-5 days)
     const durationInt = parseInt(duration);
     if (isNaN(durationInt) || durationInt < 1 || durationInt > 5) {
-        return res.status(400).json({ error: 'Duration must be between 1 and 5 days.' });
+      return res.status(400).json({ error: 'Duration must be between 1 and 5 days.' });
     }
 
     const createdAt = new Date();
@@ -64,7 +64,8 @@ router.post('/upload', upload.array('images', 6), async (req, res) => {
       description,
       min_price,
       category_id: category,
-      end_time: endTime
+      end_time: endTime,
+      auction_status: 'Active'
     }).returning(['id']);
 
     // Insert images into item_images table
