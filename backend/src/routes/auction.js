@@ -91,4 +91,26 @@ router.get('/:id', async (req, res) => {
   }
 });
 
+// 获取拍卖列表
+router.get('/', async (req, res) => {
+  try {
+    const auctions = await knex('item_current_bids')
+      .select('*')
+    res.json(auctions);
+  } catch (error) {
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// 创建拍卖项目
+router.post('/', async (req, res) => {
+  try {
+    const auctionData = req.body;
+    // 创建逻辑
+    res.json({ message: 'Auction item created successfully' });
+  } catch (error) {
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 module.exports = router;

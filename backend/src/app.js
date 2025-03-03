@@ -31,7 +31,7 @@ app.use('/api/manager', managerRoutes);
 
 // Example route
 app.get('/', (req, res) => {
-  res.send('Hello from the backend!');
+  res.json({ message: 'Server is running' });
 });
 
 module.exports = app;
