@@ -148,7 +148,7 @@ export default function ManagerDashboard() {
             {/* Pending Unassigned Authentication Requests */}
             <div className="border border-gray-300 p-4 rounded-lg">
                 <div className="flex flex-col md:flex-row justify-between items-center mb-4">
-                    <h3 className="font-semibold text-xl md:text-2xl text-center md:text-left">Pending Requests (Unassigned)</h3>
+                    <h3 className="font-semibold text-xl md:text-2xl text-center md:text-left">Unassigned Authentication Requests</h3>
                     <button
                         className="bg-blue-600 text-white px-4 py-2 rounded disabled:opacity-50 w-full md:w-auto mt-2 md:mt-0"
                         onClick={bulkAssignExperts}
@@ -204,7 +204,7 @@ export default function ManagerDashboard() {
             {/* Pending Assigned Requests */}
             <div className="border border-gray-300 p-4 rounded-lg">
                 <div className="flex flex-col md:flex-row justify-between items-center mb-4">
-                    <h3 className="font-semibold text-xl md:text-2xl text-center md:text-left">Pending Requests (Assigned)</h3>
+                    <h3 className="font-semibold text-xl md:text-2xl text-center md:text-left">Expert Reallocation Requests</h3>
                     <button
                         className="bg-blue-600 text-white px-4 py-2 rounded disabled:opacity-50"
                         onClick={bulkReassignExperts}
@@ -269,8 +269,10 @@ export default function ManagerDashboard() {
                                 <th className="p-2">Item ID</th>
                                 <th className="p-2">Item Name</th>
                                 <th className="p-2">Category</th>
-                                <th className="p-2">Status</th>
                                 <th className="p-2">Assigned Expert</th>
+                                <th className="p-2">Status</th>
+                                <th className="p-2">Comments</th>
+                                <th className="p-2">Decision Timestamp</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -279,8 +281,10 @@ export default function ManagerDashboard() {
                                     <td className="p-2 text-center">{req.item_id}</td>
                                     <td className="p-2 text-center">{req.item_name}</td>
                                     <td className="p-2 text-center">{req.category}</td>
-                                    <td className="p-2 text-center">{req.status}</td>
                                     <td className="p-2 text-center">{req.assigned_expert_username}</td>
+                                    <td className="p-2 text-center">{req.status}</td>
+                                    <td className="p-2 text-center">{req.comments}</td>
+                                    <td className="p-2 text-center">{req.decision_timestamp}</td>
                                 </tr>
                             ))}
                         </tbody>

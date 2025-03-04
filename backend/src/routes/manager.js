@@ -42,7 +42,8 @@ router.get('/authentication-requests/pending-assigned', async (req, res) => {
             .join('categories', 'items.category_id', 'categories.id')
             .join('users', 'authentication_requests.expert_id', 'users.id')
             .where('authentication_requests.status', 'Pending')
-            .whereNotNull('authentication_requests.expert_id');
+            .where('authentication_requests.second_opinion_requested', 1)
+            .whereNull('authentication_requests.new_expert_id');
 
         res.json(pendingRequests);
     } catch (error) {
@@ -96,8 +97,9 @@ router.get('/authentication-requests/completed', async (req, res) => {
                 'items.title as item_name',
                 'categories.name as category',
                 'authentication_requests.status',
-                'authentication_requests.expert_id',
-                'users.username as assigned_expert_username'
+                'users.username as assigned_expert_username',
+                'authentication_requests.comments',
+                'authentication_requests.decision_timestamp',
             )
             .join('items', 'authentication_requests.item_id', 'items.id')
             .join('categories', 'items.category_id', 'categories.id')
