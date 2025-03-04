@@ -28,9 +28,7 @@ const App = () => (
         path="/dashboard"
         element={
           <ProtectedRoute allowedRoles={[2, 3]}>
-            <div className="pt-16 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
               <Dashboard />
-            </div>
           </ProtectedRoute>
         }
       />
