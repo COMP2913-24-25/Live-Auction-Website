@@ -45,7 +45,11 @@ const AuctionList = () => {
         setLoading(false);
       })
       .catch(error => {
-        setError(error);
+        if (error.response && error.response.status === 404) {
+          setError('No active auctions available.');
+        } else {
+          setError('Something went wrong. Please try again later.');
+        }
         setLoading(false);
       });
   }, []);
@@ -72,11 +76,15 @@ const AuctionList = () => {
   }
 
   if (error) {
-    return <div>Error: {error.message}</div>;
+    return (
+      <div className='flex justify-center items-center'>
+        <div className='text-4xl text-center font-bold'>{error}</div>
+      </div>
+    )
   }
 
   return (
-    <div className="w-full min-h-screen max-w-7xl mx-auto px-12 pb-20">
+    <div className="w-full max-w-7xl mx-auto px-12 pb-20">
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
         {auctions.map(auction => (
           <div 
