@@ -27,28 +27,42 @@ const calculateTimeRemaining = (endTime) => {
   return `${hours}h ${minutes}m ${seconds}s`;
 };
 
-const AuctionList = () => {
+const AuctionList = ({ filters }) => {
   const [auctions, setAuctions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const navigate = useNavigate();
 
   useEffect(() => {
-    axios.get('/api/auctions/active')
-      .then(response => {
+    const fetchAuctions = async () => {
+      try {
+        const params = new URLSearchParams();
+        if (filters.search) params.append('query', filters.search);
+        if (filters.categories.length > 0) params.append('categories', filters.categories.join(','));
+        if (filters.minPrice) params.append('minPrice', filters.minPrice);
+        if (filters.maxPrice) params.append('maxPrice', filters.maxPrice);
+        if (filters.authenticatedOnly) params.append('authenticatedOnly', 'true');
+        if (filters.daysRemaining) params.append('daysRemaining', filters.daysRemaining);
+
+        const url = `/api/search?${params.toString()}`;
+        const response = await axios.get(url);
+        
         const data = Array.isArray(response.data) ? response.data.map(auction => ({
           ...auction,
           imageUrls: auction.image_urls ? auction.image_urls.split(',') : [],
           remainingTime: calculateTimeRemaining(auction.end_time)
         })) : [];
+        
         setAuctions(data);
         setLoading(false);
-      })
-      .catch(error => {
+      } catch (error) {
         setError(error);
         setLoading(false);
-      });
-  }, []);
+      }
+    };
+
+    fetchAuctions();
+  }, [filters]);
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -76,57 +90,59 @@ const AuctionList = () => {
   }
 
   return (
-    <div className="w-full min-h-screen max-w-7xl mx-auto px-12 pb-20">
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-        {auctions.map(auction => (
-          <div 
-            key={auction.id} 
-            className="bg-white shadow-lg overflow-hidden cursor-pointer" 
-            onClick={(e) => {
-              if (e.target.closest('object-cover') && !e.target.closest('.react-multi-carousel-arrow') && !e.target.closest('.react-multi-carousel-dot')) {
-                navigate(`/auctions/${auction.id}`);
-              }
-            }}
-          >
-            <div className="relative">
-              {auction.authenticated == true ? (
-                <img
-                  src={authenticated}
-                  alt="Authenticated Badge"
-                  className="absolute top-2 left-2 w-12 h-12 z-10 opacity-90"
-                />
-              ) : null}
-              {auction.imageUrls.length > 0 && (
-                <Carousel
-                  responsive={responsive}
-                  infinite={true}
-                  autoPlay={false}
-                  showDots={true}
-                  itemClass="w-full"
-                  containerClass="relative"
-                >
-                  {auction.imageUrls.map((url, index) => (
-                    <div key={index} className="flex justify-center">
-                      <img
-                        src={url}
-                        alt={`${auction.title} image ${index + 1}`}
-                        className="object-cover h-96 w-full cursor-pointer"
-                        onClick={() => navigate(`/auctions/${auction.id}`)}
-                      />
-                    </div>
-                  ))}
-                </Carousel>
-              )}
-              <div className="absolute bottom-2 right-2 bg-gray-800 text-white text-sm px-2 py-1 rounded">
-                {auction.remainingTime}
+    <div className="bg-white rounded-lg shadow-sm">
+      <div className="w-full max-w-7xl mx-auto px-6 py-6"> {/* Adjusted padding */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+          {auctions.map(auction => (
+            <div 
+              key={auction.id} 
+              className="bg-white shadow-lg overflow-hidden cursor-pointer" 
+              onClick={(e) => {
+                if (e.target.closest('object-cover') && !e.target.closest('.react-multi-carousel-arrow') && !e.target.closest('.react-multi-carousel-dot')) {
+                  navigate(`/auctions/${auction.id}`);
+                }
+              }}
+            >
+              <div className="relative">
+                {auction.authenticated == true ? (
+                  <img
+                    src={authenticated}
+                    alt="Authenticated Badge"
+                    className="absolute top-2 left-2 w-12 h-12 z-10 opacity-90"
+                  />
+                ) : null}
+                {auction.imageUrls.length > 0 && (
+                  <Carousel
+                    responsive={responsive}
+                    infinite={true}
+                    autoPlay={false}
+                    showDots={true}
+                    itemClass="w-full"
+                    containerClass="relative"
+                  >
+                    {auction.imageUrls.map((url, index) => (
+                      <div key={index} className="flex justify-center">
+                        <img
+                          src={url}
+                          alt={`${auction.title} image ${index + 1}`}
+                          className="object-cover h-96 w-full cursor-pointer"
+                          onClick={() => navigate(`/auctions/${auction.id}`)}
+                        />
+                      </div>
+                    ))}
+                  </Carousel>
+                )}
+                <div className="absolute bottom-2 right-2 bg-gray-800 text-white text-sm px-2 py-1 rounded">
+                  {auction.remainingTime}
+                </div>
+              </div>
+              <div className="p-4 text-center" onClick={() => navigate(`/auctions/${auction.id}`)}>
+                <h2 className="text-2xl font-semibold text-navy">{auction.title}</h2>
+                <p className="text-sm text-gray-600">Current bid: £{auction.current_bid}</p>
               </div>
             </div>
-            <div className="p-4 text-center" onClick={() => navigate(`/auctions/${auction.id}`)}>
-              <h2 className="text-2xl font-semibold text-navy">{auction.title}</h2>
-              <p className="text-sm text-gray-600">Current bid: £{auction.current_bid}</p>
-            </div>
-          </div>
-        ))}
+          ))}
+        </div>
       </div>
     </div>
   );
