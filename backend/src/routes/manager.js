@@ -90,21 +90,24 @@ router.get('/experts/:category_id/:current_expert_id', async (req, res) => {
 // Fetch approved and rejected items
 router.get('/authentication-requests/completed', async (req, res) => {
     try {
-        const completedRequests = await knex('authentication_requests')
+        const completedRequests = await knex('authentication_requests as ar')
             .select(
-                'authentication_requests.id',
+                'ar.id',
                 'items.id as item_id',
                 'items.title as item_name',
-                'categories.name as category',
-                'authentication_requests.status',
-                'users.username as assigned_expert_username',
-                'authentication_requests.comments',
-                'authentication_requests.decision_timestamp',
+                knex.raw(`
+                    COALESCE(expert_new.username, expert_old.username) AS assigned_expert_username
+                `),
+                'ar.second_opinion_requested',
+                'ar.status',
+                'ar.comments',
+                'ar.decision_timestamp',
             )
-            .join('items', 'authentication_requests.item_id', 'items.id')
+            .join('items', 'ar.item_id', 'items.id')
             .join('categories', 'items.category_id', 'categories.id')
-            .leftJoin('users', 'authentication_requests.expert_id', 'users.id')
-            .whereIn('authentication_requests.status', ['Approved', 'Rejected']);
+            .leftJoin('users as expert_old', 'ar.expert_id', 'expert_old.id')
+            .leftJoin('users as expert_new', 'ar.new_expert_id', 'expert_new.id')
+            .whereIn('ar.status', ['Approved', 'Rejected']);
 
         res.json(completedRequests);
     } catch (error) {
