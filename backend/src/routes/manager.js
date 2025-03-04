@@ -136,7 +136,7 @@ router.put('/authentication-requests/reassign', async (req, res) => {
     try {
         await knex('authentication_requests')
             .where({ item_id: request_id })
-            .update({ expert_id: new_expert_id });
+            .update({ new_expert_id: new_expert_id });
 
         res.json({ message: 'Expert reassigned successfully' });
     } catch (error) {
