@@ -15,6 +15,7 @@ function ItemAuthenticationForm() {
   const [imagePreviews, setImagePreviews] = useState([]);
   const [fileNames, setFileNames] = useState('No files chosen');
   const [categories, setCategories] = useState([]);
+  const [showModal, setShowModal] = useState(false); // Modal visibiility state
 
   // Fetch categories from backend
   useEffect(() => {
@@ -99,6 +100,12 @@ function ItemAuthenticationForm() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     console.log(`User ID: ${user.id}`); // Debugging log
+    setShowModal(true); // Show modal on form submission
+  };
+
+  const confirmSubmission = async () => {
+    setShowModal(false); // Hide modal before submitting
+
     try {
       const submitData = new FormData();
       Object.keys(formData).forEach(key => {
@@ -222,6 +229,30 @@ function ItemAuthenticationForm() {
           </div>
         </form>
       </div>
+
+      {/* Confirmation Modal */}
+      {showModal && (
+        <div className="fixed inset-0 flex items-center justify-center bg-gray-400 bg-opacity-25">
+          <div className="bg-white p-6 rounded-lg shadow-lg text-center max-w-md">
+            <h3 className="text-xl font-semibold text-charcoal">Fee Confirmation</h3>
+            <p className="mt-2 text-charcoal">If your request is approved, a fee of 5% of the winning bid will be charged.</p>
+            <div className="mt-4 flex justify-center gap-4">
+              <button
+                className="bg-gray-300 text-charcoal px-4 py-2 rounded-lg hover:bg-gray-400 transition"
+                onClick={() => setShowModal(false)}
+              >
+                Cancel
+              </button>
+              <button
+                className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700"
+                onClick={confirmSubmission}
+              >
+                Confirm
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
