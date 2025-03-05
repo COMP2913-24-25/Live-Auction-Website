@@ -1,11 +1,12 @@
-import { useEffect, useState, useRef, useContext } from "react";
-import { AuthContext } from "../context/AuthContext";
+import { useEffect, useState, useRef } from "react";
 import axios from "axios";
 import Carousel from "react-multi-carousel";
 import "react-multi-carousel/lib/styles.css";
 import { Star } from "lucide-react";
 import { useParams } from "react-router-dom";
 import authenticated from "../assets/authenticated.png";
+import AuthRequestForm from '../Components/authentication/AuthRequestForm';
+import PlaceBidModal from '../Components/PlaceBidModal';
 
 const responsive = {
   desktop: { breakpoint: { max: 3000, min: 1024 }, items: 1 },
@@ -37,13 +38,16 @@ const calculateTimeRemaining = (endTime) => {
 
 
 const AuctionDetails = () => {
-  const { user } = useContext(AuthContext);
   const { id } = useParams();
   const [auction, setAuction] = useState(null);
   const [bidAmount, setBidAmount] = useState(0);
   const [isFavorite, setIsFavorite] = useState(false);
   const [maxHeight, setMaxHeight] = useState("auto");
   const [remainingTime, setRemainingTime] = useState("");
+  const [showAuthSuccess, setShowAuthSuccess] = useState(false);
+  const [authError, setAuthError] = useState("");
+  const [showAuthForm, setShowAuthForm] = useState(false);
+  const [showBidModal, setShowBidModal] = useState(false);
 
   const section1Ref = useRef(null);
   const section2Ref = useRef(null);
@@ -89,6 +93,10 @@ const AuctionDetails = () => {
     return () => window.removeEventListener("resize", adjustHeight);
   }, [auction]);
 
+  const handleAuthRequest = () => {
+    setShowAuthForm(true);
+  };
+
   if (!auction) return <p>Loading auction details...</p>;
 
   return (
@@ -100,24 +108,19 @@ const AuctionDetails = () => {
           className="relative flex justify-center items-center w-full md:w-1/2 border border-black p-2"
           style={{ minHeight: maxHeight }}
         >
-          {auction.authenticated ? (
+          {auction.authenticated == true ? (
             <img
               src={authenticated}
               alt="Authenticated Badge"
               className="absolute top-2 left-2 w-12 h-12 z-10 opacity-90"
             />
-          ) : (user && user.id == auction.seller_id ? (
-            <button className="w-fit rounded-md bg-teal text-white absolute top-2 left-2 z-10 p-1 hover:bg-gold cursor-pointer">
-                Request Authentication
-            </button>
-          ) : null )}
-          
+          ) : null }
           <Carousel
             responsive={responsive}
             showDots={true}
             infinite={true}
             autoPlay={false}
-            className="w-full bg-black"
+            className="w-full max-w-sm"
           >
             {auction.images.length > 0 ? (
               auction.images.map((image, index) => (
@@ -132,7 +135,7 @@ const AuctionDetails = () => {
               <p>No images available</p>
             )}
           </Carousel>
-          <div className="absolute bottom-4 right-4 bg-gray-800 text-white text-sm px-2 py-1 rounded border border-gray-100">
+          <div className="absolute bottom-2 right-2 bg-gray-800 text-white text-sm px-2 py-1 rounded">
             {remainingTime}
           </div>
         </div>
@@ -172,15 +175,51 @@ const AuctionDetails = () => {
               placeholder={`£ ${auction.current_bid + 5} or up`}
               onChange={(e) => setBidAmount(e.target.value)}
             />
-            <button className="w-full bg-gold text-white py-2 mt-2 hover:bg-yellow-600 cursor-pointer">
+            <button 
+              className="w-full bg-gold text-white py-2 mt-2 hover:bg-yellow-600 cursor-pointer"
+              onClick={() => setShowBidModal(true)}
+            >
               Place Bid
             </button>
-            <p className="text-center text-gray-600 mt-2">
-              Selected by <span className="underline">{auction.seller_name}</span>
-            </p>
+            
+            {!auction.authenticated && (
+              <div className="mt-4 border-t pt-4">
+                <button 
+                  onClick={handleAuthRequest}
+                  className="w-full bg-blue-500 text-white py-2 hover:bg-blue-600 rounded"
+                >
+                  Submit authentication request
+                </button>
+              </div>
+            )}
           </div>
+
+          <p className="text-center text-gray-600 mt-2">
+            Selected by <span className="underline">{auction.seller_name}</span>
+          </p>
         </div>
       </div>
+
+      {showAuthForm && (
+        <AuthRequestForm
+          itemId={auction.id}
+          onClose={() => setShowAuthForm(false)}
+          onSuccess={() => {
+            setShowAuthSuccess(true);
+            setShowAuthForm(false);
+          }}
+        />
+      )}
+
+      {auction && (
+        <PlaceBidModal
+          isOpen={showBidModal}
+          onClose={() => setShowBidModal(false)}
+          currentBid={auction.current_bid}
+          itemId={auction.id}
+          itemTitle={auction.title}
+        />
+      )}
     </div>
   );
 };
