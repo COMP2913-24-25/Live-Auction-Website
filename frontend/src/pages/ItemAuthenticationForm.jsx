@@ -232,7 +232,7 @@ function ItemAuthenticationForm() {
 
       {/* Confirmation Modal */}
       {showModal && (
-        <div className="fixed inset-0 flex items-center justify-center bg-gray-400 bg-opacity-25">
+        <div className="fixed inset-0 flex items-center justify-center bg-black/50">
           <div className="bg-white p-6 rounded-lg shadow-lg text-center max-w-md">
             <h3 className="text-xl font-semibold text-charcoal">Fee Confirmation</h3>
             <p className="mt-2 text-charcoal">If your request is approved, a fee of 5% of the winning bid will be charged.</p>
@@ -244,7 +244,7 @@ function ItemAuthenticationForm() {
                 Cancel
               </button>
               <button
-                className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700"
+                className="bg-green-600 text-white font-semibold px-4 py-2 rounded-lg hover:bg-green-800"
                 onClick={confirmSubmission}
               >
                 Confirm
