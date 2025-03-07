@@ -8,6 +8,7 @@ import NavBar from "./components/NavBar";
 import ProtectedRoute from "./context/ProtectedRoute";
 import AuctionDetails from './pages/AuctionDetails';
 import AuctionForm from './pages/AuctionForm';
+import NotificationBell from './pages/notificationBell';
 
 const App = () => (
   <AuthProvider>
@@ -23,6 +24,14 @@ const App = () => (
       <Route path="/register" element={<Register />} />
 
       {/* Protected Routes */}
+      <Route 
+        path="/notifications" 
+        element={
+          <ProtectedRoute allowedRoles={[2]}>
+            <NotificationBell />
+          </ProtectedRoute>
+        }
+      />
       <Route 
         path="/create-auction" 
         element={

@@ -1,13 +1,18 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useContext } from "react";
 import { Link } from "react-router-dom";
 import { Menu, Bell, User, UserPlus, X, Search } from "lucide-react";
-import { useAuth } from "../context/AuthContext";
+import { useAuth, AuthContext } from "../context/AuthContext";
+import { Route, Routes } from "react-router-dom";
+import NotificationBell from "../pages/notificationBell";
 
 function NavBar() {
     const { isAuthenticated, logout } = useAuth();
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
     const [isNotificationOpen, setIsNotificationOpen] = useState(false);
     const notificationRef = useRef(null);
+    const { user } = useContext(AuthContext);
+    const [hasNewNotification, setHasNewNotification] = useState(false);
+    const [previousAuctionCount, setPreviousAuctionCount] = useState(0);
   
     const notifications = [
       { id: 1, message: "New bid on your item", time: "5 mins ago" },
@@ -25,6 +30,29 @@ function NavBar() {
         document.removeEventListener("mousedown", handleClickOutside);
       };
     }, []);
+
+    useEffect(() => {
+      if (user?.role === 2) { // Only fetch notifications for experts
+          const fetchNotifications = async () => {
+              try {
+                const response = await fetch(`${import.meta.env.VITE_API_URL}/api/auction/active`);
+                const data = await response.json();
+        
+                // Check if new auctions were added
+                if (data.length > previousAuctionCount) {
+                    setHasNewNotification(true);
+                }
+                setPreviousAuctionCount(data.length);
+            } catch (error) {
+                console.error('Failed to fetch notifications', error);
+            }
+          };
+  
+          fetchNotifications();
+          const interval = setInterval(fetchNotifications, 10000);
+          return () => clearInterval(interval);
+      }
+    }, [user]);
   
     return (
       <>
@@ -48,13 +76,16 @@ function NavBar() {
                 </Link>
                 {isAuthenticated && (
                   <>
-                    <Link to="/dashboard" className="text-white/90 hover:text-white transition-colors">
-                      Dashboard
-                    </Link>
-                    
-                    <Link to="/create-auction" className="text-white/90 hover:text-white transition-colors">
-                      Create Auction
-                    </Link>
+                    {(user.role === 2 || user.role === 3) && (
+                      <Link to="/dashboard" className="text-white/90 hover:text-white transition-colors">
+                        Dashboard
+                      </Link>
+                    )}
+                    {user.role === 1 && (
+                      <Link to="/create-auction" className="text-white/90 hover:text-white transition-colors">
+                        Create Auction
+                      </Link>
+                    )}
                   </>
                 )}
               </nav>
@@ -89,14 +120,14 @@ function NavBar() {
                         className="text-white/90 hover:text-white transition-colors relative"
                         onClick={() => setIsNotificationOpen(!isNotificationOpen)}
                       >
-                        <Bell className="h-5 w-5" />
+                        <Bell className={`h-6 w-6 ${hasNewNotification ? 'animate-[bounce_1s_infinite] text-gold' : 'text-white'}`} />
                         <span className="absolute -top-1 -right-1 h-4 w-4 bg-accent rounded-full text-xs flex items-center justify-center text-white">
                           {notifications.length}
                         </span>
                       </button>
 
-                      {/* Notification Dropdown */}
-                      {isNotificationOpen && (
+                      {/* We are gonna override the use of this bell for user/expert/manager */}
+                      {isNotificationOpen && user.role==1 ? ( /* Notification Dropdown for user == 1 */
                         <div className="notification-dropdown">
                           <div className="px-4 py-2 border-b border-gray-200">
                             <h3 className="text-sm font-semibold text-gray-900">Notifications</h3>
@@ -119,7 +150,11 @@ function NavBar() {
                             </button>
                           </div>
                         </div>
-                      )}
+                        ) : (user.role==2 ? ( /* Notification list for expert == 1 perhaps need protect route */
+                        <Routes>
+                          <Route path="/notifications" element={<NotificationBell />} /> 
+                        </Routes>
+                        ) : (null))} {/*null should be for manager, user.role == 3 perhaps need protect route */}
                     </div>
                     <button onClick={logout} className="text-white/90 hover:text-white transition-colors">
                       Logout

@@ -1,0 +1,17 @@
+#!/bin/bash
+
+# Navigate to the backend folder and start the server
+echo "Starting backend server..."
+cd backend || exit
+npm start &
+BACKEND_PID=$!
+
+# Navigate to the frontend folder and start the development server
+echo "Starting frontend server..."
+cd ../frontend || exit
+npm run dev &
+FRONTEND_PID=$!
+
+# Wait for both servers to stop
+echo "Servers are running. Press [CTRL+C] to stop both servers."
+wait $BACKEND_PID $FRONTEND_PID
