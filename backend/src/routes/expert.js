@@ -46,6 +46,8 @@ router.get("/completed/:expertId", async (req, res) => {
                 "i.title as item_title",
                 "i.description as item_description",
                 knex.raw("GROUP_CONCAT(ii.image_url) as item_images"),
+                "ar.comments",
+                "ar.decision_timestamp",
                 "i.user_id as seller_id"
             )
             .leftJoin("items as i", "ar.item_id", "i.id")
