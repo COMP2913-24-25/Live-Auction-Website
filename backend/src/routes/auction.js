@@ -12,7 +12,7 @@ router.get('/active', async (req, res) => {
         'icb.description',
         'icb.min_price',
         'icb.end_time',
-        'icb.authenticated',
+        'icb.authentication_status',
         'icb.current_bid',
         knex.raw('GROUP_CONCAT(ii.image_url) as image_urls'),
         'u.username as seller_name'
@@ -46,8 +46,8 @@ router.get('/:id', async (req, res) => {
         'title',
         'description',
         'current_bid',
-        'authenticated',
-        'end_time',  // Ensure this is a valid timestamp
+        'authentication_status',
+        'end_time',
         'min_price'
       )
       .where({ item_id: id })
@@ -77,7 +77,7 @@ router.get('/:id', async (req, res) => {
       title: auction.title,
       description: auction.description,
       current_bid: auction.current_bid,
-      authenticated: auction.authenticated,
+      authenticated: auction.authentication_status,
       requested_auth: requested ? true : false,
       seller_id: seller?.seller_id,
       seller_name: seller?.seller_name || "Unknown",
