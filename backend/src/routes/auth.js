@@ -43,6 +43,14 @@ router.post('/login', async (req, res) => {
             { expiresIn: '24h' }
         );
 
+        // 设置cookie以持久保存令牌
+        res.cookie('token', token, {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === 'production',
+            sameSite: 'none', // 修改为 none 以允许跨站点请求
+            maxAge: 24 * 60 * 60 * 1000 // 24小时
+        });
+
         // 统一返回格式
         res.json({
             id: user.id,

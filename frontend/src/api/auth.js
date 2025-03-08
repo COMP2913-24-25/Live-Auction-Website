@@ -2,6 +2,21 @@ import axios from 'axios';
 
 const API_URL = `${import.meta.env.VITE_API_URL}/api`; 
 
+// Add tokens to all API requests
+axios.interceptors.request.use(
+  config => {
+    // Get the token from localStorage
+    const token = localStorage.getItem('authToken');
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
+  },
+  error => {
+    return Promise.reject(error);
+  }
+);
+
 export const loginUser = async (credentials) => {
     try {
         const response = await axios.post('/api/auth/login', credentials);

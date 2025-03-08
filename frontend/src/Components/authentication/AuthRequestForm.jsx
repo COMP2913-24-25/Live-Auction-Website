@@ -5,7 +5,7 @@ import { AuthContext } from '../../context/authContext';
 const AuthRequestForm = ({ itemId, onClose, onSuccess }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const { user } = useContext(AuthContext);
+  const { user, handleLogin } = useContext(AuthContext);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -30,6 +30,31 @@ const AuthRequestForm = ({ itemId, onClose, onSuccess }) => {
       setError(error.response?.data?.error || 'An error occurred while submitting the authentication request');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const login = async () => {
+    setLoading(true);
+    setError(null);
+    
+    try {
+      console.log('Attempting login with:', { email, password });
+      console.log('Current cookies:', document.cookie);
+      
+      const response = await axios.post('/api/auth/login', { email, password });
+      
+      console.log('Cookies after login:', document.cookie);
+      console.log('Login response:', response);
+      
+      if (response.data && response.data.token) {
+        localStorage.setItem('authToken', response.data.token);
+        
+        handleLogin(response.data.user);
+        
+        onClose();
+      }
+    } catch (err) {
+      // ...error handling...
     }
   };
 

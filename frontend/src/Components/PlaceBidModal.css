@@ -184,4 +184,103 @@
   font-size: 1.2rem;
   font-weight: bold;
   margin-bottom: 10px;
+}
+
+.bid-tabs {
+  display: flex;
+  border-bottom: 1px solid #eee;
+  margin-bottom: 20px;
+}
+
+.bid-tab {
+  padding: 10px 20px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 16px;
+  color: #666;
+  border-bottom: 2px solid transparent;
+}
+
+.bid-tab.active {
+  color: #28a745;
+  border-bottom: 2px solid #28a745;
+  font-weight: 600;
+}
+
+.bid-form-container,
+.bid-history-container {
+  padding: 10px 0;
+}
+
+.current-price-display {
+  display: flex;
+  justify-content: space-between;
+  padding: 15px;
+  background-color: #f8f9fa;
+  border-radius: 4px;
+  margin-bottom: 20px;
+}
+
+.price-value {
+  font-weight: bold;
+  font-size: 1.2rem;
+  color: #333;
+}
+
+.place-bid-btn {
+  width: 100%;
+  padding: 12px;
+  background-color: #28a745;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 16px;
+  margin-top: 20px;
+  transition: background-color 0.3s;
+}
+
+.place-bid-btn:hover {
+  background-color: #218838;
+}
+
+.place-bid-btn:disabled {
+  background-color: #6c757d;
+  cursor: not-allowed;
+}
+
+.bid-success-message {
+  background-color: #d4edda;
+  color: #155724;
+  padding: 12px;
+  border-radius: 4px;
+  margin-bottom: 15px;
+  text-align: center;
+  font-weight: 500;
+}
+
+.bid-history-title {
+  font-size: 1.5rem;
+  margin-bottom: 1rem;
+  color: #333;
+  text-align: center;
+  padding-bottom: 0.5rem;
+  border-bottom: 2px solid #4CAF50;
+}
+
+.show-bid-form-btn, .show-history-btn {
+  display: block;
+  margin: 1rem auto;
+  padding: 0.75rem 1.5rem;
+  background-color: #4CAF50;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: bold;
+}
+
+.show-history-btn {
+  background-color: #555;
 } 

@@ -17,10 +17,11 @@ const authRoutes = require('./routes/auth');
 const categoriesRoutes = require('./routes/categories');
 const searchRoutes = require('./routes/search');
 const authenticationRoutes = require('./routes/authentication');
+const bidsRoutes = require('./routes/bids');
 
 // CORS configuration
 app.use(cors({
-  origin: true,  // Allow all sources, or specify specific domain names
+  origin: ['http://localhost:5173', 'http://localhost:5174', 'http://localhost:5175'],
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
@@ -35,7 +36,8 @@ app.use(async (req, res, next) => {
     console.log('Request cookies:', req.cookies);
     console.log('Request headers:', req.headers);
     
-    const token = req.cookies.token;
+    // 从 cookie 或 Authorization 头获取令牌
+    const token = req.cookies.token || (req.headers.authorization && req.headers.authorization.split(' ')[1]);
     console.log('Found token:', token);
 
     if (token) {
@@ -61,6 +63,7 @@ app.use(async (req, res, next) => {
     } else {
       console.log('No token found in request');
     }
+    
     next();
   } catch (error) {
     console.error('Auth middleware error:', error);
@@ -75,6 +78,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api', categoriesRoutes);
 app.use('/api', searchRoutes);
 app.use('/api/authentication', authenticationRoutes);
+app.use('/api/bids', bidsRoutes);
 
 // Example route
 app.get('/', (req, res) => {

@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useContext } from "react";
 import axios from "axios";
 import Carousel from "react-multi-carousel";
 import "react-multi-carousel/lib/styles.css";
@@ -7,6 +7,8 @@ import { useParams } from "react-router-dom";
 import authenticated from "../assets/authenticated.png";
 import AuthRequestForm from '../Components/authentication/AuthRequestForm';
 import PlaceBidModal from '../Components/PlaceBidModal';
+import BidForm from '../Components/BidForm';
+import { AuthContext } from '../context/AuthContext';
 
 const responsive = {
   desktop: { breakpoint: { max: 3000, min: 1024 }, items: 1 },
@@ -39,6 +41,7 @@ const calculateTimeRemaining = (endTime) => {
 
 const AuctionDetails = () => {
   const { id } = useParams();
+  const { user } = useContext(AuthContext);
   const [auction, setAuction] = useState(null);
   const [bidAmount, setBidAmount] = useState(0);
   const [isFavorite, setIsFavorite] = useState(false);
@@ -48,6 +51,9 @@ const AuctionDetails = () => {
   const [authError, setAuthError] = useState("");
   const [showAuthForm, setShowAuthForm] = useState(false);
   const [showBidModal, setShowBidModal] = useState(false);
+  const [bidSuccess, setBidSuccess] = useState(false);
+  const [bidError, setBidError] = useState("");
+  const [submittingBid, setSubmittingBid] = useState(false);
 
   const section1Ref = useRef(null);
   const section2Ref = useRef(null);
@@ -95,6 +101,66 @@ const AuctionDetails = () => {
 
   const handleAuthRequest = () => {
     setShowAuthForm(true);
+  };
+
+  const openBidModal = () => {
+    setShowBidModal(true);
+  };
+
+  const closeBidModal = () => {
+    setShowBidModal(false);
+  };
+
+  const handleBidSubmit = async () => {
+    if (!user) {
+      setBidError("Please login before bidding");
+      return;
+    }
+    
+    if (bidAmount <= auction.current_bid) {
+      setBidError(`The bid must be higher than the current price £${auction.current_bid}`);
+      return;
+    }
+    
+    setSubmittingBid(true);
+    setBidError("");
+    
+    try {
+      const response = await axios.post('/api/bids', {
+        item_id: auction.id,
+        bid_amount: bidAmount
+      });
+      
+      if (response.data.success) {
+        setBidSuccess(true);
+        
+        // Refresh product data
+        axios.get(`/api/auctions/${id}`)
+          .then(response => {
+            setAuction(response.data);
+            setBidAmount(response.data.current_bid + 5);
+          });
+        
+        // Automatically open the bid history after success
+        setTimeout(() => {
+          setShowBidModal(true);  
+        }, 1000);
+        
+        setTimeout(() => {
+          setBidSuccess(false);
+        }, 3000);
+      } else {
+        setBidError(response.data.error || "Bid failed, please try again");
+      }
+    } catch (error) {
+      console.error("Bidding error:", error);
+      setBidError(
+        error.response?.data?.error || 
+        (error.response?.status === 401 ? "Please login first" : "An error occurred during the bidding process")
+      );
+    } finally {
+      setSubmittingBid(false);
+    }
   };
 
   if (!auction) return <p>Loading auction details...</p>;
@@ -173,14 +239,28 @@ const AuctionDetails = () => {
               type="number"
               className="w-full p-2 mt-2 bg-gray-200 placeholder-gray-400"
               placeholder={`£ ${auction.current_bid + 5} or up`}
-              onChange={(e) => setBidAmount(e.target.value)}
+              value={bidAmount}
+              onChange={(e) => setBidAmount(parseFloat(e.target.value))}
             />
             <button 
               className="w-full bg-gold text-white py-2 mt-2 hover:bg-yellow-600 cursor-pointer"
-              onClick={() => setShowBidModal(true)}
+              onClick={handleBidSubmit}
+              disabled={submittingBid}
             >
-              Place Bid
+              {submittingBid ? "In process..." : "Place Bid"}
             </button>
+            
+            {bidError && (
+              <div className="text-red-500 bg-red-100 p-2 mt-2 rounded text-center">
+                {bidError}
+              </div>
+            )}
+            
+            {bidSuccess && (
+              <div className="text-green-700 bg-green-100 p-2 mt-2 rounded text-center">
+                Bid successful! Your bid has been accepted.
+              </div>
+            )}
             
             {!auction.authenticated && (
               <div className="mt-4 border-t pt-4">
@@ -214,10 +294,11 @@ const AuctionDetails = () => {
       {auction && (
         <PlaceBidModal
           isOpen={showBidModal}
-          onClose={() => setShowBidModal(false)}
+          onClose={closeBidModal}
           currentBid={auction.current_bid}
           itemId={auction.id}
           itemTitle={auction.title}
+          historyOnly={true}
         />
       )}
     </div>
