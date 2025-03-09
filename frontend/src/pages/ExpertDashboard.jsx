@@ -9,6 +9,8 @@ const ExpertPendingRequests = () => {
   const [requests, setRequests] = useState([]);
   const [comments, setComments] = useState({});
   const [modal, setModal] = useState({ open: false, images: [], index: 0 });
+  const [reallocateModal, setShowModal] = useState(false); // Modal visibiility state
+  const [selectedRequestId, setSelectedRequestId] = useState(null);
 
   useEffect(() => {
       axios.get(`/api/expert/pending/${user.id}`)
@@ -24,6 +26,17 @@ const ExpertPendingRequests = () => {
 
   const handleCommentChange = (id, value) => {
     setComments({ ...comments, [id]: value });
+  };
+
+  const handleReallocate = (id) => {
+    if (selectedRequestId) {
+        axios.post(`/api/expert/request-reallocation/${selectedRequestId}`)
+            .then(() => {
+                setRequests(requests.filter(req => req.id !== selectedRequestId));
+                setShowModal(false);
+            })
+            .catch((err) => console.error("Error reallocating request:", err));
+    }
   };
 
   const handleAction = (id, action) => {
@@ -89,7 +102,15 @@ const ExpertPendingRequests = () => {
           <div className="w-full md:w-1/3 flex flex-col gap-2">
             <div className="justify-between flex">
                 <h3 className="text-lg font-semibold">Comments</h3>
-                <button className="w-fit text-off-white bg-gray-700 py-1 px-2 cursor-pointer hover:bg-gray-600 rounded">Request 2nd Opinion</button>
+                <button 
+                  className="w-fit text-off-white bg-gray-700 py-1 px-2 cursor-pointer hover:bg-gray-600 rounded"
+                  onClick={() => {
+                    setSelectedRequestId(requests.id);
+                    setShowModal(true);
+                  }}
+                >
+                    Request 2nd Opinion
+                </button>
             </div>
             <textarea
               className="w-full h-full border rounded p-2"
@@ -98,19 +119,24 @@ const ExpertPendingRequests = () => {
               onChange={(e) => handleCommentChange(requests.id, e.target.value)}
             />
             <div className="flex gap-2">
-              <button
-                className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-800 w-50"
-                onClick={() => handleAction(requests.id, "Approved")}
-              >Approve</button>
-              <button
-                className="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-800 w-50"
-                onClick={() => handleAction(requests.id, "Rejected")}
-              >Reject</button>
+                <button
+                    className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-800 w-50"
+                    onClick={() => handleAction(requests.id, "Approved")}
+                >
+                    Approve
+                </button>
+                <button
+                    className="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-800 w-50"
+                    onClick={() => handleAction(requests.id, "Rejected")}
+                >
+                    Reject
+                </button>
             </div>
           </div>
         </div>
       ))}
     </div>
+
     {/* Full-Screen Modal */}
     {modal.open && (
         <div className="fixed inset-0 bg-black bg-opacity-90 flex justify-center items-center z-50">
@@ -126,6 +152,30 @@ const ExpertPendingRequests = () => {
           </button>
         </div>
     )}
+
+    {/* Reallocate Confirmation Modal */}
+    {reallocateModal && (
+        <div className="fixed inset-0 z-20 flex items-center justify-center bg-black/50">
+          <div className="bg-white p-6 rounded-lg shadow-lg text-center max-w-md">
+            <h3 className="text-xl font-semibold text-charcoal">Reallocation Confirmation</h3>
+            <p className="mt-2 text-charcoal">The item's authentication will be reassigned to another expert. Would you like to proceed?</p>
+            <div className="mt-4 flex justify-center gap-4">
+              <button
+                className="bg-gray-300 text-charcoal px-4 py-2 rounded-lg hover:bg-gray-400 transition"
+                onClick={() => setShowModal(false)}
+              >
+                Cancel
+              </button>
+              <button
+                className="bg-gray-800 text-white font-semibold px-4 py-2 rounded-lg hover:bg-gray-700"
+                onClick={handleReallocate}
+              >
+                Confirm
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 };
