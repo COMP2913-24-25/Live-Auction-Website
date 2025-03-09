@@ -13,6 +13,7 @@ const authRoutes = require('./routes/auth');
 const categoriesRoutes = require('./routes/categories');
 const searchRoutes = require('./routes/search');
 const managerRoutes = require('./routes/manager');
+const expertRoutes = require('./routes/expert');
 
 // CORS configuration
 app.use(cors({
@@ -28,6 +29,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api', categoriesRoutes);
 app.use('/api', searchRoutes);
 app.use('/api/manager', managerRoutes);
+app.use('/api/expert', expertRoutes);
 
 // Example route
 app.get('/', (req, res) => {
