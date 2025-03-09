@@ -61,26 +61,26 @@ const ExpertPendingRequests = () => {
     <div className="text-3xl p-4">Pending Requests ({requests.length})</div>
     <div className="grid grid-cols-1 gap-6 p-4 max-w-5xl">
       {requests.map((requests) => (
-        <div key={requests.id} className="border rounded-xl p-4 shadow-md flex flex-col md:flex-row lg:flex-row gap-4">
+        <div key={requests.id} className="border border-gray-300 border-b-4 border-b-gray-400 rounded-md p-4 shadow-md flex flex-col md:flex-row lg:flex-row gap-4 bg-gray-200">
             {/* Left: Image Carousel */}
-            <div className="w-full md:w-1/3">
+            <div className="w-full md:w-1/3 h-fit">
                 <Carousel
                     responsive={responsive}
                     infinite={true}
                     autoPlay={false}
                     showDots={true}
-                    itemClass="w-full h-fit"
+                    itemClass="w-full h-60 flex items-center justify-center bg-black"
                     containerClass="relative"
                 >
                     {requests.imageUrls.map((url, index) => (
-                    <div key={index} className="flex justify-center">
-                        <img
-                        src={url}
-                        alt={`${requests.item_title} image ${index + 1}`}
-                        className="object-cover h-96 w-full"
-                        onClick={() => openModal(requests.imageUrls, index)}
-                        />
-                    </div>
+                        <div key={index} className="flex justify-center">
+                            <img
+                                src={url}
+                                alt={`${requests.item_title} image ${index + 1}`}
+                                className="object-contain w-full"
+                                onClick={() => openModal(requests.imageUrls, index)}
+                            />
+                        </div>
                     ))}
                 </Carousel>
             </div>
@@ -88,20 +88,20 @@ const ExpertPendingRequests = () => {
           {/* Middle: Item Details */}
           <div className="flex-1 flex flex-col justify-between">
             <div>
-              <h2 className="text-xl font-bold">{requests.item_title}</h2>
-              <p className="text-gray-700">{requests.item_description}</p>
-              <span className="text-sm text-gray-500">Category: {requests.category}</span>
+              <h2 className="text-3xl font-semibold">{requests.item_title}</h2>
+              <p className="text-gray-600 pb-5">{requests.item_description}</p>
+              <span className="text-sm text-gray-500 font-semibold">Category: {requests.category}</span>
             </div>
             <div className="flex items-center justify-between mt-2">
-              <span className="text-sm text-gray-600">Seller: {requests.seller_id}</span>
-              <MessageCircle className="cursor-pointer text-blue-600 hover:text-blue-800" size={20} />
+              <span className="text-xl text-charcoal italic underline">Seller: {requests.seller_id}</span>
+              <MessageCircle className="cursor-pointer text-black hover:text-gray-600" size={25} />
             </div>
           </div>
 
           {/* Right: Comment Box & Actions */}
           <div className="w-full md:w-1/3 flex flex-col gap-2">
             <div className="justify-between flex">
-                <h3 className="text-lg font-semibold">Comments</h3>
+                <h3 className="text-xl text-gray-500 font-semibold">Comments</h3>
                 <button 
                   className="w-fit text-off-white bg-gray-700 py-1 px-2 cursor-pointer hover:bg-gray-600 rounded"
                   onClick={() => {
@@ -113,20 +113,20 @@ const ExpertPendingRequests = () => {
                 </button>
             </div>
             <textarea
-              className="w-full h-full border rounded p-2"
-              placeholder="Add comments..."
+              className="w-full h-full p-2 bg-gray-300"
+              placeholder="Please enter any feedback..."
               value={comments[requests.id] || ""}
               onChange={(e) => handleCommentChange(requests.id, e.target.value)}
             />
             <div className="flex gap-2">
                 <button
-                    className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-800 w-50"
+                    className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-800 w-full"
                     onClick={() => handleAction(requests.id, "Approved")}
                 >
                     Approve
                 </button>
                 <button
-                    className="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-800 w-50"
+                    className="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-800 w-full"
                     onClick={() => handleAction(requests.id, "Rejected")}
                 >
                     Reject
