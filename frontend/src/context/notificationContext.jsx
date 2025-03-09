@@ -10,46 +10,51 @@ export function NotificationProvider({ children }) {
   const { user } = useAuth();
 
   const fetchNotifications = async () => {
-    if (!user) return;
+    if (!user) {
+      setNotifications([]);
+      setUnreadCount(0);
+      return;
+    }
     
     try {
-      const { data } = await axios.get('/api/notifications');
-      setNotifications(data);
-      setUnreadCount(data.filter(n => !n.read).length);
+      const { data } = await axios.get('/api/notifications', {
+        headers: {
+          'Cache-Control': 'no-cache',
+          'Pragma': 'no-cache'
+        }
+      });
+      
+      // Only accept notifications with valid types
+      const validNotifications = data.filter(n => 
+        n.type && ['outbid', 'won', 'ending_soon', 'ended'].includes(n.type)
+      );
+      
+      setNotifications(validNotifications);
+      setUnreadCount(validNotifications.filter(n => !n.read).length);
     } catch (error) {
       console.error('Error fetching notifications:', error);
+      setNotifications([]);
+      setUnreadCount(0);
     }
   };
 
-  const markAsRead = async (notificationId) => {
+  // Force clear notifications
+  const clearAllNotifications = async () => {
     try {
-      await axios.put(`/api/notifications/${notificationId}/read`);
-      setNotifications(prev => 
-        prev.map(n => n.id === notificationId ? { ...n, read: true } : n)
-      );
-      setUnreadCount(prev => Math.max(0, prev - 1));
+      await axios.delete('/api/notifications/all');
+      setNotifications([]);
+      setUnreadCount(0);
     } catch (error) {
-      console.error('Error marking notification as read:', error);
-    }
-  };
-
-  const deleteNotification = async (notificationId) => {
-    try {
-      await axios.delete(`/api/notifications/${notificationId}`);
-      setNotifications(prev => prev.filter(n => n.id !== notificationId));
-      if (!notifications.find(n => n.id === notificationId)?.read) {
-        setUnreadCount(prev => Math.max(0, prev - 1));
-      }
-    } catch (error) {
-      console.error('Error deleting notification:', error);
+      console.error('Error clearing notifications:', error);
     }
   };
 
   useEffect(() => {
     if (user) {
       fetchNotifications();
-      const interval = setInterval(fetchNotifications, 30000); // Poll every 30 seconds
-      return () => clearInterval(interval);
+    } else {
+      setNotifications([]);
+      setUnreadCount(0);
     }
   }, [user]);
 
@@ -57,9 +62,8 @@ export function NotificationProvider({ children }) {
     <NotificationContext.Provider value={{
       notifications,
       unreadCount,
-      markAsRead,
-      deleteNotification,
-      fetchNotifications
+      fetchNotifications,
+      clearAllNotifications
     }}>
       {children}
     </NotificationContext.Provider>
