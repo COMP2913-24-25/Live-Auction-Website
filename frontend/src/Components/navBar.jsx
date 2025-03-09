@@ -1,7 +1,8 @@
+import React from 'react';
 import { useState, useRef, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { Menu, Bell, User, UserPlus, X, Search } from "lucide-react";
-import { useAuth } from "../context/AuthContext";
+import { useAuth } from "./authContext";
 
 function NavBar() {
     const { isAuthenticated, logout } = useAuth();

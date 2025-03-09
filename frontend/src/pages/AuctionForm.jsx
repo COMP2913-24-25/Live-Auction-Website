@@ -1,11 +1,14 @@
 import { useState, useEffect } from 'react';
-import { useAuth } from '../context/AuthContext';
+import { useAuth } from '../components/authContext';
+import axios from 'axios';
+import { useNavigate } from 'react-router-dom';
 
 function AuctionForm() {
-  const { user } = useAuth();
+  const { currentUser } = useAuth();
+  const navigate = useNavigate();
 
   const [formData, setFormData] = useState({
-    user_id: user?.id, // Attach current user ID to the form data
+    user_id: currentUser?.id, // 使用 currentUser 而不是 user
     title: '',
     description: '',
     min_price: '',
@@ -100,32 +103,54 @@ function AuctionForm() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    console.log(`User ID: ${user.id}`); // Debugging log
+    
+    // 添加日志
+    console.log('Submitting form data:', formData);
+    console.log('Uploaded image files:', imageFiles);
+    
+    // 检查用户 ID
+    if (!formData.user_id) {
+      console.error('User ID is missing');
+      alert('User ID is missing. Please log in again.');
+      return;
+    }
+    
+    // 检查必填字段
+    if (!formData.title || !formData.description || !formData.min_price || !formData.category) {
+      alert('Please fill in all required fields');
+      return;
+    }
+    
+    // 创建 FormData 对象
+    const formDataToSend = new FormData();
+    
+    // 添加表单字段
+    for (const key in formData) {
+      formDataToSend.append(key, formData[key]);
+    }
+    
+    // 添加图片文件
+    imageFiles.forEach(file => {
+      formDataToSend.append('images', file);
+    });
+    
     try {
-      const submitData = new FormData();
-      Object.keys(formData).forEach(key => {
-        submitData.append(key, formData[key]);
+      // 发送请求
+      const response = await axios.post('/api/auctions', formDataToSend, {
+        headers: {
+          'Content-Type': 'multipart/form-data'
+        }
       });
-      imageFiles.forEach(file => submitData.append('images', file));
-
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/upload`, {
-        method: 'POST',
-        body: submitData
-      });
-
-      const data = await response.json();
-      if (response.ok) {
-        alert('Auction item created successfully!');
-        setFormData({ title: '', description: '', min_price: '', duration: '', category: '' });
-        setImageFiles([]);
-        setImagePreviews([]);
-        setFileNames('No files chosen');
-      } else {
-        throw new Error(data.error || `Submission failed: ${response.status}`);
-      }
+      
+      console.log('Create auction response:', response.data);
+      
+      // 处理成功响应
+      alert('Auction created successfully!');
+      navigate('/browse'); // 导航到浏览页面
     } catch (error) {
-      console.error('Submit error:', error);
-      alert('Error: ' + error.message);
+      console.error('Error creating auction:', error);
+      console.error('Error response:', error.response?.data);
+      alert(`Failed to create auction: ${error.response?.data?.message || 'Unknown error'}`);
     }
   };
 
@@ -176,7 +201,7 @@ function AuctionForm() {
               required
               className="w-full px-4 py-3 rounded-lg border border-gray-200 focus:outline-none focus:border-teal focus:ring-1 focus:ring-teal/20 bg-white text-charcoal"
             >
-              <option value="" disabled>Select a category</option>
+              <option value="" disabled>Please select a category</option>
               {categories.map(category => (
                 <option key={category.id} value={category.id}>{category.name}</option>
               ))}

@@ -37,11 +37,13 @@ app.use('/api/auth', authRoutes);
 app.use('/api', categoriesRoutes);
 app.use('/api', searchRoutes);
 app.use('/api/manager', managerRoutes);
-app.use('/api/payments', paymentRoutes);
+app.use('/api/payment', paymentRoutes);
 
 // Example route
 app.get('/', (req, res) => {
   res.json({ message: 'Server is running' });
 });
+
+app.use(express.json());
 
 module.exports = app;

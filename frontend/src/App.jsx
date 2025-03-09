@@ -1,11 +1,12 @@
-import { Navigate, BrowserRouter as Router, Route, Routes } from 'react-router-dom';
-import { AuthProvider } from "./context/AuthContext";
+import React from 'react';
+import { Navigate, Route, Routes } from 'react-router-dom';
+import { AuthProvider } from './components/authContext';
+import ProtectedRoute from './components/ProtectedRoute';
 import Browse from "./pages/Browse";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 import Dashboard from "./pages/Dashboard";  
-import NavBar from "./components/NavBar";
-import ProtectedRoute from "./context/ProtectedRoute";
+import NavBar from "./components/navBar";
 import AuctionDetails from './pages/AuctionDetails';
 import AuctionForm from './pages/AuctionForm';
 
@@ -25,11 +26,7 @@ const App = () => (
       {/* Protected Routes */}
       <Route 
         path="/create-auction" 
-        element={
-          <ProtectedRoute allowedRoles={[1]}>
-            <AuctionForm />
-          </ProtectedRoute>
-        }
+        element={<AuctionForm />}
       />
       <Route
         path="/dashboard"

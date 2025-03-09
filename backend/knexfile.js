@@ -9,15 +9,15 @@ module.exports = {
   development: {
     client: 'sqlite3',
     connection: {
-      filename: process.env.DATABASE_URL || './database/db.sqlite',
+      filename: './database/db.sqlite'
     },
     useNullAsDefault: true,
     migrations: {
-      directory: "./database/migrations",
+      directory: './database/migrations'
     },
     seeds: {
-      directory: "./database/seeds",
-    },
+      directory: './database/seeds'
+    }
   },
 
   staging: {

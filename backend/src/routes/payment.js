@@ -81,10 +81,10 @@ const createPaymentIntent = async (req, res) => {
 // 保存支付方式
 const savePaymentMethod = async (req, res) => {
   try {
-    const { userId, cardNumber, expiry, cvc } = req.body;
+    const { userId, cardNumber, expiry, cvv } = req.body;
     
     // 验证数据
-    if (!userId || !cardNumber || !expiry || !cvc) {
+    if (!userId || !cardNumber || !expiry || !cvv) {
       return res.status(400).json({ error: 'Missing required fields' });
     }
     
@@ -129,36 +129,45 @@ const savePaymentMethod = async (req, res) => {
       });
     }
     
-    // 保存到数据库
-    const [paymentMethodId] = await db('user_payment_methods').insert({
-      user_id: userId,
-      payment_provider: 'Stripe',
-      tokenized_card_id: tokenizedCardId,
-      last4: last4,
-      card_type: cardType,
-      exp_month: parseInt(expMonth, 10),
-      exp_year: parseInt(expYear, 10) + 2000, // 假设 YY 格式，转换为完整年份
-      cvv: cvc,
-      created_at: new Date()
-    }).returning('id');
-    
-    // 创建一个初始的支付记录（状态为待处理）
-    if (req.body.itemId && req.body.amount) {
-      await db('payments').insert({
-        user_id: userId,
-        item_id: req.body.itemId,
-        amount: req.body.amount,
-        status: 'Pending', // 初始状态为待处理
-        payment_method_id: paymentMethodId,
+    // 插入数据
+    let id;
+    try {
+      // 对于 SQLite，我们需要特殊处理 returning
+      const result = await db('user_payment_methods').insert({
+        user_id: req.user.id,
+        payment_provider: 'Stripe',
+        tokenized_card_id,
+        last4,
+        card_type: cardType,
+        exp_month: parseInt(expMonth, 10),
+        exp_year: parseInt(expYear, 10) + 2000, // 假设 YY 格式，转换为完整年份
+        cvv: cvv,
         created_at: new Date()
       });
+      
+      // 在 SQLite 中，insert 返回的是最后插入的 ID
+      id = result[0];
+      
+      console.log('Database insertion successful, ID:', id);
+      
+      res.status(201).json({ 
+        message: 'Payment method added successfully',
+        id: id
+      });
+    } catch (error) {
+      console.error('Error saving payment method:', error);
+      // 打印更详细的错误信息
+      if (error.code) {
+        console.error('Error code:', error.code);
+      }
+      if (error.errno) {
+        console.error('Error number:', error.errno);
+      }
+      if (error.sql) {
+        console.error('SQL:', error.sql);
+      }
+      res.status(500).json({ error: 'Internal server error', details: error.message });
     }
-    
-    res.json({ 
-      success: true, 
-      message: 'Payment method saved successfully',
-      paymentMethodId: paymentMethodId
-    });
   } catch (error) {
     console.error('Error saving payment method:', error);
     res.status(500).json({ error: 'Failed to save payment method' });
@@ -436,71 +445,6 @@ const getItemPaymentStatus = async (req, res) => {
   }
 };
 
-// 添加支付方式
-router.post('/methods', authenticateToken, async (req, res) => {
-  try {
-    console.log('支付方法请求体:', req.body);
-    console.log('认证用户:', req.user);
-    
-    const { payment_provider, tokenized_card_id, last4, card_type, exp_month, exp_year, cvv } = req.body;
-    
-    // 验证必填字段
-    if (!payment_provider || !tokenized_card_id || !last4 || !card_type || !exp_month || !exp_year || !cvv) {
-      return res.status(400).json({ error: '所有字段都是必填的' });
-    }
-    
-    // 在插入前检查表结构
-    const tableInfo = await db.raw('PRAGMA table_info(user_payment_methods)');
-    console.log('表结构:', tableInfo);
-    
-    // 插入数据
-    const result = await db('user_payment_methods').insert({
-      user_id: req.user.id,
-      payment_provider,
-      tokenized_card_id,
-      last4,
-      card_type,
-      exp_month,
-      exp_year,
-      cvv
-    });
-    
-    console.log('插入结果:', result);
-    
-    res.status(201).json({ 
-      message: '支付方法已添加',
-      id: result[0]
-    });
-  } catch (error) {
-    console.error('保存支付方法时出错:', error);
-    // 打印更详细的错误信息
-    if (error.code) {
-      console.error('错误代码:', error.code);
-    }
-    if (error.errno) {
-      console.error('错误号:', error.errno);
-    }
-    if (error.sql) {
-      console.error('SQL:', error.sql);
-    }
-    res.status(500).json({ error: '内部服务器错误', details: error.message });
-  }
-});
-
-// 获取用户的支付方式
-router.get('/methods', authenticateToken, async (req, res) => {
-  try {
-    const methods = await db('user_payment_methods')
-      .where({ user_id: req.user.id })
-      .select('id', 'payment_provider', 'last4', 'card_type', 'exp_month', 'exp_year');
-    
-    res.json(methods);
-  } catch (error) {
-    console.error('获取支付方法时出错:', error);
-    res.status(500).json({ error: '内部服务器错误' });
-  }
-});
-
 // 路由定义
 router.post('/create-payment-intent', authenticateToken, createPaymentIntent);
 router.post('/save-payment-method', authenticateToken, savePaymentMethod);
@@ -510,5 +454,62 @@ router.get('/payment-history/:userId', authenticateToken, getUserPaymentHistory)
 router.get('/payment/:paymentId', authenticateToken, getPaymentDetails);
 router.get('/item-payment-status/:itemId', getItemPaymentStatus);
 router.post('/webhook', express.raw({ type: 'application/json' }), handleWebhook);
+
+// 添加支付方式
+router.post('/methods', authenticateToken, async (req, res) => {
+  try {
+    console.log('The request to add payment method was received:', new Date().toISOString());
+    console.log('Request body:', req.body);
+    console.log('User ID:', req.user.id);
+    
+    const { payment_provider, tokenized_card_id, last4, card_type, exp_month, exp_year, cvv } = req.body;
+    
+    // 验证必要字段
+    if (!payment_provider || !tokenized_card_id || !last4 || !card_type || !exp_month || !exp_year) {
+      return res.status(400).json({ error: 'Missing required fields' });
+    }
+    
+    // 插入支付方式 - 添加 cvv 字段（如果数据库需要）
+    const [paymentMethodId] = await db('user_payment_methods').insert({
+      user_id: req.user.id,
+      payment_provider,
+      tokenized_card_id,
+      last4,
+      card_type,
+      exp_month,
+      exp_year,
+      cvv: cvv || '000' // 提供默认值，实际应用中不应存储真实 CVV
+    });
+    
+    console.log('Payment method added successfully, ID:', paymentMethodId);
+    
+    res.status(201).json({ 
+      id: paymentMethodId,
+      message: 'Payment method added successfully' 
+    });
+  } catch (error) {
+    console.error('Error adding payment method:', error);
+    // 详细记录错误信息
+    if (error.code) console.error('Error code:', error.code);
+    if (error.errno) console.error('Error number:', error.errno);
+    if (error.sql) console.error('SQL:', error.sql);
+    
+    res.status(500).json({ error: 'Internal server error', details: error.message });
+  }
+});
+
+router.get('/methods', authenticateToken, async (req, res) => {
+  try {
+    // 修改查询，移除 is_default 字段
+    const paymentMethods = await db('user_payment_methods')
+      .where({ user_id: req.user.id })
+      .select('id', 'payment_provider', 'last4', 'card_type', 'exp_month', 'exp_year', 'created_at');
+    
+    res.json(paymentMethods);
+  } catch (error) {
+    console.error('Error fetching payment methods:', error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
 
 module.exports = router; 
