@@ -27,7 +27,7 @@ const ExpertPendingRequests = () => {
   };
 
   const handleAction = (id, action) => {
-    axios.post(`/api/authenticate/${id}`, { action, comment: comments[id] })
+    axios.post(`/api/expert/authenticate/${id}`, { action, comment: comments[id] })
       .then(() => setRequests(requests.filter(req => req.id !== id)))
       .catch((err) => console.error("Error updating status:", err));
   };
@@ -100,11 +100,11 @@ const ExpertPendingRequests = () => {
             <div className="flex gap-2">
               <button
                 className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-800 w-50"
-                onClick={() => handleAction(requests.id, "approve")}
+                onClick={() => handleAction(requests.id, "Approved")}
               >Approve</button>
               <button
                 className="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-800 w-50"
-                onClick={() => handleAction(requests.id, "reject")}
+                onClick={() => handleAction(requests.id, "Rejected")}
               >Reject</button>
             </div>
           </div>

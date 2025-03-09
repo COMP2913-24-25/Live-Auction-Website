@@ -66,4 +66,48 @@ router.get("/completed/:expertId", async (req, res) => {
     }
 });
 
+// Update the status of an authentication request
+router.post("/authenticate/:requestId", async (req, res) => {
+    const { requestId } = req.params;
+    const { action, comment } = req.body;
+    try {
+        const request = await knex("authentication_requests")
+            .where("id", requestId)
+            .first();
+
+        if (!request) {
+            return res.status(404).json({ error: "Request not found" });
+        }
+
+        if (request.status !== "Pending") {
+            return res.status(400).json({ error: "Request has already been processed" });
+        }
+
+        const update = {
+            status: action,
+            comments: comment,
+            decision_timestamp: knex.fn.now()
+        };
+
+        if (action === "Approved") {
+            update.expert_id = request.new_expert_id || request.expert_id;
+        } else if (action === "Rejected") {
+            update.expert_id = null;
+        }
+
+        await knex("authentication_requests")
+            .where("id", requestId)
+            .update(update);
+
+        await knex("items")
+            .where("id", request.item_id)
+            .update("authentication_status", update.status);
+
+        res.json({ message: "Request updated successfully" });
+    } catch (error) {
+        console.error("Error updating request status:", error);
+        res.status(500).json({ error: "Internal server error" });
+    }
+});
+
 module.exports = router;
