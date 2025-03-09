@@ -1,25 +1,19 @@
 import { defineConfig } from 'vite'
-import dotenv from 'dotenv';
 import react from '@vitejs/plugin-react'
-import tailwindcss from '@tailwindcss/vite'
+import dotenv from 'dotenv'
 
-// Load the root .env file
-dotenv.config({ path: '../.env' });
+dotenv.config({ path: '../.env' })
 
 export default defineConfig({
-  define: {
-    'process.env': process.env
-  },
-  plugins: [
-    react(),
-    tailwindcss(),
-  ],
+  plugins: [react()],
   server: {
+    port: 5173,
     proxy: {
       '/api': {
-        target: 'http://localhost:5001',
+        target: 'http://localhost:5000',
         changeOrigin: true,
+        secure: false
       }
     }
   }
-});
+})
