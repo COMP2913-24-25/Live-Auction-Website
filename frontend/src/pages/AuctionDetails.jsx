@@ -9,6 +9,7 @@ import AuthRequestForm from '../Components/authentication/AuthRequestForm';
 import PlaceBidModal from '../Components/PlaceBidModal';
 import BidForm from '../Components/BidForm';
 import { AuthContext } from '../context/AuthContext';
+import AuctionSuccessModal from '../Components/AuctionSuccessModal';
 
 const responsive = {
   desktop: { breakpoint: { max: 3000, min: 1024 }, items: 1 },
@@ -54,6 +55,7 @@ const AuctionDetails = () => {
   const [bidSuccess, setBidSuccess] = useState(false);
   const [bidError, setBidError] = useState("");
   const [submittingBid, setSubmittingBid] = useState(false);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
 
   const section1Ref = useRef(null);
   const section2Ref = useRef(null);
@@ -99,6 +101,21 @@ const AuctionDetails = () => {
     return () => window.removeEventListener("resize", adjustHeight);
   }, [auction]);
 
+  useEffect(() => {
+    if (auction && user) {
+      // 检查拍卖是否已结束
+      const now = new Date().getTime();
+      const endTime = new Date(auction.end_time).getTime();
+      const isAuctionEnded = now > endTime;
+      
+      // 检查当前用户是否是最高出价者
+      if (isAuctionEnded && auction.highest_bidder_id === user.id) {
+        // 如果拍卖已结束且当前用户是最高出价者，显示成功模态窗口
+        setShowSuccessModal(true);
+      }
+    }
+  }, [auction, user]);
+
   const handleAuthRequest = () => {
     setShowAuthForm(true);
   };
@@ -124,6 +141,7 @@ const AuctionDetails = () => {
     
     setSubmittingBid(true);
     setBidError("");
+    setBidSuccess(false);
     
     try {
       const response = await axios.post('/api/bids', {
@@ -133,13 +151,10 @@ const AuctionDetails = () => {
       
       if (response.data.success) {
         setBidSuccess(true);
+        setBidError("");
         
         // Refresh product data
-        axios.get(`/api/auctions/${id}`)
-          .then(response => {
-            setAuction(response.data);
-            setBidAmount(response.data.current_bid + 5);
-          });
+        fetchAuctionDetails();
         
         // Automatically open the bid history after success
         setTimeout(() => {
@@ -150,10 +165,12 @@ const AuctionDetails = () => {
           setBidSuccess(false);
         }, 3000);
       } else {
+        setBidSuccess(false);
         setBidError(response.data.error || "Bid failed, please try again");
       }
     } catch (error) {
       console.error("Bidding error:", error);
+      setBidSuccess(false);
       setBidError(
         error.response?.data?.error || 
         (error.response?.status === 401 ? "Please login first" : "An error occurred during the bidding process")
@@ -161,6 +178,18 @@ const AuctionDetails = () => {
     } finally {
       setSubmittingBid(false);
     }
+  };
+
+  const fetchAuctionDetails = () => {
+    axios
+      .get(`/api/auctions/${id}`)
+      .then((response) => {
+        setAuction(response.data);
+        setBidAmount(response.data.current_bid + 5);
+      })
+      .catch((error) =>
+        console.error("Error fetching auction details:", error)
+      );
   };
 
   if (!auction) return <p>Loading auction details...</p>;
@@ -299,6 +328,14 @@ const AuctionDetails = () => {
           itemId={auction.id}
           itemTitle={auction.title}
           historyOnly={true}
+        />
+      )}
+
+      {auction && (
+        <AuctionSuccessModal
+          isOpen={showSuccessModal}
+          onClose={() => setShowSuccessModal(false)}
+          item={auction}
         />
       )}
     </div>

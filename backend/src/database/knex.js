@@ -35,4 +35,5 @@ db.raw('SELECT 1')
     console.error('Database connection failed:', err);
   });
 
-module.exports = db; 
+module.exports = db;
+module.exports.connectionConfig = connectionConfig; 
