@@ -70,8 +70,8 @@ exports.seed = async function (knex) {
   await knex("authentication_requests").insert([
     { id: 1, user_id: 4, item_id: 1, status: "Approved", expert_id: 2, second_opinion_requested: false, new_expert_id: null, comments: "Looks good!", decision_timestamp: "2025-02-25 12:00:00" },
     { id: 2, user_id: 4, item_id: 2, status: "Pending", expert_id: 2, second_opinion_requested: true, new_expert_id: null, comments: "Looks good!", decision_timestamp: "2025-02-25 12:00:00" },
-    { id: 3, user_id: 5, item_id: 3, status: "Rejected", expert_id: 3, second_opinion_requested: false, new_expert_id: null, comments: "Looks good!", decision_timestamp: "2025-02-25 12:00:00" },
-    { id: 4, user_id: 4, item_id: 4, status: "Pending", expert_id: 3, second_opinion_requested: false, new_expert_id: null, comments: "Looks good!", decision_timestamp: "2025-02-25 12:00:00" },
+    { id: 3, user_id: 5, item_id: 3, status: "Pending", expert_id: 3, second_opinion_requested: false, new_expert_id: null, comments: "", decision_timestamp: "2025-02-25 12:00:00" },
+    { id: 4, user_id: 4, item_id: 4, status: "Pending", expert_id: 3, second_opinion_requested: false, new_expert_id: null, comments: "", decision_timestamp: "2025-02-25 12:00:00" },
     { id: 5, user_id: 6, item_id: 5, status: "Pending", expert_id: null, second_opinion_requested: false, new_expert_id: null, comments: "Looks good!", decision_timestamp: "2025-02-25 12:00:00" },
     { id: 6, user_id: 5, item_id: 6, status: "Pending", expert_id: null, second_opinion_requested: false, new_expert_id: null, comments: "Looks good!", decision_timestamp: "2025-02-25 12:00:00" },
     { id: 7, user_id: 4, item_id: 7, status: "Approved", expert_id: 2, second_opinion_requested: true, new_expert_id: 3, comments: "Looks good!", decision_timestamp: "2025-02-25 12:00:00" }
