@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef, useContext } from "react";
-import { AuthContext } from "../context/AuthContext";
+import { useAuth } from "../context/AuthContext";
 import axios from "axios";
 import Carousel from "react-multi-carousel";
 import "react-multi-carousel/lib/styles.css";
@@ -37,7 +37,7 @@ const calculateTimeRemaining = (endTime, auctionStatus) => {
 
 
 const AuctionDetails = () => {
-  const { user } = useContext(AuthContext);
+  const { user } = useAuth();
   const { id } = useParams();
   const [auction, setAuction] = useState(null);
   const [bidAmount, setBidAmount] = useState(0);
