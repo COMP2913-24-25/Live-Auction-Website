@@ -17,7 +17,7 @@ exports.up = async function (knex) {
     await knex.schema.alterTable('authentication_requests', (table) => {
         table.boolean('second_opinion_requested').defaultTo(false);
         table.integer('new_expert_id').references('id').inTable('users').onDelete('SET NULL');
-        table.text('comments').nullable();
+        table.text('comments').nullable().defaultTo('');
         table.timestamp('decision_timestamp').nullable();
     });
 
