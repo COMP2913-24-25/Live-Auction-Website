@@ -110,4 +110,31 @@ router.post("/authenticate/:requestId", async (req, res) => {
     }
 });
 
+// Request reallocation for an authentication request
+router.post("/request-reallocation/:requestId", async (req, res) => {
+    const { requestId } = req.params;
+    try {
+        const request = await knex("authentication_requests")
+            .where("id", requestId)
+            .first();
+
+        if (!request) {
+            return res.status(404).json({ error: "Request not found" });
+        }
+
+        if (request.status !== "Pending") {
+            return res.status(400).json({ error: "Request has already been processed" });
+        }
+
+        await knex("authentication_requests")
+            .where("id", requestId)
+            .update({ second_opinion_requested: true });
+
+        res.json({ message: "Second opinion requested successfully" });
+    } catch (error) {
+        console.error("Error requesting second opinion:", error);
+        res.status(500).json({ error: "Internal server error" });
+    }
+});
+
 module.exports = router;
