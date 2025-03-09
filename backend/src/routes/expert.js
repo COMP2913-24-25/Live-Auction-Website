@@ -13,7 +13,7 @@ router.get("/pending/:expertId", async (req, res) => {
                 "i.title as item_title",
                 "i.description as item_description",
                 "c.name as category",
-                knex.raw("GROUP_CONCAT(ii.image_url) as item_images"),
+                knex.raw("GROUP_CONCAT(ii.image_url) as image_urls"),
                 "i.user_id as seller_id"
             )
             .leftJoin("items as i", "ar.item_id", "i.id")
