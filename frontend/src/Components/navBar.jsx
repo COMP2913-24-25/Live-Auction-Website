@@ -3,7 +3,8 @@ import { Link } from "react-router-dom";
 import { Menu, Bell, User, UserPlus, X, Search } from "lucide-react";
 import { useAuth, AuthContext } from "../context/AuthContext";
 import { Route, Routes } from "react-router-dom";
-import NotificationBell from "../pages/notificationBell";
+import { NotificationBell } from "../pages/notificationBell";
+import {hasSelectedPendingRequests} from '../pages/Dashboard';
 
 function NavBar() {
     const { isAuthenticated, logout } = useAuth();
@@ -13,6 +14,8 @@ function NavBar() {
     const { user } = useContext(AuthContext);
     const [hasNewNotification, setHasNewNotification] = useState(false);
     const [previousAuctionCount, setPreviousAuctionCount] = useState(0);
+    const [hasUpdates, setHasUpdates] = useState(false);
+    const [previousData, setPreviousData] = useState([]);
   
     const notifications = [
       { id: 1, message: "New bid on your item", time: "5 mins ago" },
@@ -53,6 +56,33 @@ function NavBar() {
           return () => clearInterval(interval);
       }
     }, [user]);
+
+    useEffect(() => {
+      const fetchUpdates = async () => {
+          try {
+              const response = await axios.get('/api/manager/authentication-requests/assign');
+              const assignedRequests = response.data;
+
+              // Check if the assignedRequests array has changed
+              const hasNewUpdate = JSON.stringify(assignedRequests) !== JSON.stringify(previousData);
+
+              if (hasNewUpdate) {
+                  setHasUpdates(true);
+                  setPreviousData(assignedRequests);
+              }
+          } catch (error) {
+              console.error('Error checking for updates:', error);
+          }
+      };
+
+      // Check for updates every 10 seconds
+      const interval = setInterval(fetchUpdates, 10000);
+      
+      // Cleanup interval on component unmount
+      return () => clearInterval(interval);
+  }, [previousData]);
+
+
   
     return (
       <>
@@ -120,7 +150,7 @@ function NavBar() {
                         className="text-white/90 hover:text-white transition-colors relative"
                         onClick={() => setIsNotificationOpen(!isNotificationOpen)}
                       >
-                        <Bell className={`h-6 w-6 ${hasNewNotification ? 'animate-[bounce_1s_infinite] text-gold' : 'text-white'}`} />
+                        <Bell className={`h-6 w-6 ${hasNewNotification && hasUpdates ? 'animate-[bounce_1s_infinite] text-gold' : 'text-white'}`} />
                         <span className="absolute -top-1 -right-1 h-4 w-4 bg-accent rounded-full text-xs flex items-center justify-center text-white">
                           {notifications.length}
                         </span>

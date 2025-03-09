@@ -3,6 +3,10 @@ import axios from "axios";
 import { AuthContext } from "../context/AuthContext";
 import { Navigate } from "react-router-dom";
 
+// const [hasSelectedPendingRequests, setHasSelectedPendingRequests] = useState(false);
+
+// export {hasSelectedPendingRequests};
+
 export default function ManagerDashboard() {
     const [pendingRequests, setPendingRequests] = useState([]);
     const [assignedRequests, setAssignedRequests] = useState([]);
@@ -10,7 +14,11 @@ export default function ManagerDashboard() {
     const [experts, setExperts] = useState({});
     const [selectedPendingRequests, setSelectedPendingRequests] = useState({});
     const [selectedAssignedRequests, setSelectedAssignedRequests] = useState({});
+    const [hasSelectedPendingRequests, setHasSelectedPendingRequests] = useState(false);
     const [loading, setLoading] = useState(true);
+    
+    // hasSelectedPendingRequests = false;
+    // export const hasSelectedPendingRequests = true; 
 
     useEffect(() => {
         fetchPendingRequests();
@@ -70,6 +78,7 @@ export default function ManagerDashboard() {
             ...prev,
             [itemId]: prev[itemId] ? undefined : { expertId: "", categoryId }
         }));
+        // setHasSelectedPendingRequests(true);
     };
 
     const handleAssignedCheckboxChange = (itemId, categoryId) => {
@@ -170,7 +179,7 @@ export default function ManagerDashboard() {
                                 <th className="p-2">Assign Expert</th>
                             </tr>
                         </thead>
-                        <tbody>
+                        <tbody> 
                             {pendingRequests.map((req) => (
                                 <tr key={req.item_id} className="odd:bg-white even:bg-gray-200">
                                     <td className="p-2 text-center">
@@ -187,13 +196,17 @@ export default function ManagerDashboard() {
                                     <td className="p-2 text-center">
                                         <select
                                             onFocus={() => fetchExperts(req.category_id)}
-                                            onChange={(e) => handlePendingExpertChange(req.item_id, e.target.value)}
+                                            onChange={(e) => {
+                                                handlePendingExpertChange(req.item_id, e.target.value)
+                                                setHasSelectedPendingRequests(true);
+                                            }
+                                        }
                                             className="border p-1 w-full md:w-auto"
                                         >
                                             <option value="">Select Expert</option>
                                             {experts[req.category_id]?.map((exp) => (
                                                 <option key={exp.id} value={exp.id}>{exp.username}</option>
-                                            ))}
+                                            ))} 
                                         </select>
                                     </td>
                                 </tr>
@@ -292,3 +305,4 @@ export default function ManagerDashboard() {
         </div>
     );
 }
+
