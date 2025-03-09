@@ -3,8 +3,8 @@ import { Link } from "react-router-dom";
 import { Menu, Bell, User, UserPlus, X, Search } from "lucide-react";
 import { useAuth, AuthContext } from "../context/AuthContext";
 import { Route, Routes } from "react-router-dom";
-import { NotificationBell } from "../pages/notificationBell";
-import {hasSelectedPendingRequests} from '../pages/Dashboard';
+import  NotificationBell  from "../pages/NotificationBell";
+// import {hasSelectedPendingRequests} from '../pages/Dashboard';
 
 function NavBar() {
     const { isAuthenticated, logout } = useAuth();

@@ -40,74 +40,75 @@ function NotificationBell() {
         }
     }, [user?.id]);
 
+    const handleRequestAction = async (itemId, status) => {
+        try {
+            await axios.put('/api/manager/authentication-requests/completed', {
+                item_id: itemId,
+                status: status,
+            });
+            alert(`Item ${status} successfully!`);
+            
+            // Optionally, refresh the notifications list or remove the item
+            setNotifications((prev) => prev.filter((item) => item.id !== itemId));
+        } catch (error) {
+            console.error(`Failed to ${status} item ID ${itemId}:`, error);
+            alert('Failed to update item status. Please try again.');
+        }
+    };
+
 
     return (
 
         <div className="p-4">
-            <h2 className="text-xl font-bold mb-4">Notification Center</h2>
-            {notifications.length > 0 ? (
-                <table className="min-w-full bg-white border border-gray-200">
-                    <thead>
-                        <tr>
-                            <th className="py-2 px-4 border">Item ID</th>
-                            <th className="py-2 px-4 border">Title</th>
-                            <th className="py-2 px-4 border">Description</th>
-                            <th className="py-2 px-4 border">Current Bid</th>
-                            <th className="py-2 px-4 border">Minimum Price</th>
-                            <th className="py-2 px-4 border">End Time</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {notifications.map((item) => (
-                            <tr key={item.id} className="odd:bg-gray-100">
-                                <td className="py-2 px-4 border">{item.id}</td>
-                                <td className="py-2 px-4 border">{item.title}</td>
-                                <td className="py-2 px-4 border">{item.description}</td>
-                                <td className="py-2 px-4 border">{item.current_bid}</td>
-                                <td className="py-2 px-4 border">{item.min_price}</td>
-                                <td className="py-2 px-4 border">{new Date(item.end_time).toLocaleString()}</td>
-                            </tr>
-                        ))}
-                    </tbody>
-                </table>
-            ) : (
-                <p>No notifications available.</p>
-            )}
+    <h1 className="text-3xl font-bold mb-6 text-center">Item Authentication Requests</h1>
+    {notifications.length > 0 ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {notifications.map((item) => (
+                <div key={item.id} className="bg-white border border-gray-200 rounded-lg p-4 shadow-md">
+                    <h2 className="text-xl font-semibold mb-2">{item.title}</h2>
+                    <p className="text-gray-600 mb-2">{item.description}</p>
+                    <div className="mb-2">
+                        <strong>Current Bid:</strong> ${item.current_bid}<br />
+                        <strong>Minimum Price:</strong> ${item.min_price}<br />
+                        <strong>End Time:</strong> {new Date(item.end_time).toLocaleString()}
+                    </div>
+                    <div className="flex flex-wrap gap-2 mb-2">
+                        {item.images && item.images.length > 0 ? (
+                            item.images.map((imageUrl, index) => (
+                                <img
+                                    key={index}
+                                    src={imageUrl}
+                                    alt={`Item ${item.id} Image ${index + 1}`}
+                                    className="w-24 h-24 object-cover border rounded-md"
+                                />
+                            ))
+                        ) : (
+                            <p className="text-gray-500">No images available</p>
+                        )}
+                    </div>
+                    <div className="flex justify-end gap-2 mt-4">
+                        <button
+                            onClick={() => handleRequestAction(item.id, 'Rejected')}
+                            className="bg-red-500 text-white px-4 py-2 rounded-md hover:bg-red-600"
+                        >
+                            Reject
+                        </button>
+                        <button
+                            onClick={() => handleRequestAction(item.id, 'Approved')}
+                            className="bg-green-500 text-white px-4 py-2 rounded-md hover:bg-green-600"
+                        >
+                            Approve
+                        </button>
+                    </div>
+                </div>
+            ))}
         </div>
+    ) : (
+        <p className="text-center text-gray-500">No notifications available.</p>
+    )}
+</div>
 
-        // <>
-        //     {/* Notification Details Display */}
-        //     <div className="p-4">
-        //         {notifications.map((notification) => (
-        //             <div key={notification.id} className="border rounded-lg p-4 mb-4 shadow-lg bg-white">
-        //                 <h2 className="text-xl font-semibold">{notification.title}</h2>
-        //                 <p className="text-gray-500">Seller: {notification.seller_name}</p>
-        //                 <div className="flex gap-4 my-4">
-        //                     <div className="flex flex-wrap gap-2">
-        //                         <p className="font-semibold">Item Images:</p>
-        //                         {notification.image_urls?.split(',').map((url, index) => (
-        //                             <img
-        //                                 key={index}
-        //                                 src={url}
-        //                                 alt={`Item image ${index + 1}`}
-        //                                 className="w-24 h-24 object-cover border"
-        //                             />
-        //                         ))}
-        //                     </div>
-        //                     <div className="flex-1">
-        //                         <p><strong>Description:</strong> {notification.description}</p>
-        //                         <p><strong>Minimum Price:</strong> ${notification.min_price}</p>
-        //                         <p><strong>End Time:</strong> {notification.end_time}</p>
-        //                         <div className="flex gap-2 mt-4">
-        //                             <button className="px-4 py-2 bg-red-500 text-white rounded-md">Reject</button>
-        //                             <button className="px-4 py-2 bg-black text-white rounded-md">Approve</button>
-        //                         </div>
-        //                     </div>
-        //                 </div>
-        //             </div>
-        //         ))}
-        //     </div>
-        // </>
+    
     );
 }
 
