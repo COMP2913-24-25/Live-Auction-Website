@@ -87,9 +87,18 @@ exports.seed = async function (knex) {
     { id: 1, user_id: 4, item_id: 2 }
   ]);
 
-  // Insert Notifications
+  // Update the Notifications section to only create notifications for valid actions
   await knex("notifications").insert([
-    { id: 1, user_id: 4, message: "Your item has a new bid!", read: false }
+    { 
+      id: 1, 
+      user_id: 6, // User who placed the bid
+      auction_id: 1,
+      type: 'outbid',
+      message: null,
+      read: false,
+      deleted: false,
+      created_at: new Date()
+    }
   ]);
 
   // Insert Item Images

@@ -17,7 +17,7 @@ export function NotificationProvider({ children }) {
     }
     
     try {
-      const { data } = await axios.get('/api/notifications', {
+      const { data } = await axios.get(`http://localhost:5000/api/notifications/${user.id}`, {
         headers: {
           'Cache-Control': 'no-cache',
           'Pragma': 'no-cache'

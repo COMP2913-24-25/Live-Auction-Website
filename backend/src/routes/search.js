@@ -2,7 +2,8 @@ const express = require('express');
 const knex = require('../db');
 const router = express.Router();
 
-router.get('/search', async (req, res) => {
+// Remove '/search' from here since it's already mounted with '/api/search' in app.js
+router.get('/', async (req, res) => {
   try {
     const { query, categories, minPrice, maxPrice, authenticatedOnly, daysRemaining } = req.query;
 

@@ -13,6 +13,7 @@ const authRoutes = require('./routes/auth');
 const categoriesRoutes = require('./routes/categories');
 const searchRoutes = require('./routes/search');
 const managerRoutes = require('./routes/manager');
+const notificationsRoutes = require('./routes/notifications'); 
 
 // CORS configuration
 app.use(cors({
@@ -26,12 +27,13 @@ app.use('/api', uploadRoutes);
 app.use('/api/auctions', auctionRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api', categoriesRoutes);
-app.use('/api', searchRoutes);
+app.use('/api/search', searchRoutes);
 app.use('/api/manager', managerRoutes);
+app.use('/api', notificationsRoutes); 
 
 // Example route
-app.get('/', (req, res) => {
-  res.send('Hello from the backend!');
-});
+// app.get('/', (req, res) => {
+//   res.send('Hello from the backend!');
+// });
 
 module.exports = app;

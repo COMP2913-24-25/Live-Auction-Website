@@ -1,5 +1,5 @@
 const express = require('express');
-const knex = require('../db'); // Assuming you have a Knex setup in db/knex.js
+const knex = require('../db'); 
 const router = express.Router();
 
 // Fetch all active auctions
@@ -47,7 +47,7 @@ router.get('/:id', async (req, res) => {
         'description',
         'current_bid',
         'authenticated',
-        'end_time',  // Ensure this is a valid timestamp
+        'end_time',  
         'min_price'
       )
       .where({ item_id: id })
@@ -88,6 +88,47 @@ router.get('/:id', async (req, res) => {
   } catch (error) {
     console.error('Error fetching auction item:', error);
     res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// In your bid placement route
+router.post('/:id/bid', async (req, res) => {
+  try {
+
+    // Notify previous highest bidder
+    if (previousHighestBid) {
+      await axios.post('/api/notifications/bid-notification', {
+        userId: previousHighestBid.user_id,
+        auctionId: req.params.id,
+        type: 'outbid'
+      });
+    }
+
+    // Check if auction is ending soon
+    const auction = await knex('items').where('id', req.params.id).first();
+    const endTime = new Date(auction.end_time);
+    const now = new Date();
+    const hoursRemaining = (endTime - now) / (1000 * 60 * 60);
+
+    if (hoursRemaining <= 1) {
+      const bidders = await knex('bids')
+        .where('item_id', req.params.id)
+        .select('user_id')
+        .distinct();
+
+      for (const bidder of bidders) {
+        await axios.post('/api/notifications/bid-notification', {
+          userId: bidder.user_id,
+          auctionId: req.params.id,
+          type: 'ending_soon'
+        });
+      }
+    }
+
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Error placing bid:', error);
+    res.status(500).json({ error: 'Failed to place bid' });
   }
 });
 

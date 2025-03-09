@@ -1,7 +1,8 @@
 import { useState, useRef, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { Menu, Bell, Search, LogOut } from "lucide-react";
+import { Menu, Bell, Search, LogOut, AlertCircle, Check, Clock, ArrowRight } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
+import { useNotifications } from "../context/NotificationContext";
 
 function NavBar() {
     const { isAuthenticated, logout } = useAuth();
@@ -12,10 +13,8 @@ function NavBar() {
     const searchRef = useRef(null);
     const navigate = useNavigate();
   
-    const notifications = [
-      { id: 1, message: "New bid on your item", time: "5 mins ago" },
-      { id: 2, message: "Auction ending soon", time: "10 mins ago" },
-    ];
+    const { notifications, unreadCount, markAsRead } = useNotifications();
+    console.log(notifications);
 
     useEffect(() => {
       function handleClickOutside(event) {
@@ -54,7 +53,7 @@ function NavBar() {
                 </Link>
               </div>
 
-              {/* Search Bar - Centered and Styled to Match Design */}
+              {/* Search Bar*/}
               <div className="hidden md:flex flex-1 justify-center mx-6">
                 <div className="w-full max-w-xl relative">
                   <div className="relative flex items-center w-full">
@@ -95,44 +94,68 @@ function NavBar() {
                         onClick={() => setIsNotificationOpen(!isNotificationOpen)}
                       >
                         <Bell className="h-5 w-5" />
-                        {notifications.length > 0 && (
+                        {unreadCount > 0 && (
                           <span className="absolute -top-1 -right-1 h-5 w-5 bg-orange-500 rounded-full text-xs flex items-center justify-center text-white font-bold">
-                            {notifications.length}
+                            {unreadCount}
                           </span>
                         )}
                       </button>
 
                       {/* Notification Dropdown */}
                       {isNotificationOpen && (
-                        <div className="absolute right-0 mt-2 w-72 bg-white rounded-md shadow-lg overflow-hidden z-50">
-                          <div className="px-4 py-2 border-b border-gray-200 bg-gray-50">
-                            <h3 className="text-sm font-semibold text-gray-800">Notifications</h3>
+                        <div className="absolute right-0 mt-2 w-80 bg-white rounded-lg shadow-lg overflow-hidden z-50">
+                          <div className="p-3 border-b border-gray-200 bg-gray-50 flex justify-between items-center">
+                            <h3 className="font-semibold text-gray-800">Notifications</h3>
+                            <span className="text-sm text-gray-500">{unreadCount} unread</span>
                           </div>
-                          {notifications.length > 0 ? (
-                            <>
-                              {notifications.map((notification) => (
-                                <div 
-                                  key={notification.id} 
-                                  className="px-4 py-3 hover:bg-gray-50 cursor-pointer border-b border-gray-100"
-                                >
-                                  <p className="text-sm text-gray-800 font-medium">{notification.message}</p>
-                                  <p className="text-xs text-gray-500 mt-1">{notification.time}</p>
-                                </div>
-                              ))}
-                              <div className="px-4 py-2 bg-gray-50">
+                          <div className="max-h-96 overflow-y-auto">
+                            {notifications.length > 0 ? (
+                              <>
+                                {notifications.slice(0, 6).map((notification) => (
+                                  <div 
+                                    key={notification.id} 
+                                    onClick={() => {
+                                      markAsRead(notification.id);
+                                      navigate('/notifications');
+                                      setIsNotificationOpen(false);
+                                    }}
+                                    className={`p-3 hover:bg-gray-50 cursor-pointer border-b border-gray-100 ${
+                                      !notification.read ? 'bg-blue-50' : ''
+                                    }`}
+                                  >
+                                    <div className="flex gap-2 items-start">
+                                      <div className="mt-1">
+                                        {notification.type === 'outbid' && <AlertCircle className="h-4 w-4 text-red-500" />}
+                                        {notification.type === 'won' && <Check className="h-4 w-4 text-green-500" />}
+                                        {notification.type === 'ending_soon' && <Clock className="h-4 w-4 text-orange-500" />}
+                                        {notification.type === 'ended' && <Bell className="h-4 w-4 text-gray-500" />}
+                                      </div>
+                                      <div>
+                                        <p className="text-sm text-gray-800">{notification.message}</p>
+                                        <p className="text-xs text-gray-500 mt-1">
+                                          {notification.timeAgo}
+                                        </p>
+                                      </div>
+                                    </div>
+                                  </div>
+                                ))}
                                 <button 
-                                  className="text-sm text-blue-600 hover:text-blue-800 w-full text-center font-medium"
-                                  onClick={() => {/* Handle view all notifications */}}
+                                  onClick={() => {
+                                    navigate('/notifications');
+                                    setIsNotificationOpen(false);
+                                  }}
+                                  className="w-full p-3 text-sm text-blue-600 hover:bg-gray-50 font-medium flex items-center justify-center gap-2"
                                 >
                                   View all notifications
+                                  <ArrowRight className="h-4 w-4" />
                                 </button>
+                              </>
+                            ) : (
+                              <div className="p-4 text-center text-gray-500">
+                                No notifications
                               </div>
-                            </>
-                          ) : (
-                            <div className="px-4 py-6 text-center text-gray-500">
-                              <p>No new notifications</p>
-                            </div>
-                          )}
+                            )}
+                          </div>
                         </div>
                       )}
                     </div>

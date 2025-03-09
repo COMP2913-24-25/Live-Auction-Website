@@ -18,9 +18,9 @@ const createNotification = async (userId, auctionId, type) => {
 };
 
 // Get user's notifications
-router.get('/notifications', async (req, res) => {
+router.get('/notifications/:id', async (req, res) => {
   try {
-    const userId = req.user.id;
+    const userId = req.params.id;
     const notifications = await knex('notifications')
       .select(
         'notifications.*',
