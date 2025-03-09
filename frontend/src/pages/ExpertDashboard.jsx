@@ -28,7 +28,7 @@ const ExpertPendingRequests = () => {
     setComments({ ...comments, [id]: value });
   };
 
-  const handleReallocate = (id) => {
+  const handleReallocate = () => {
     if (selectedRequestId) {
         axios.post(`/api/expert/request-reallocation/${selectedRequestId}`)
             .then(() => {
