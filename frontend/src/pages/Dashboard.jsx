@@ -198,7 +198,7 @@ export default function ManagerDashboard() {
                                             onFocus={() => fetchExperts(req.category_id)}
                                             onChange={(e) => {
                                                 handlePendingExpertChange(req.item_id, e.target.value)
-                                                setHasSelectedPendingRequests(true);
+                                                // setHasSelectedPendingRequests(true);
                                             }
                                         }
                                             className="border p-1 w-full md:w-auto"

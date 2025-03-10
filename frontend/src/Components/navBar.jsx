@@ -35,7 +35,7 @@ function NavBar() {
     }, []);
 
     useEffect(() => {
-      if (user?.role === 2) { // Only fetch notifications for experts
+      if (user?.role === 2 || user?.role === 3) { // Only fetch notifications for manager and expert
           const fetchNotifications = async () => {
               try {
                 const response = await fetch(`${import.meta.env.VITE_API_URL}/api/auction/active`);
@@ -58,32 +58,54 @@ function NavBar() {
     }, [user]);
 
     useEffect(() => {
-      const fetchUpdates = async () => {
-          try {
-              const response = await axios.get('/api/manager/authentication-requests/assign');
-              const assignedRequests = response.data;
+    if ([2, 3].includes(user?.role)) {
+        const fetchUpdates = async () => {
+            try {
+                const response = await axios.get('/api/manager/authentication-requests/assign');
+                const assignedRequests = response.data;
+                
+                // If previousData is null, set it directly without comparison
+                if (!previousData) {
+                    setPreviousData(assignedRequests);
+                    return;
+                }
 
-              // Check if the assignedRequests array has changed
-              const hasNewUpdate = JSON.stringify(assignedRequests) !== JSON.stringify(previousData);
+                // Compare only if previousData is already set
+                const hasNewUpdate = JSON.stringify(assignedRequests) !== JSON.stringify(previousData);
 
-              if (hasNewUpdate) {
-                  setHasUpdates(true);
-                  setPreviousData(assignedRequests);
-              }
-          } catch (error) {
-              console.error('Error checking for updates:', error);
-          }
-      };
+                if (hasNewUpdate) {
+                    setHasUpdates(true);
+                    setPreviousData(assignedRequests);
+                }
+            } catch (error) {
+                console.error('Error checking for updates:', error);
+            }
+        };
 
-      // Check for updates every 10 seconds
-      const interval = setInterval(fetchUpdates, 10000);
-      
-      // Cleanup interval on component unmount
-      return () => clearInterval(interval);
-  }, [previousData]);
+        fetchUpdates();
+        const interval = setInterval(fetchUpdates, 10000);
+
+        return () => clearInterval(interval);
+    }
+}, [previousData, user?.role]);
+
+    const handleNotificationClick = () => {
+      if (user?.role === 1) {
+          // For regular users, toggle the notification dropdown
+          setIsNotificationOpen(!isNotificationOpen);
+      } else if (user?.role === 2) {
+          // For experts, navigate to the notifications page
+          navigate('/notifications');
+      } else if (user?.role === 3) {
+          // For managers, perform a different action (e.g., open a different page or modal)
+          // navigate('/manager/notifications');
+      } else {
+          console.warn('Unknown user role, no action taken.');
+      }
+    };
 
 
-  
+
     return (
       <>
         <header className="fixed top-0 left-0 right-0 bg-primary shadow-lg z-50">
@@ -106,9 +128,14 @@ function NavBar() {
                 </Link>
                 {isAuthenticated && (
                   <>
-                    {(user.role === 2 || user.role === 3) && (
+                    {(user.role === 2) && (
                       <Link to="/dashboard" className="text-white/90 hover:text-white transition-colors">
-                        Dashboard
+                        Expert Dashboard
+                      </Link>
+                    )}
+                    {(user.role === 3) && (
+                      <Link to="/dashboard" className="text-white/90 hover:text-white transition-colors">
+                        Manager Dashboard
                       </Link>
                     )}
                     {user.role === 1 && (
@@ -148,43 +175,41 @@ function NavBar() {
                     <div className="relative" ref={notificationRef}>
                       <button 
                         className="text-white/90 hover:text-white transition-colors relative"
-                        onClick={() => setIsNotificationOpen(!isNotificationOpen)}
+                        onClick= {handleNotificationClick}
                       >
-                        <Bell className={`h-6 w-6 ${hasNewNotification && hasUpdates ? 'animate-[bounce_1s_infinite] text-gold' : 'text-white'}`} />
+                        <Bell className={`h-6 w-6 ${(hasNewNotification && hasUpdates) ? 'animate-[bounce_1s_infinite] text-gold' : 'text-white'}`} />
                         <span className="absolute -top-1 -right-1 h-4 w-4 bg-accent rounded-full text-xs flex items-center justify-center text-white">
                           {notifications.length}
                         </span>
                       </button>
 
                       {/* We are gonna override the use of this bell for user/expert/manager */}
-                      {isNotificationOpen && user.role==1 ? ( /* Notification Dropdown for user == 1 */
-                        <div className="notification-dropdown">
-                          <div className="px-4 py-2 border-b border-gray-200">
-                            <h3 className="text-sm font-semibold text-gray-900">Notifications</h3>
-                          </div>
-                          {notifications.map((notification) => (
-                            <div 
-                              key={notification.id} 
-                              className="px-4 py-3 hover:bg-gray-50 cursor-pointer"
-                            >
-                              <p className="text-sm text-gray-800">{notification.message}</p>
-                              <p className="text-xs text-gray-500 mt-1">{notification.time}</p>
+                      {isNotificationOpen && (
+                          // User notifications
+                          <div className="notification-dropdown">
+                            <div className="px-4 py-2 border-b border-gray-200">
+                              <h3 className="text-sm font-semibold text-gray-900">Notifications</h3>
                             </div>
-                          ))}
-                          <div className="px-4 py-2 border-t border-gray-200">
-                            <button 
-                              className="text-sm text-secondary hover:text-secondary/80 w-full text-center"
-                              onClick={() => {/* Handle view all notifications */}}
-                            >
-                              View all notifications
-                            </button>
+                            {notifications.map((notification) => (
+                              <div 
+                                key={notification.id} 
+                                className="px-4 py-3 hover:bg-gray-50 cursor-pointer"
+                              >
+                                <p className="text-sm text-gray-800">{notification.message}</p>
+                                <p className="text-xs text-gray-500 mt-1">{notification.time}</p>
+                              </div>
+                            ))}
+                            <div className="px-4 py-2 border-t border-gray-200">
+                              <button 
+                                className="text-sm text-secondary hover:text-secondary/80 w-full text-center"
+                                onClick={() => {/* Handle view all notifications */}}
+                              >
+                                View all notifications
+                              </button>
+                            </div>
                           </div>
-                        </div>
-                        ) : (user.role==2 ? ( /* Notification list for expert == 1 perhaps need protect route */
-                        <Routes>
-                          <Route path="/notifications" element={<NotificationBell />} /> 
-                        </Routes>
-                        ) : (null))} {/*null should be for manager, user.role == 3 perhaps need protect route */}
+                      )}
+
                     </div>
                     <button onClick={logout} className="text-white/90 hover:text-white transition-colors">
                       Logout

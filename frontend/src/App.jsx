@@ -8,7 +8,7 @@ import NavBar from "./components/NavBar";
 import ProtectedRoute from "./context/ProtectedRoute";
 import AuctionDetails from './pages/AuctionDetails';
 import AuctionForm from './pages/AuctionForm';
-import NotificationBell from './pages/notificationBell';
+import NotificationBell from './pages/NotificationBell';
 
 const App = () => (
   <AuthProvider>
