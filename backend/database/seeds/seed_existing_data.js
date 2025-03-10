@@ -51,13 +51,13 @@ exports.seed = async function (knex) {
 
   // Insert Items
   await knex("items").insert([
-    { id: 1, user_id: 4, title: "Vintage Clock", description: "An old clock", min_price: 50.0, category_id: 2, end_time: "2025-03-06 17:35:00", authentication_status: 'Approved', auction_status: 'Active' },
-    { id: 2, user_id: 4, title: "Antique Vase", description: "A rare vase", min_price: 100.0, category_id: 2, end_time: "2025-03-06 15:00:00", authentication_status: 'Pending', auction_status: 'Not Listed' },
-    { id: 3, user_id: 5, title: "Rare Coin", description: "A valuable coin", min_price: 200.0, category_id: 5, end_time: "2025-03-06 18:00:00", authentication_status: 'Rejected', auction_status: 'Active' },
-    { id: 4, user_id: 4, title: "Vintage Camera", description: "An old camera", min_price: 150.0, category_id: 6, end_time: "2025-03-07 21:00:00", authentication_status: 'Pending', auction_status: 'Not Listed' },
-    { id: 5, user_id: 6, title: "Rare Stamp", description: "A valuable stamp", min_price: 250.0, category_id: 5, end_time: "2025-03-08 00:00:00", authentication_status: 'Pending', auction_status: 'Not Listed' },
-    { id: 6, user_id: 5, title: "Vintage Typewriter", description: "An old typewriter", min_price: 300.0, category_id: 6, end_time: "2025-03-07 03:00:00", authentication_status: 'Pending', auction_status: 'Not Listed' },
-    { id: 7, user_id: 7, title: "Rare Book", description: "A valuable book", min_price: 350.0, category_id: 11, end_time: "2025-03-09 06:00:00", authentication_status: 'Not Requested', auction_status: 'Active' }
+    { id: 1, user_id: 4, title: "Vintage Clock", description: "An old clock", min_price: 50.0, category_id: 2, end_time: "2025-03-17 17:35:00", authentication_status: 'Approved', auction_status: 'Active' },
+    { id: 2, user_id: 4, title: "Antique Vase", description: "A rare vase", min_price: 100.0, category_id: 2, end_time: "2025-03-16 15:00:00", authentication_status: 'Pending', auction_status: 'Not Listed' },
+    { id: 3, user_id: 5, title: "Rare Coin", description: "A valuable coin", min_price: 200.0, category_id: 5, end_time: "2025-03-20 18:00:00", authentication_status: 'Rejected', auction_status: 'Active' },
+    { id: 4, user_id: 4, title: "Vintage Camera", description: "An old camera", min_price: 150.0, category_id: 6, end_time: "2025-03-20 21:00:00", authentication_status: 'Pending', auction_status: 'Not Listed' },
+    { id: 5, user_id: 6, title: "Rare Stamp", description: "A valuable stamp", min_price: 250.0, category_id: 5, end_time: "2025-03-21 00:00:00", authentication_status: 'Pending', auction_status: 'Not Listed' },
+    { id: 6, user_id: 5, title: "Vintage Typewriter", description: "An old typewriter", min_price: 300.0, category_id: 6, end_time: "2025-03-21 03:00:00", authentication_status: 'Pending', auction_status: 'Not Listed' },
+    { id: 7, user_id: 7, title: "Rare Book", description: "A valuable book", min_price: 350.0, category_id: 11, end_time: "2025-03-22 06:00:00", authentication_status: 'Not Requested', auction_status: 'Active' }
   ]);
 
   // Insert Bids
