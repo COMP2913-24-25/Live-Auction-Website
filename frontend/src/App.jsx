@@ -1,9 +1,11 @@
 import { Navigate, BrowserRouter as Router, Route, Routes } from 'react-router-dom';
 import { AuthProvider } from "./context/AuthContext";
+import { useAuth } from './context/AuthContext';
 import Browse from "./pages/Browse";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
-import Dashboard from "./pages/Dashboard";  
+import ManagerDashboard from "./pages/ManagerDashboard";
+import ExpertDashboard from "./pages/ExpertDashboard";  
 import NavBar from "./components/NavBar";
 import ProtectedRoute from "./context/ProtectedRoute";
 import AuctionDetails from './pages/AuctionDetails';

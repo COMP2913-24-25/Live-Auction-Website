@@ -2,12 +2,9 @@ import { useState, useRef, useEffect, useContext } from "react";
 import { Link } from "react-router-dom";
 import { Menu, Bell, User, UserPlus, X, Search } from "lucide-react";
 import { useAuth, AuthContext } from "../context/AuthContext";
-import { Route, Routes } from "react-router-dom";
-import  NotificationBell  from "../pages/NotificationBell";
-// import {hasSelectedPendingRequests} from '../pages/Dashboard';
 
 function NavBar() {
-    const { isAuthenticated, logout } = useAuth();
+    const { isAuthenticated, logout, user } = useAuth();
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
     const [isNotificationOpen, setIsNotificationOpen] = useState(false);
     const notificationRef = useRef(null);
@@ -122,9 +119,6 @@ function NavBar() {
               <nav className="hidden md:flex items-center space-x-8">
                 <Link to="/browse" className="text-white/90 hover:text-white transition-colors">
                   Browse
-                </Link>
-                <Link to="/how-it-works" className="text-white/90 hover:text-white transition-colors">
-                  How It Works
                 </Link>
                 {isAuthenticated && (
                   <>
