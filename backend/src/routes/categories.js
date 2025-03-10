@@ -2,9 +2,10 @@ const express = require('express');
 const knex = require('../db');
 const router = express.Router();
 
-router.get('/categories', async (req, res) => {
+// Change from '/categories' to '/'
+router.get('/', async (req, res) => {
   try {
-    const categories = await knex('categories').select('*'); // Adjust column names if needed
+    const categories = await knex('categories').select('*');
     res.json(categories);
   } catch (error) {
     console.error('Database error:', error);

@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Menu, Bell, Search, LogOut, AlertCircle, Check, Clock, ArrowRight } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
-import { useNotifications } from "../context/NotificationContext";
+import { useNotifications } from "../context/notificationContext";
 
 function NavBar() {
     const { isAuthenticated, logout } = useAuth();

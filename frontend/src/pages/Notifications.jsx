@@ -1,4 +1,4 @@
-import { useNotifications } from '../context/NotificationContext';
+import { useNotifications } from '../context/notificationContext';
 import { useNavigate } from 'react-router-dom';
 import { Trash2, Bell, Check, Clock, ArrowRight, AlertCircle } from 'lucide-react';
 
@@ -7,10 +7,20 @@ export default function Notifications() {
   const navigate = useNavigate();
 
   const handleNotificationClick = async (notification) => {
-    await markAsRead(notification.id);
+    if (!notification.read) {
+      await markAsRead(notification.id);
+    }
     if (notification.auction_id) {
       navigate(`/auctions/${notification.auction_id}`);
     }
+  };
+
+  // Format currency
+  const formatCurrency = (amount) => {
+    return new Intl.NumberFormat('en-GB', {
+      style: 'currency',
+      currency: 'GBP'
+    }).format(amount);
   };
 
   const getNotificationIcon = (type) => {
@@ -64,6 +74,44 @@ export default function Notifications() {
                             View auction details <ArrowRight className="h-4 w-4" />
                           </p>
                         )}
+                      </div>
+                      {/* Auction Details Card */}
+                      <div className="mt-3 bg-gray-50 rounded-lg p-4 border border-gray-200">
+                        <h3 className="font-medium text-gray-900">{notification.auction_title}</h3>
+                        <p className="text-sm text-gray-600 mt-1">{notification.auction_description}</p>
+                        
+                        <div className="mt-3 grid grid-cols-2 gap-4 text-sm">
+                          <div>
+                            <p className="text-gray-500">Starting Price</p>
+                            <p className="font-medium">{formatCurrency(notification.min_price)}</p>
+                          </div>
+                          <div>
+                            <p className="text-gray-500">Current Bid</p>
+                            <p className="font-medium">{formatCurrency(notification.current_bid || notification.min_price)}</p>
+                          </div>
+                        </div>
+
+                        {/* Show auction images if available */}
+                        {notification.image_urls && (
+                          <div className="mt-3 flex gap-2 overflow-x-auto">
+                            {notification.image_urls.split(',').map((url, index) => (
+                              <img 
+                                key={index}
+                                src={url}
+                                alt={`${notification.auction_title} - Image ${index + 1}`}
+                                className="h-20 w-20 object-cover rounded-md"
+                              />
+                            ))}
+                          </div>
+                        )}
+                        
+                        <button 
+                          onClick={() => handleNotificationClick(notification)}
+                          className="mt-3 w-full flex items-center justify-center gap-2 text-blue-600 hover:bg-blue-50 p-2 rounded-md transition-colors"
+                        >
+                          View Auction Details
+                          <ArrowRight className="h-4 w-4" />
+                        </button>
                       </div>
                     </div>
                   </div>

@@ -38,6 +38,35 @@ export function NotificationProvider({ children }) {
     }
   };
 
+  // Add markAsRead function
+  const markAsRead = async (notificationId) => {
+    try {
+      await axios.put(`/api/notifications/${notificationId}/read`);
+      setNotifications(notifications.map(notification => 
+        notification.id === notificationId 
+          ? { ...notification, read: true }
+          : notification
+      ));
+      setUnreadCount(prev => Math.max(0, prev - 1));
+    } catch (error) {
+      console.error('Error marking notification as read:', error);
+    }
+  };
+
+  // Add deleteNotification function
+  const deleteNotification = async (notificationId) => {
+    try {
+      await axios.delete(`/api/notifications/${notificationId}`);
+      setNotifications(notifications.filter(n => n.id !== notificationId));
+      const deletedNotification = notifications.find(n => n.id === notificationId);
+      if (deletedNotification && !deletedNotification.read) {
+        setUnreadCount(prev => Math.max(0, prev - 1));
+      }
+    } catch (error) {
+      console.error('Error deleting notification:', error);
+    }
+  };
+
   // Force clear notifications
   const clearAllNotifications = async () => {
     try {
@@ -63,6 +92,8 @@ export function NotificationProvider({ children }) {
       notifications,
       unreadCount,
       fetchNotifications,
+      markAsRead,
+      deleteNotification,
       clearAllNotifications
     }}>
       {children}

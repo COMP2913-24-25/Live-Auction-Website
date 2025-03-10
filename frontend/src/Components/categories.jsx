@@ -21,6 +21,10 @@ function Categories({ onCategorySelect, selectedCategory, allSelectedCategories 
 
   const displayedCategories = showMore ? categories : categories.slice(0, 4);
 
+  const handleCategoryClick = (categoryId) => {
+    onCategorySelect(categoryId === selectedCategory ? null : categoryId);
+  };
+
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="flex justify-between items-center mb-6">
@@ -37,7 +41,7 @@ function Categories({ onCategorySelect, selectedCategory, allSelectedCategories 
         {displayedCategories.map(category => (
           <div 
             key={category.id}
-            onClick={() => onCategorySelect(category.id)}
+            onClick={() => handleCategoryClick(category.id)}
             className={`cursor-pointer rounded-lg border p-4 text-center transition-all hover:shadow-md ${
               selectedCategory === category.id || allSelectedCategories?.includes(category.id)
                 ? 'border-blue-500 bg-blue-50'

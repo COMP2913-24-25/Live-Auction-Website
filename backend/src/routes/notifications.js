@@ -17,21 +17,28 @@ const createNotification = async (userId, auctionId, type) => {
   }
 };
 
-// Get user's notifications
-router.get('/notifications/:id', async (req, res) => {
+// Get user's notifications 
+router.get('/:id', async (req, res) => {
   try {
     const userId = req.params.id;
     const notifications = await knex('notifications')
       .select(
         'notifications.*',
         'items.title as auction_title',
-        'items.end_time as auction_end_time'
+        'items.description as auction_description',
+        'items.min_price',
+        'items.end_time as auction_end_time',
+        'item_current_bids.current_bid',
+        knex.raw('GROUP_CONCAT(item_images.image_url) as image_urls')
       )
       .leftJoin('items', 'notifications.auction_id', 'items.id')
+      .leftJoin('item_current_bids', 'items.id', 'item_current_bids.item_id')
+      .leftJoin('item_images', 'items.id', 'item_images.item_id')
       .where({ 
         'notifications.user_id': userId,
         'notifications.deleted': false 
       })
+      .groupBy('notifications.id')
       .orderBy('notifications.created_at', 'desc');
     
     const formattedNotifications = notifications.map(notification => {
@@ -82,11 +89,12 @@ router.get('/notifications/:id', async (req, res) => {
   }
 });
 
-// Mark notification as read
-router.put('/notifications/:id/read', async (req, res) => {
+// Mark notification as read - Change from '/notifications/:id/read' to '/:id/read'
+router.put('/:id/read', async (req, res) => {
   try {
     const { id } = req.params;
-    const userId = req.user.id;
+    // Remove req.user.id reference since it's not available
+    const userId = req.query.userId; // Add userId as a query parameter
     
     await knex('notifications')
       .where({ id, user_id: userId })
@@ -99,11 +107,11 @@ router.put('/notifications/:id/read', async (req, res) => {
   }
 });
 
-// Delete notification
-router.delete('/notifications/:id', async (req, res) => {
+// Delete notification - Change from '/notifications/:id' to '/:id'
+router.delete('/:id', async (req, res) => {
   try {
     const { id } = req.params;
-    const userId = req.user.id;
+    const userId = req.query.userId; // Add userId as a query parameter
     
     await knex('notifications')
       .where({ id, user_id: userId })

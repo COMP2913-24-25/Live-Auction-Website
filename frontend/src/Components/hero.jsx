@@ -91,27 +91,46 @@ function Hero() {
   
   useEffect(() => {
     if (showFilters) {
-      // Restore filters from URL params
       const params = new URLSearchParams(location.search);
       
-      setSearchQuery(params.get('search') || '');
-      setSelectedCategories(params.get('categories')?.split(',').map(Number) || []);
-      setPriceRange({
-        min: params.get('minPrice') || '',
-        max: params.get('maxPrice') || ''
-      });
-      setAuthenticatedOnly(params.get('authenticatedOnly') === 'true');
+      // Only update filters if parameters exist
+      if (params.has('categories')) {
+        setSelectedCategories(params.get('categories').split(',').map(Number));
+      }
       
-      const days = params.get('daysRemaining');
-      if (days) {
-        const value = parseInt(days);
+      if (params.has('minPrice') || params.has('maxPrice')) {
+        setPriceRange({
+          min: params.get('minPrice') || '',
+          max: params.get('maxPrice') || ''
+        });
+      }
+      
+      if (params.has('authenticatedOnly')) {
+        setAuthenticatedOnly(params.get('authenticatedOnly') === 'true');
+      }
+      
+      if (params.has('daysRemaining')) {
+        const days = parseInt(params.get('daysRemaining'));
         setTimeFilter({
-          value: value < 1 ? 24 : value,
-          unit: value < 1 ? 'hours' : 'days'
+          value: days < 1 ? 24 : days,
+          unit: days < 1 ? 'hours' : 'days'
         });
       }
     }
   }, [showFilters, location.search]);
+
+  useEffect(() => {
+    // Update selected categories when URL changes
+    const searchParams = new URLSearchParams(location.search);
+    const categoryParam = searchParams.get("categories");
+    
+    if (categoryParam) {
+      const categories = categoryParam.split(",").map(Number);
+      setSelectedCategories(categories);
+    } else {
+      setSelectedCategories([]);
+    }
+  }, [location.search]);
   
   const toggleCategory = (categoryId) => {
     setSelectedCategories(prev => 
@@ -122,10 +141,33 @@ function Hero() {
   };
   
   const clearFilters = () => {
+    // Reset all filters to default values
     setSelectedCategories([]);
     setPriceRange({ min: "", max: "" });
     setAuthenticatedOnly(false);
-    setDaysRemaining(5);
+    setTimeFilter({
+      value: 5,
+      unit: 'days'
+    });
+    setPriceErrors({ min: '', max: '' });
+    
+    // Clear URL parameters
+    const searchParams = new URLSearchParams(location.search);
+    searchParams.delete('categories');
+    searchParams.delete('minPrice');
+    searchParams.delete('maxPrice');
+    searchParams.delete('authenticatedOnly');
+    searchParams.delete('daysRemaining');
+    
+    // Keep search query if exists
+    const currentSearch = searchParams.get('search');
+    searchParams.delete('search');
+    if (currentSearch) {
+      searchParams.set('search', currentSearch);
+    }
+    
+    // Update URL without the cleared filters
+    navigate(`/browse${searchParams.toString() ? `?${searchParams.toString()}` : ''}`);
   };
   
   const handleSearch = (e) => {
@@ -164,12 +206,27 @@ function Hero() {
   };
   
   // Count active filters
-  const activeFilterCount = 
-    selectedCategories.length + 
-    (priceRange.min ? 1 : 0) + 
-    (priceRange.max ? 1 : 0) + 
-    (authenticatedOnly ? 1 : 0) + 
-    (daysRemaining < 5 ? 1 : 0);
+  const calculateActiveFilterCount = () => {
+    let count = 0;
+    
+    if (selectedCategories && selectedCategories.length > 0) {
+      count += selectedCategories.length; // Changed to count each category
+    }
+    
+    // Count price filters
+    if (priceRange.min && priceRange.min !== '0') count += 1;
+    if (priceRange.max && priceRange.max !== '0') count += 1;
+    
+    // Count authenticated only if true
+    if (authenticatedOnly) count += 1;
+    
+    // Count time filter if not default (5 days)
+    if (timeFilter.unit === 'hours' || timeFilter.value !== 5) count += 1;
+    
+    return count;
+  };
+
+  const activeFilterCount = calculateActiveFilterCount();
   
   const validatePrice = (value, type) => {
     const num = parseFloat(value);
@@ -448,12 +505,12 @@ function Hero() {
                         }}
                         className="w-full px-3 py-2 bg-gray-50 border border-gray-300 rounded-md text-sm focus:ring-blue-500 focus:border-blue-500 text-gray-900"
                       >
+                        <option value="5-days">Default (5 days)</option>
                         <option value="24-hours">Less than 24 hours</option>
                         <option value="1-days">1 day</option>
                         <option value="2-days">2 days</option>
                         <option value="3-days">3 days</option>
                         <option value="4-days">4 days</option>
-                        <option value="5-days">5 days</option>
                       </select>
                     </div>
                   </div>

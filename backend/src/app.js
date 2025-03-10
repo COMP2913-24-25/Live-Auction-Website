@@ -29,7 +29,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api', categoriesRoutes);
 app.use('/api/search', searchRoutes);
 app.use('/api/manager', managerRoutes);
-app.use('/api', notificationsRoutes); 
+app.use('/api/notifications', notificationsRoutes); 
 
 // Example route
 // app.get('/', (req, res) => {
