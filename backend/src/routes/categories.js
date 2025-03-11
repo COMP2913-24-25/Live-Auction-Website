@@ -2,8 +2,7 @@ const express = require('express');
 const knex = require('../db');
 const router = express.Router();
 
-// Change from '/categories' to '/'
-router.get('/', async (req, res) => {
+router.get('/categories', async (req, res) => {
   try {
     const categories = await knex('categories').select('*');
     res.json(categories);
