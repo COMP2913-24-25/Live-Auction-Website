@@ -51,13 +51,13 @@ exports.seed = async function (knex) {
 
   // Insert Items
   await knex("items").insert([
-    { id: 1, user_id: 4, title: "Vintage Clock", description: "An old clock", min_price: 50.0, category_id: 2, end_time: "2025-02-20 12:00:00", authenticated: false },
-    { id: 2, user_id: 4, title: "Antique Vase", description: "A rare vase", min_price: 100.0, category_id: 2, end_time: "2025-02-22 15:00:00", authenticated: true },
-    { id: 3, user_id: 5, title: "Rare Coin", description: "A valuable coin", min_price: 200.0, category_id: 5, end_time: "2025-02-23 18:00:00", authenticated: false },
-    { id: 4, user_id: 4, title: "Vintage Camera", description: "An old camera", min_price: 150.0, category_id: 6, end_time: "2025-02-24 21:00:00", authenticated: true },
-    { id: 5, user_id: 6, title: "Rare Stamp", description: "A valuable stamp", min_price: 250.0, category_id: 5, end_time: "2025-02-25 00:00:00", authenticated: false },
-    { id: 6, user_id: 5, title: "Vintage Typewriter", description: "An old typewriter", min_price: 300.0, category_id: 6, end_time: "2025-02-26 03:00:00", authenticated: true },
-    { id: 7, user_id: 7, title: "Rare Book", description: "A valuable book", min_price: 350.0, category_id: 11, end_time: "2025-02-27 06:00:00", authenticated: false }
+    { id: 1, user_id: 4, title: "Vintage Clock", description: "An old clock", min_price: 50.0, category_id: 2, end_time: "2025-03-20 12:00:00", authenticated: false },
+    { id: 2, user_id: 4, title: "Antique Vase", description: "A rare vase", min_price: 100.0, category_id: 2, end_time: "2025-03-22 15:00:00", authenticated: true },
+    { id: 3, user_id: 5, title: "Rare Coin", description: "A valuable coin", min_price: 200.0, category_id: 5, end_time: "2025-03-23 18:00:00", authenticated: false },
+    { id: 4, user_id: 4, title: "Vintage Camera", description: "An old camera", min_price: 150.0, category_id: 6, end_time: "2025-03-24 21:00:00", authenticated: true },
+    { id: 5, user_id: 6, title: "Rare Stamp", description: "A valuable stamp", min_price: 250.0, category_id: 5, end_time: "2025-03-25 00:00:00", authenticated: false },
+    { id: 6, user_id: 5, title: "Vintage Typewriter", description: "An old typewriter", min_price: 300.0, category_id: 6, end_time: "2025-03-26 03:00:00", authenticated: true },
+    { id: 7, user_id: 7, title: "Rare Book", description: "A valuable book", min_price: 350.0, category_id: 11, end_time: "2025-03-27 06:00:00", authenticated: false }
   ]);
 
   // Insert Bids
