@@ -5,7 +5,7 @@ import { Menu, Bell, User, UserPlus, X, Search } from "lucide-react";
 import { useAuth } from "./authContext";
 
 function NavBar() {
-    const { isAuthenticated, logout } = useAuth();
+    const { isAuthenticated, logout, currentUser } = useAuth();
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
     const [isNotificationOpen, setIsNotificationOpen] = useState(false);
     const notificationRef = useRef(null);
@@ -14,6 +14,9 @@ function NavBar() {
       { id: 1, message: "New bid on your item", time: "5 mins ago" },
       { id: 2, message: "Auction ending soon", time: "10 mins ago" },
     ];
+
+    console.log("Current user:", currentUser);
+    console.log("Is authenticated:", isAuthenticated);
 
     useEffect(() => {
       function handleClickOutside(event) {

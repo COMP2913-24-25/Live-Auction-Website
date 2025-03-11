@@ -67,7 +67,7 @@ router.post('/upload', upload.array('images', 6), async (req, res) => {
       end_time: endTime
     }).returning(['id']);
 
-    // Insert images into item_images table
+    // Insert images into item_images table 
     const imageRecords = imageUrls.map(url => ({ item_id: auctionId, image_url: url }));
     await knex('item_images').insert(imageRecords);
 

@@ -51,8 +51,8 @@ exports.seed = async function (knex) {
 
   // Insert Items
   await knex("items").insert([
-    { id: 1, user_id: 4, title: "Vintage Clock", description: "An old clock", min_price: 50.0, category_id: 2, end_time: "2025-02-20 12:00:00", authentication_status: "Not Requested", auction_status: "Active" },
-    { id: 2, user_id: 4, title: "Antique Vase", description: "A rare vase", min_price: 100.0, category_id: 2, end_time: "2025-02-22 15:00:00", authentication_status: "Approved", auction_status: "Active" },
+    { id: 1, user_id: 4, title: "Vintage Clock", description: "An old clock", min_price: 50.0, category_id: 2, end_time: "2025-03-20 12:00:00", authentication_status: "Not Requested", auction_status: "Active" },
+    { id: 2, user_id: 4, title: "Antique Vase", description: "A rare vase", min_price: 100.0, category_id: 2, end_time: "2025-03-22 15:00:00", authentication_status: "Approved", auction_status: "Active" },
     { id: 3, user_id: 5, title: "Rare Coin", description: "A valuable coin", min_price: 200.0, category_id: 5, end_time: "2025-02-23 18:00:00", authentication_status: "Not Requested", auction_status: "Active" },
     { id: 4, user_id: 4, title: "Vintage Camera", description: "An old camera", min_price: 150.0, category_id: 6, end_time: "2025-02-24 21:00:00", authentication_status: "Approved", auction_status: "Active" },
     { id: 5, user_id: 6, title: "Rare Stamp", description: "A valuable stamp", min_price: 250.0, category_id: 5, end_time: "2025-02-25 00:00:00", authentication_status: "Not Requested", auction_status: "Active" },
