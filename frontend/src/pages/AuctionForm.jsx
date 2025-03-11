@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
+import axios from 'axios';
 
 function AuctionForm() {
   const { user } = useAuth();
@@ -22,9 +23,8 @@ function AuctionForm() {
   useEffect(() => {
     const fetchCategories = async () => {
       try {
-        const response = await fetch(`${import.meta.env.VITE_API_URL}/api/categories`);
-        const data = await response.json();
-        setCategories(data); // Assuming API returns an array of { id, name }
+        const response = await axios.get(`/api/categories`);
+        setCategories(response.data); // Assuming API returns an array of { id, name }
       } catch (error) {
         console.error("Error fetching categories:", error);
       }
