@@ -1,14 +1,13 @@
 import { useState, useRef, useEffect, useContext } from "react";
 import { Link } from "react-router-dom";
 import { Menu, Bell, User, UserPlus, X, Search } from "lucide-react";
-import { useAuth, AuthContext } from "../context/AuthContext";
+import { useAuth } from "../context/AuthContext";
 
 function NavBar() {
     const { isAuthenticated, logout, user } = useAuth();
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
     const [isNotificationOpen, setIsNotificationOpen] = useState(false);
     const notificationRef = useRef(null);
-    const { user } = useContext(AuthContext);
     const [hasNewNotification, setHasNewNotification] = useState(false);
     const [previousAuctionCount, setPreviousAuctionCount] = useState(0);
     const [hasUpdates, setHasUpdates] = useState(false);
