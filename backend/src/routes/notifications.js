@@ -89,15 +89,13 @@ router.get('/:id', async (req, res) => {
   }
 });
 
-// Mark notification as read - Change from '/notifications/:id/read' to '/:id/read'
+// Mark notification as read
 router.put('/:id/read', async (req, res) => {
   try {
     const { id } = req.params;
-    // Remove req.user.id reference since it's not available
-    const userId = req.query.userId; // Add userId as a query parameter
     
     await knex('notifications')
-      .where({ id, user_id: userId })
+      .where('id', id)
       .update({ read: true });
     
     res.json({ success: true });
@@ -107,14 +105,13 @@ router.put('/:id/read', async (req, res) => {
   }
 });
 
-// Delete notification - Change from '/notifications/:id' to '/:id'
+// Delete notification
 router.delete('/:id', async (req, res) => {
   try {
     const { id } = req.params;
-    const userId = req.query.userId; // Add userId as a query parameter
     
     await knex('notifications')
-      .where({ id, user_id: userId })
+      .where('id', id)
       .update({ deleted: true });
     
     res.json({ success: true });

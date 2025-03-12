@@ -3,16 +3,16 @@ import axios from 'axios';
 import Carousel from 'react-multi-carousel';
 import 'react-multi-carousel/lib/styles.css';
 import { useNavigate } from 'react-router-dom';
-import authenticated from '../assets/authenticated.png';
+import authenticatedIcon from '../assets/authenticatedIcon.png';
 
-const calculateTimeRemaining = (endTime) => {
+const calculateTimeRemaining = (endTime, auctionStatus) => {
   if (!endTime) return "Auction Ended";
 
   const now = new Date().getTime();
   const end = new Date(endTime).getTime();
   const difference = end - now;
 
-  if (difference <= 0) return "Auction Ended";
+  if (difference <= 0) return auctionStatus;
 
   const days = Math.floor(difference / (1000 * 60 * 60 * 24));
 
@@ -44,19 +44,21 @@ const AuctionList = ({ filters }) => {
         if (filters.authenticatedOnly) params.append('authenticatedOnly', 'true');
         if (filters.daysRemaining) params.append('daysRemaining', filters.daysRemaining);
 
-        const url = `/api/search?${params.toString()}`;
-        const response = await axios.get(url);
+        const response = await axios.get(`/api/search?${params.toString()}`);
+        
+        if (!response.data) throw new Error('No data received');
 
-        const data = Array.isArray(response.data) ? response.data.map(auction => ({
+        const formattedAuctions = response.data.map(auction => ({
           ...auction,
           imageUrls: auction.image_urls ? auction.image_urls.split(',') : [],
-          remainingTime: calculateTimeRemaining(auction.end_time)
-        })) : [];
+          remainingTime: calculateTimeRemaining(auction.end_time, auction.auction_status)
+        }));
 
-        setAuctions(data);
+        setAuctions(formattedAuctions);
         setLoading(false);
       } catch (error) {
-        setError(error);
+        console.error('Fetch error:', error);
+        setError(error.message);
         setLoading(false);
       }
     };
@@ -68,7 +70,7 @@ const AuctionList = ({ filters }) => {
     const interval = setInterval(() => {
       setAuctions(prevAuctions => prevAuctions.map(auction => ({
         ...auction,
-        remainingTime: calculateTimeRemaining(auction.end_time)
+        remainingTime: calculateTimeRemaining(auction.end_time, auction.auction_status)
       })));
     }, 1000);
 
@@ -86,7 +88,11 @@ const AuctionList = ({ filters }) => {
   }
 
   if (error) {
-    return <div>Error: {error.message}</div>;
+    return (
+      <div className='flex justify-center items-center'>
+        <div className='text-4xl text-center font-bold'>{error}</div>
+      </div>
+    )
   }
 
   return (
@@ -114,9 +120,9 @@ const AuctionList = ({ filters }) => {
                 }}
               >
                 <div className="relative">
-                  {auction.authenticated == true ? (
+                  {auction.authentication_status === 'Approved' ? (
                     <img
-                      src={authenticated}
+                      src={authenticatedIcon}
                       alt="Authenticated Badge"
                       className="absolute top-2 left-2 w-12 h-12 z-10 opacity-90"
                     />

@@ -1,16 +1,13 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
-import axios from 'axios';
 
-function AuctionForm() {
+function ItemAuthenticationForm() {
   const { user } = useAuth();
 
   const [formData, setFormData] = useState({
     user_id: user?.id, // Attach current user ID to the form data
     title: '',
     description: '',
-    min_price: '',
-    duration: 1,
     category: ''
   });
 
@@ -18,13 +15,15 @@ function AuctionForm() {
   const [imagePreviews, setImagePreviews] = useState([]);
   const [fileNames, setFileNames] = useState('No files chosen');
   const [categories, setCategories] = useState([]);
+  const [showModal, setShowModal] = useState(false); // Modal visibiility state
 
   // Fetch categories from backend
   useEffect(() => {
     const fetchCategories = async () => {
       try {
-        const response = await axios.get(`/api/categories`);
-        setCategories(response.data); 
+        const response = await fetch(`${import.meta.env.VITE_API_URL}/api/categories`);
+        const data = await response.json();
+        setCategories(data); // Assuming API returns an array of { id, name }
       } catch (error) {
         console.error("Error fetching categories:", error);
       }
@@ -100,6 +99,13 @@ function AuctionForm() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    console.log(`User ID: ${user.id}`); // Debugging log
+    setShowModal(true); // Show modal on form submission
+  };
+
+  const confirmSubmission = async () => {
+    setShowModal(false); // Hide modal before submitting
+
     try {
       const submitData = new FormData();
       Object.keys(formData).forEach(key => {
@@ -107,22 +113,24 @@ function AuctionForm() {
       });
       imageFiles.forEach(file => submitData.append('images', file));
 
-      const response = await axios.post('/api/upload/create-listing', submitData, {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        }
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/authenticate-item`, {
+        method: 'POST',
+        body: submitData
       });
 
-      if (response.status === 201) {
+      const data = await response.json();
+      if (response.ok) {
         alert('Auction item created successfully!');
-        setFormData({ title: '', description: '', min_price: '', duration: 1, category: '' });
+        setFormData({ title: '', description: '', category: '' });
         setImageFiles([]);
         setImagePreviews([]);
         setFileNames('No files chosen');
+      } else {
+        throw new Error(data.error || `Submission failed: ${response.status}`);
       }
     } catch (error) {
       console.error('Submit error:', error);
-      alert('Error: ' + (error.response?.data?.error || error.message));
+      alert('Error: ' + error.message);
     }
   };
 
@@ -135,7 +143,7 @@ function AuctionForm() {
     <div className='px-4'>
       <div className="max-w-3xl mx-auto bg-off-white rounded-3xl shadow-lg p-12 mt-8 mb-8">
         <h2 className="text-3xl font-bold text-navy text-center mb-12 relative">
-          Create a New Auction
+          Item Authentication
           <div className="absolute bottom-[-8px] left-1/2 transform -translate-x-1/2 w-16 h-1 bg-teal"></div>
         </h2>
 
@@ -214,44 +222,39 @@ function AuctionForm() {
             )}
           </div>
 
-          <div className="grid grid-cols-2 gap-6">
-            <div className="space-y-2">
-              <label className="block text-charcoal font-medium">Minimum Price (£):</label>
-              <input
-                type="number"
-                name="min_price"
-                value={formData.min_price}
-                onChange={handleChange}
-                min="1"
-                required
-                className="w-full px-4 py-3 rounded-lg border border-gray-200 focus:outline-none focus:border-teal focus:ring-1 focus:ring-teal/20 bg-white text-charcoal"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <label className="block text-charcoal font-medium">Duration (1-5 days):</label>
-              <input
-                type="number"
-                name="duration"
-                value={formData.duration}
-                onChange={handleChange}
-                min="1"
-                max="5"
-                required
-                className="w-full px-4 py-3 rounded-lg border border-gray-200 focus:outline-none focus:border-teal focus:ring-1 focus:ring-teal/20 bg-white text-charcoal"
-              />
-            </div>
-          </div>
-
           <div className="text-center mt-8">
             <button type="submit" className="cursor-pointer bg-teal text-white px-8 py-3 rounded-full hover:bg-gold transition-colors duration-300 font-semibold shadow-lg hover:shadow-xl">
-              CREATE
+              REQUEST
             </button>
           </div>
         </form>
       </div>
+
+      {/* Confirmation Modal */}
+      {showModal && (
+        <div className="fixed inset-0 flex items-center justify-center bg-black/50">
+          <div className="bg-white p-6 rounded-lg shadow-lg text-center max-w-md">
+            <h3 className="text-xl font-semibold text-charcoal">Fee Confirmation</h3>
+            <p className="mt-2 text-charcoal">If your request is approved, a fee of 5% of the winning bid will be charged.</p>
+            <div className="mt-4 flex justify-center gap-4">
+              <button
+                className="bg-gray-300 text-charcoal px-4 py-2 rounded-lg hover:bg-gray-400 transition"
+                onClick={() => setShowModal(false)}
+              >
+                Cancel
+              </button>
+              <button
+                className="bg-green-600 text-white font-semibold px-4 py-2 rounded-lg hover:bg-green-800"
+                onClick={confirmSubmission}
+              >
+                Confirm
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
 
-export default AuctionForm;
+export default ItemAuthenticationForm;

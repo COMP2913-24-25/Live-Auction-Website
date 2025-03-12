@@ -14,14 +14,16 @@ router.get('/', async (req, res) => {
         'icb.description',
         'icb.min_price',
         'icb.end_time',
-        'icb.authenticated',
+        'icb.authentication_status',
+        'icb.auction_status',
         'icb.current_bid',
-        knex.raw('GROUP_CONCAT(ii.image_url) as image_urls'),
+        knex.raw('GROUP_CONCAT(DISTINCT ii.image_url) as image_urls'),
         'u.username as seller_name'
       )
       .leftJoin('items as i', 'icb.item_id', 'i.id')
       .leftJoin('users as u', 'i.user_id', 'u.id')
       .leftJoin('item_images as ii', 'icb.item_id', 'ii.item_id')
+      .where('icb.auction_status', 'Active')
       .where('icb.end_time', '>', knex.raw("datetime('now')"));
 
     // Search query
@@ -43,15 +45,15 @@ router.get('/', async (req, res) => {
       queryBuilder.where('icb.current_bid', '<=', maxPrice);
     }
 
-    // Authenticated sellers only
+    // Authenticated only
     if (authenticatedOnly === 'true') {
-      queryBuilder.where('icb.authenticated', true);
+      queryBuilder.where('icb.authentication_status', 'Approved');
     }
 
-    // Updated time remaining filter to handle hours
+    // Time remaining filter
     if (daysRemaining) {
       const timeValue = parseFloat(daysRemaining);
-      const secondsRemaining = timeValue * 24 * 60 * 60; // Convert to seconds
+      const secondsRemaining = timeValue * 24 * 60 * 60;
       
       queryBuilder.whereRaw(`
         ROUND(
@@ -63,20 +65,10 @@ router.get('/', async (req, res) => {
     queryBuilder.groupBy('icb.item_id').orderBy('i.created_at', 'desc');
 
     const results = await queryBuilder;
-
-    // Add remaining time calculation to results
-    const resultsWithTime = results.map(item => ({
-      ...item,
-      timeRemaining: {
-        hours: Math.floor((new Date(item.end_time) - new Date()) / (1000 * 60 * 60)),
-        total: (new Date(item.end_time) - new Date()) / (1000 * 60 * 60)
-      }
-    }));
-
-    res.json(resultsWithTime);
+    res.json(results);
   } catch (error) {
     console.error('Search error:', error);
-    res.status(500).json({ error: 'Search failed' });
+    res.status(500).json({ error: error.message });
   }
 });
 

@@ -17,7 +17,7 @@ export function NotificationProvider({ children }) {
     }
     
     try {
-      const { data } = await axios.get(`http://localhost:5000/api/notifications/${user.id}`, {
+      const { data } = await axios.get(`/api/notifications/${user.id}`, {
         headers: {
           'Cache-Control': 'no-cache',
           'Pragma': 'no-cache'
@@ -38,10 +38,13 @@ export function NotificationProvider({ children }) {
     }
   };
 
-  // Add markAsRead function
+  // Update markAsRead function
   const markAsRead = async (notificationId) => {
     try {
+      if (!user) return;
+      
       await axios.put(`/api/notifications/${notificationId}/read`);
+      
       setNotifications(notifications.map(notification => 
         notification.id === notificationId 
           ? { ...notification, read: true }
@@ -53,10 +56,13 @@ export function NotificationProvider({ children }) {
     }
   };
 
-  // Add deleteNotification function
+  // Update deleteNotification function
   const deleteNotification = async (notificationId) => {
     try {
+      if (!user) return;
+      
       await axios.delete(`/api/notifications/${notificationId}`);
+      
       setNotifications(notifications.filter(n => n.id !== notificationId));
       const deletedNotification = notifications.find(n => n.id === notificationId);
       if (deletedNotification && !deletedNotification.read) {

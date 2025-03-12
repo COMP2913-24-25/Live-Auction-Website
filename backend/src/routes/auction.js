@@ -1,6 +1,7 @@
 const express = require('express');
 const knex = require('../db'); 
 const router = express.Router();
+const cron = require('node-cron');
 
 // Fetch all active auctions
 router.get('/active', async (req, res) => {
@@ -12,7 +13,8 @@ router.get('/active', async (req, res) => {
         'icb.description',
         'icb.min_price',
         'icb.end_time',
-        'icb.authenticated',
+        'icb.authentication_status',
+        'icb.auction_status',
         'icb.current_bid',
         knex.raw('GROUP_CONCAT(ii.image_url) as image_urls'),
         'u.username as seller_name'
@@ -21,6 +23,7 @@ router.get('/active', async (req, res) => {
       .leftJoin('users as u', 'i.user_id', 'u.id')
       .leftJoin('item_images as ii', 'icb.item_id', 'ii.item_id')
       .where('icb.end_time', '>', knex.raw("datetime('now')"))
+      .where('icb.auction_status', '=', 'Active')
       .groupBy('icb.item_id')
       .orderBy('i.created_at', 'desc');
 
@@ -40,54 +43,47 @@ router.get('/:id', async (req, res) => {
   const { id } = req.params;
 
   try {
-    const auction = await knex('item_current_bids')
+    // First, check if the item exists and get current bid in one query
+    const item = await knex('items')
       .select(
-        'item_id AS id',
-        'title',
-        'description',
-        'current_bid',
-        'authenticated',
-        'end_time',  
-        'min_price'
+        'items.*',
+        'users.username as seller_name',
+        'item_current_bids.current_bid',
+        knex.raw('GROUP_CONCAT(DISTINCT item_images.image_url) as image_urls')
       )
-      .where({ item_id: id })
+      .leftJoin('users', 'items.user_id', 'users.id')
+      .leftJoin('item_current_bids', 'items.id', 'item_current_bids.item_id')
+      .leftJoin('item_images', 'items.id', 'item_images.item_id')
+      .where('items.id', id)
+      .groupBy('items.id')
       .first();
 
-    if (!auction) {
+    if (!item) {
       return res.status(404).json({ error: 'Auction item not found' });
     }
 
-    const seller = await knex('items')
-      .select('users.id AS seller_id', 'users.username AS seller_name', 'items.created_at')
-      .join('users', 'items.user_id', 'users.id')
-      .where('items.id', id)
-      .first();
+    // Format the response
+    const response = {
+      id: item.id,
+      title: item.title,
+      description: item.description,
+      min_price: item.min_price,
+      current_bid: item.current_bid || item.min_price,
+      authentication_status: item.authentication_status,
+      auction_status: item.auction_status,
+      seller_name: item.seller_name || "Unknown",
+      posting_date: item.created_at,
+      end_time: item.end_time,
+      images: item.image_urls ? item.image_urls.split(',') : []
+    };
 
-    const images = await knex('item_images')
-      .select('image_url')
-      .where({ item_id: id });
-
-    const requested = await knex('authentication_requests')
-      .select('id')
-      .where({ item_id: id })
-      .first();
-
-    res.json({
-      id: auction.id,
-      title: auction.title,
-      description: auction.description,
-      current_bid: auction.current_bid,
-      authenticated: auction.authenticated,
-      requested_auth: requested ? true : false,
-      seller_id: seller?.seller_id,
-      seller_name: seller?.seller_name || "Unknown",
-      posting_date: seller?.created_at || "Unknown",
-      end_time: auction.end_time, // Send as raw timestamp
-      images: images.map(img => img.image_url)
-    });
+    res.json(response);
   } catch (error) {
     console.error('Error fetching auction item:', error);
-    res.status(500).json({ error: 'Internal server error' });
+    res.status(500).json({ 
+      error: 'Failed to fetch auction details',
+      details: error.message 
+    });
   }
 });
 

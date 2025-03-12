@@ -6,7 +6,6 @@ const cors = require('cors');
 
 const app = express();
 
-// Import routes
 const uploadRoutes = require('./routes/upload');
 const auctionRoutes = require('./routes/auction');
 const authRoutes = require('./routes/auth');
@@ -14,6 +13,7 @@ const categoriesRoutes = require('./routes/categories');
 const searchRoutes = require('./routes/search');
 const managerRoutes = require('./routes/manager');
 const notificationsRoutes = require('./routes/notifications'); 
+const expertRoutes = require('./routes/expert');
 
 // CORS configuration
 app.use(cors({
@@ -23,13 +23,14 @@ app.use(cors({
 app.use(bodyParser.json());
 
 // Mount routes
-app.use('/api', uploadRoutes);
+app.use('/api/upload', uploadRoutes);
 app.use('/api/auctions', auctionRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api', categoriesRoutes);
 app.use('/api/search', searchRoutes);
 app.use('/api/manager', managerRoutes);
 app.use('/api/notifications', notificationsRoutes); 
+app.use('/api/expert', expertRoutes);
 
 // Example route
 // app.get('/', (req, res) => {

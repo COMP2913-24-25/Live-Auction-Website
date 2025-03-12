@@ -4,8 +4,19 @@ import { Menu, Bell, Search, LogOut, AlertCircle, Check, Clock, ArrowRight } fro
 import { useAuth } from "../context/AuthContext";
 import { useNotifications } from "../context/notificationContext";
 
+const getDashboardLink = (role) => {
+    switch (role) {
+        case 2:
+            return '/expert-dashboard';
+        case 3:
+            return '/manager-dashboard';
+        default:
+            return '/browse';
+    }
+};
+
 function NavBar() {
-    const { isAuthenticated, logout } = useAuth();
+    const { isAuthenticated, logout, user } = useAuth();
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
     const [isNotificationOpen, setIsNotificationOpen] = useState(false);
     const [searchQuery, setSearchQuery] = useState("");
@@ -79,7 +90,7 @@ function NavBar() {
                 
                 {isAuthenticated && (
                   <>
-                    <Link to="/dashboard" className="text-white hover:text-blue-200 font-medium transition-colors duration-200">
+                    <Link to={getDashboardLink(user.role)} className="text-white hover:text-blue-200 font-medium transition-colors duration-200">
                       Dashboard
                     </Link>
                     
@@ -221,7 +232,7 @@ function NavBar() {
               </Link>
               {isAuthenticated ? (
                 <>
-                  <Link to="/dashboard" className="block px-3 py-2 text-white font-medium hover:bg-slate-700 rounded-md">
+                  <Link to={getDashboardLink(user.role)} className="block px-3 py-2 text-white font-medium hover:bg-slate-700 rounded-md">
                     Dashboard
                   </Link>
                   <Link to="/create-auction" className="block px-3 py-2 text-white font-medium hover:bg-slate-700 rounded-md">
