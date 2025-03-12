@@ -14,19 +14,20 @@ CREATE TABLE
         name TEXT UNIQUE NOT NULL
     );
 
-CREATE TABLE
-    items (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        user_id INTEGER NOT NULL,
-        title TEXT NOT NULL,
-        description TEXT,
-        min_price REAL NOT NULL,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        end_time TIMESTAMP NOT NULL,
-        authenticated BOOLEAN DEFAULT FALSE,
-        category_id INTEGER NOT NULL REFERENCES categories (id),
-        FOREIGN KEY (user_id) REFERENCES users (id)
-    );
+CREATE TABLE items (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL,
+    title TEXT NOT NULL,
+    description TEXT,
+    min_price REAL NOT NULL,
+    category_id INTEGER NOT NULL,
+    end_time TIMESTAMP NOT NULL,
+    authentication_status TEXT CHECK (authentication_status IN ('Not Requested', 'Pending', 'Approved', 'Rejected')) DEFAULT 'Not Requested',
+    auction_status TEXT CHECK (auction_status IN ('Not Listed', 'Active', 'Ended')) DEFAULT 'Not Listed',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users (id),
+    FOREIGN KEY (category_id) REFERENCES categories (id)
+);
 
 CREATE TABLE
     expert_categories (
@@ -103,15 +104,17 @@ CREATE TABLE
 
 CREATE INDEX idx_item_images_item_id ON item_images (item_id);
 
-CREATE VIEW
-    item_current_bids AS
+CREATE VIEW item_current_bids AS
 SELECT
     i.id AS item_id,
     i.title,
     i.description,
     i.min_price,
     i.end_time,
-    i.authenticated,
+    i.authentication_status,
+    i.auction_status,
+    i.category_id,
+    i.user_id,
     COALESCE(MAX(b.bid_amount), i.min_price) AS current_bid
 FROM
     items i

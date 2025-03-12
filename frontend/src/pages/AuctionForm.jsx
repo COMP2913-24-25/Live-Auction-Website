@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
+import axios from 'axios';
 
 function AuctionForm() {
   const { user } = useAuth();
@@ -22,9 +23,8 @@ function AuctionForm() {
   useEffect(() => {
     const fetchCategories = async () => {
       try {
-        const response = await fetch(`${import.meta.env.VITE_API_URL}/api/categories`);
-        const data = await response.json();
-        setCategories(data); // Assuming API returns an array of { id, name }
+        const response = await axios.get(`/api/categories`);
+        setCategories(response.data); 
       } catch (error) {
         console.error("Error fetching categories:", error);
       }
@@ -100,7 +100,6 @@ function AuctionForm() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    console.log(`User ID: ${user.id}`); // Debugging log
     try {
       const submitData = new FormData();
       Object.keys(formData).forEach(key => {
@@ -108,24 +107,22 @@ function AuctionForm() {
       });
       imageFiles.forEach(file => submitData.append('images', file));
 
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/create-listing`, {
-        method: 'POST',
-        body: submitData
+      const response = await axios.post('/api/upload/create-listing', submitData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        }
       });
 
-      const data = await response.json();
-      if (response.ok) {
+      if (response.status === 201) {
         alert('Auction item created successfully!');
-        setFormData({ title: '', description: '', min_price: '', duration: '', category: '' });
+        setFormData({ title: '', description: '', min_price: '', duration: 1, category: '' });
         setImageFiles([]);
         setImagePreviews([]);
         setFileNames('No files chosen');
-      } else {
-        throw new Error(data.error || `Submission failed: ${response.status}`);
       }
     } catch (error) {
       console.error('Submit error:', error);
-      alert('Error: ' + error.message);
+      alert('Error: ' + (error.response?.data?.error || error.message));
     }
   };
 
