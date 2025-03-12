@@ -19,9 +19,9 @@ const DashboardRouter = () => {
   
   switch (user?.role) {
     case 2:
-      return <Navigate to="/expert-dashboard" replace />;
+      return <ExpertDashboard />;
     case 3:
-      return <Navigate to="/manager-dashboard" replace />;
+      return <ManagerDashboard />;
     default:
       return <Navigate to="/browse" replace />;
   }
@@ -33,29 +33,21 @@ function App() {
       <NotificationProvider>
         <NavBar />
         <Routes>
+          {/* Redirect root to /browse */}
           <Route path="/" element={<Navigate to="/browse" />} />
+
+          {/* Public Routes */}
           <Route path="/browse" element={<Browse />} />
+          <Route path="/auctions/:id" element={<AuctionDetails />} />
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
           
+          {/* Protected Routes */}
           <Route path="/dashboard" element={
             <ProtectedRoute>
               <DashboardRouter />
             </ProtectedRoute>
           } />
-          
-          <Route path="/expert-dashboard" element={
-            <ProtectedRoute allowedRoles={[2]}>
-              <ExpertDashboard />
-            </ProtectedRoute>
-          } />
-          
-          <Route path="/manager-dashboard" element={
-            <ProtectedRoute allowedRoles={[3]}>
-              <ManagerDashboard />
-            </ProtectedRoute>
-          } />
-          
           <Route path="/create-auction" 
             element={
               <ProtectedRoute allowedRoles={[1]}>
@@ -63,7 +55,13 @@ function App() {
               </ProtectedRoute>
             }
           />
-          <Route path="/auctions/:id" element={<AuctionDetails />} />
+          <Route path="authenticate-item"
+            element={
+              <ProtectedRoute allowedRoles={[1]}>
+                <ItemAuthenticationForm />
+              </ProtectedRoute>
+            }
+          />
           <Route path="/notifications" element={
             <ProtectedRoute>
               <Notifications />
