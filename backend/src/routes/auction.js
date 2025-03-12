@@ -26,11 +26,9 @@ router.get('/active', async (req, res) => {
       .where('icb.auction_status', '=', 'Active')
       .groupBy('icb.item_id')
       .orderBy('i.created_at', 'desc');
-
     if (auctions.length === 0) {
       return res.status(404).json({ error: 'No active auctions found' });
     }
-
     res.json(auctions);
   } catch (err) {
     console.error('Database error:', err.message);
@@ -41,7 +39,6 @@ router.get('/active', async (req, res) => {
 // Route to get a single auction item
 router.get('/:id', async (req, res) => {
   const { id } = req.params;
-
   try {
     // First, check if the item exists and get current bid in one query
     const item = await knex('items')
@@ -57,11 +54,9 @@ router.get('/:id', async (req, res) => {
       .where('items.id', id)
       .groupBy('items.id')
       .first();
-
     if (!item) {
       return res.status(404).json({ error: 'Auction item not found' });
     }
-
     // Format the response
     const response = {
       id: item.id,
@@ -76,7 +71,6 @@ router.get('/:id', async (req, res) => {
       end_time: item.end_time,
       images: item.image_urls ? item.image_urls.split(',') : []
     };
-
     res.json(response);
   } catch (error) {
     console.error('Error fetching auction item:', error);
@@ -90,7 +84,6 @@ router.get('/:id', async (req, res) => {
 // In your bid placement route
 router.post('/:id/bid', async (req, res) => {
   try {
-
     // Notify previous highest bidder
     if (previousHighestBid) {
       await axios.post('/api/notifications/bid-notification', {
@@ -99,19 +92,16 @@ router.post('/:id/bid', async (req, res) => {
         type: 'outbid'
       });
     }
-
     // Check if auction is ending soon
     const auction = await knex('items').where('id', req.params.id).first();
     const endTime = new Date(auction.end_time);
     const now = new Date();
     const hoursRemaining = (endTime - now) / (1000 * 60 * 60);
-
     if (hoursRemaining <= 1) {
       const bidders = await knex('bids')
         .where('item_id', req.params.id)
         .select('user_id')
         .distinct();
-
       for (const bidder of bidders) {
         await axios.post('/api/notifications/bid-notification', {
           userId: bidder.user_id,
@@ -120,11 +110,45 @@ router.post('/:id/bid', async (req, res) => {
         });
       }
     }
-
     res.json({ success: true });
   } catch (error) {
     console.error('Error placing bid:', error);
     res.status(500).json({ error: 'Failed to place bid' });
+  }
+});
+
+// Runs every minute to check for expired auctions
+cron.schedule('* * * * *', async () => {
+  try {
+    console.log('Checking and updating expired auctions...');
+
+    await knex.transaction(async (trx) => {
+      // Update auctions that have ended but have no bids
+      await trx('items')
+        .where('end_time', '<=', knex.raw("datetime('now')"))
+        .where('auction_status', '=', 'Active')
+        .whereNotExists(function () {
+          this.select('*')
+            .from('bids')
+            .whereRaw('bids.item_id = items.id');
+        })
+        .update({ auction_status: 'Ended - Unsold' });
+
+      // Update auctions that have ended and have at least one bid
+      await trx('items')
+        .where('end_time', '<=', knex.raw("datetime('now')"))
+        .where('auction_status', '=', 'Active')
+        .whereExists(function () {
+          this.select('*')
+            .from('bids')
+            .whereRaw('bids.item_id = items.id');
+        })
+        .update({ auction_status: 'Ended - Sold' });
+    });
+
+    console.log('Expired auctions updated successfully.');
+  } catch (error) {
+    console.error('Error updating auction statuses:', error);
   }
 });
 
