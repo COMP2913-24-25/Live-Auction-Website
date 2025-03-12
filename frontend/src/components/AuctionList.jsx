@@ -149,7 +149,8 @@ const AuctionList = ({ filters }) => {
                     </Carousel>
                   )}
                   <div className="absolute bottom-2 right-2 bg-gray-800 text-white text-sm px-2 py-1 rounded">
-                    {auction.remainingTime}
+                    {/* If timer runs out, show Ended instead of Active. On reload, will display real auction_status */}
+                    {(auction.remainingTime) == "Active" ? "Ended" : auction.remainingTime}
                   </div>
                 </div>
                 <div className="p-4 text-center" onClick={() => navigate(`/auctions/${auction.id}`)}>
