@@ -43,11 +43,22 @@ const App = () => (
         }
       />
       <Route
-        path="/dashboard"
+        path="/manger-dashboard"
         element={
-          <ProtectedRoute allowedRoles={[2, 3]}>
+          <ProtectedRoute allowedRoles={[3]}>
             <div className="pt-16 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-              <Dashboard />
+              <ExpertDashboard />
+            </div>
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/expert-dashboard"
+        element={
+          <ProtectedRoute allowedRoles={[2]}>
+            <div className="pt-16 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+              <ManagerDashboard />
             </div>
           </ProtectedRoute>
         }

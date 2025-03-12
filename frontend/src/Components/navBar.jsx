@@ -8,7 +8,6 @@ function NavBar() {
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
     const [isNotificationOpen, setIsNotificationOpen] = useState(false);
     const notificationRef = useRef(null);
-    const { user } = useContext(AuthContext);
     const [hasNewNotification, setHasNewNotification] = useState(false);
     const [previousAuctionCount, setPreviousAuctionCount] = useState(0);
     const [hasUpdates, setHasUpdates] = useState(false);
@@ -58,7 +57,7 @@ function NavBar() {
     if ([2, 3].includes(user?.role)) {
         const fetchUpdates = async () => {
             try {
-                const response = await axios.get('/api/manager/authentication-requests/assign');
+                const response = await axios.get('/api/manager/authentication-requests/completed');
                 const assignedRequests = response.data;
                 
                 // If previousData is null, set it directly without comparison
@@ -117,18 +116,21 @@ function NavBar() {
 
               {/* Desktop Navigation */}
               <nav className="hidden md:flex items-center space-x-8">
-                <Link to="/browse" className="text-white/90 hover:text-white transition-colors">
-                  Browse
-                </Link>
+              <Link to="/browse" className="text-white/90 hover:text-white transition-colors">
+                Browse
+              </Link>
+              <Link to="/how-it-works" className="text-white/90 hover:text-white transition-colors">
+                How It Works
+              </Link>
                 {isAuthenticated && (
                   <>
                     {(user.role === 2) && (
-                      <Link to="/dashboard" className="text-white/90 hover:text-white transition-colors">
+                      <Link to="/expert-dashboard" className="text-white/90 hover:text-white transition-colors">
                         Expert Dashboard
                       </Link>
                     )}
                     {(user.role === 3) && (
-                      <Link to="/dashboard" className="text-white/90 hover:text-white transition-colors">
+                      <Link to="/manager-dashboard" className="text-white/90 hover:text-white transition-colors">
                         Manager Dashboard
                       </Link>
                     )}

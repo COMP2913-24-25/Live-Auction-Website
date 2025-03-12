@@ -3,6 +3,7 @@
 # Navigate to the backend folder and start the server
 echo "Starting backend server..."
 cd backend || exit
+npm run db:reset
 npm start &
 BACKEND_PID=$!
 

@@ -101,7 +101,7 @@ router.get('/authentication-requests/completed', async (req, res) => {
                 'ar.second_opinion_requested',
                 'ar.status',
                 'ar.comments',
-                'ar.decision_timestamp',
+                'ar.decision_timestamp',            
             )
             .join('items', 'ar.item_id', 'items.id')
             .join('categories', 'items.category_id', 'categories.id')
