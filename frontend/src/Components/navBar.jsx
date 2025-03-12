@@ -4,17 +4,6 @@ import { Menu, Bell, Search, LogOut, AlertCircle, Check, Clock, ArrowRight } fro
 import { useAuth } from "../context/AuthContext";
 import { useNotifications } from "../context/notificationContext";
 
-const getDashboardLink = (role) => {
-    switch (role) {
-        case 2:
-            return '/expert-dashboard';
-        case 3:
-            return '/manager-dashboard';
-        default:
-            return '/browse';
-    }
-};
-
 function NavBar() {
     const { isAuthenticated, logout, user } = useAuth();
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -90,13 +79,46 @@ function NavBar() {
                 
                 {isAuthenticated && (
                   <>
-                    <Link to={getDashboardLink(user.role)} className="text-white hover:text-blue-200 font-medium transition-colors duration-200">
-                      Dashboard
-                    </Link>
-                    
-                    <Link to="/create-auction" className="text-white hover:text-blue-200 font-medium transition-colors duration-200">
-                      Create Auction
-                    </Link>
+                    {user.role == 1 && (
+                      <>
+                        <Link to="/create-auction" className="text-white hover:text-blue-200 font-medium transition-colors duration-200">
+                          Create Listing
+                        </Link>
+                        <Link to="/authenticate-item" className="text-white hover:text-blue-200 font-medium transition-colors duration-200">
+                          Authenticate Item
+                        </Link>
+                      </>
+                    )}
+
+                    {user.role == 2 || user.role == 3 && (
+                      <>
+                        <Link to="/dashboard" className="text-white hover:text-blue-200 font-medium transition-colors duration-200">
+                          Dashboard
+                        </Link>
+                      </>
+                    )}
+
+                    {user.role == 2 && (
+                      <>
+                        <Link to="/reviewed" className="text-white hover:text-blue-200 font-medium transition-colors duration-200">
+                          Reviewed
+                        </Link>
+                      </>
+                    )}
+
+                    {user.role == 3 && (
+                      <>
+                        <Link to="/requests" className="text-white hover:text-blue-200 font-medium transition-colors duration-200">
+                          Requests
+                        </Link>
+                        <Link to="/experts" className="text-white hover:text-blue-200 font-medium transition-colors duration-200">
+                          Experts
+                        </Link>
+                        <Link to="/users" className="text-white hover:text-blue-200 font-medium transition-colors duration-200">
+                          Users
+                        </Link>
+                      </>
+                    )}
                     
                     {/* Notification Bell */}
                     <div className="relative" ref={notificationRef}>
@@ -232,12 +254,47 @@ function NavBar() {
               </Link>
               {isAuthenticated ? (
                 <>
-                  <Link to={getDashboardLink(user.role)} className="block px-3 py-2 text-white font-medium hover:bg-slate-700 rounded-md">
-                    Dashboard
-                  </Link>
-                  <Link to="/create-auction" className="block px-3 py-2 text-white font-medium hover:bg-slate-700 rounded-md">
-                    Create Auction
-                  </Link>
+                  {user.role == 1 && (
+                    <>
+                      <Link to="/create-auction" className="block px-3 py-2 text-white font-medium hover:bg-slate-700 rounded-md">
+                        Create Listing
+                      </Link>
+                      <Link to="/authenticate-item" className="block px-3 py-2 text-white font-medium hover:bg-slate-700 rounded-md">
+                        Authenticate Item
+                      </Link>
+                    </>
+                  )}
+
+                  {user.role == 2 || user.role == 3 && (
+                    <>
+                      <Link to="/dashboard" className="block px-3 py-2 text-white font-medium hover:bg-slate-700 rounded-md">
+                        Dashboard
+                      </Link>
+                    </>
+                  )}
+
+                  {user.role == 2 && (
+                    <>
+                      <Link to="/reviewed" className="block px-3 py-2 text-white font-medium hover:bg-slate-700 rounded-md">
+                        Reviewed
+                      </Link>
+                    </>
+                  )}
+
+                  {user.role == 3 && (
+                    <>
+                      <Link to="/requests" className="block px-3 py-2 text-white font-medium hover:bg-slate-700 rounded-md">
+                        Requests
+                      </Link>
+                      <Link to="/experts" className="block px-3 py-2 text-white font-medium hover:bg-slate-700 rounded-md">
+                        Experts
+                      </Link>
+                      <Link to="/users" className="block px-3 py-2 text-white font-medium hover:bg-slate-700 rounded-md">
+                        Users
+                      </Link>
+                    </>
+                  )}
+                  
                   <button 
                     onClick={logout} 
                     className="block px-3 py-2 text-white font-medium hover:bg-slate-700 rounded-md w-full text-left"
