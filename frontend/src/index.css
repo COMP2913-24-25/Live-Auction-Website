@@ -16,24 +16,6 @@
   --color-success: #27AE60;     /* Green */
 }
 
-@import "tailwindcss";
-@import 'react-multi-carousel/lib/styles.css';
-
-@theme {
-  --color-navy: #1E2A38;
-  --color-off-white: #F8F9FA;
-  --color-teal: #008080;
-  --color-gold: #7F6200;
-  --color-charcoal: #4A4A4A;
-  --color-primary: #2C3E50;    /* Professional Dark Blue */
-  --color-secondary: #3498DB;   /* Professional Blue */
-  --color-accent: #E67E22;      /* Warm Orange */
-  --color-background: #F5F6FA;  /* Light Gray */
-  --color-text: #2D3436;        /* Near Black */
-  --color-error: #E74C3C;       /* Red */
-  --color-success: #27AE60;     /* Green */
-}
-
 /* 只保留基础样式 */
 :root {
   font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
@@ -112,44 +94,3 @@ h1 {
 .animate-slideIn {
   animation: slideIn 0.5s ease-out;
 }
-
-/* a {
-  font-weight: 500;
-  color: #646cff;
-  text-decoration: inherit;
-}
-a:hover {
-  color: #535bf2;
-}
-
-h1 {
-  font-size: 3.2em;
-  line-height: 1.1;
-}
-
-.btn {
-  @apply px-4 py-2 rounded-md font-medium transition-colors;
-}
-
-.notification-dropdown {
-  @apply absolute right-0 mt-2 w-80 bg-white rounded-md shadow-lg overflow-hidden;
-  transform-origin: top right;
-  animation: notification-popup 0.2s ease-out;
-}
-button:focus,
-button:focus-visible {
-  outline: 4px auto -webkit-focus-ring-color;
-}
-
-@media (prefers-color-scheme: light) {
-  :root {
-    color: #213547;
-    background-color: #ffffff;
-  }
-  a:hover {
-    color: #747bff;
-  }
-  button {
-    background-color: #f9f9f9;
-  }
-} */

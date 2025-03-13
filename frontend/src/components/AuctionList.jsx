@@ -3,16 +3,16 @@ import axios from 'axios';
 import Carousel from 'react-multi-carousel';
 import 'react-multi-carousel/lib/styles.css';
 import { useNavigate } from 'react-router-dom';
-import authenticated from '../assets/authenticated.png';
+import authenticatedIcon from '../assets/authenticatedIcon.png';
 
-const calculateTimeRemaining = (endTime) => {
+const calculateTimeRemaining = (endTime, auctionStatus) => {
   if (!endTime) return "Auction Ended";
 
   const now = new Date().getTime();
   const end = new Date(endTime).getTime();
   const difference = end - now;
 
-  if (difference <= 0) return "Auction Ended";
+  if (difference <= 0) return auctionStatus;
 
   const days = Math.floor(difference / (1000 * 60 * 60 * 24));
   
@@ -45,7 +45,11 @@ const AuctionList = () => {
         setLoading(false);
       })
       .catch(error => {
-        setError(error);
+        if (error.response && error.response.status === 404) {
+          setError('No active auctions available.');
+        } else {
+          setError('Something went wrong. Please try again later.');
+        }
         setLoading(false);
       });
   }, []);
@@ -54,7 +58,7 @@ const AuctionList = () => {
     const interval = setInterval(() => {
       setAuctions(prevAuctions => prevAuctions.map(auction => ({
         ...auction,
-        remainingTime: calculateTimeRemaining(auction.end_time)
+        remainingTime: calculateTimeRemaining(auction.end_time, auction.auction_status)
       })));
     }, 1000);
 
@@ -72,11 +76,15 @@ const AuctionList = () => {
   }
 
   if (error) {
-    return <div>Error: {error.message}</div>;
+    return (
+      <div className='flex justify-center items-center'>
+        <div className='text-4xl text-center font-bold'>{error}</div>
+      </div>
+    )
   }
 
   return (
-    <div className="w-full min-h-screen max-w-7xl mx-auto px-12 pb-20">
+    <div className="w-full max-w-7xl mx-auto px-12 pb-20">
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
         {auctions.map(auction => (
           <div 
@@ -89,10 +97,10 @@ const AuctionList = () => {
             }}
           >
             <div className="relative">
-              {auction.authenticated == true ? (
+              {auction.authentication_status == 'Approved' ? (
                 <img
-                  src={authenticated}
-                  alt="Authenticated Badge"
+                  src={authenticatedIcon}
+                  alt="Authenticated Icon"
                   className="absolute top-2 left-2 w-12 h-12 z-10 opacity-90"
                 />
               ) : null}
@@ -117,8 +125,9 @@ const AuctionList = () => {
                   ))}
                 </Carousel>
               )}
-              <div className="absolute bottom-2 right-2 bg-gray-800 text-white text-sm px-2 py-1 rounded">
-                {auction.remainingTime}
+              <div className="absolute bottom-2 right-2 bg-gray-800 text-white text-sm px-2 py-1 rounded border border-gray-100">
+                {/* If timer runs out, show Ended instead of Active. On reload, will display real auction_status */}
+                {(auction.remainingTime) == "Active" ? "Ended" : auction.remainingTime}
               </div>
             </div>
             <div className="p-4 text-center" onClick={() => navigate(`/auctions/${auction.id}`)}>

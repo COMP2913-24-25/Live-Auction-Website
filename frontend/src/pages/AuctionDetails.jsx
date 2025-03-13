@@ -1,15 +1,23 @@
 import { useEffect, useState, useRef, useContext } from "react";
+<<<<<<< HEAD
 import { AuthContext } from "../components/authContext";
+=======
+import { useAuth } from "../context/AuthContext";
+>>>>>>> origin/sprint-2
 import axios from "axios";
 import Carousel from "react-multi-carousel";
 import "react-multi-carousel/lib/styles.css";
 import { Star } from "lucide-react";
 import { useParams } from "react-router-dom";
+<<<<<<< HEAD
 import authenticated from "../assets/authenticated.png";
 import PaymentForm from '../components/payment/PaymentForm';
 import PaymentSuccess from '../components/payment/PaymentSuccess';
 import PaymentCardSelector from '../components/PaymentCardSelector';
 import { validateBidAmount } from '../components/BidForm';
+=======
+import authenticatedIcon from "../assets/authenticatedIcon.png";
+>>>>>>> origin/sprint-2
 
 const responsive = {
   desktop: { breakpoint: { max: 3000, min: 1024 }, items: 1 },
@@ -17,14 +25,14 @@ const responsive = {
   mobile: { breakpoint: { max: 464, min: 0 }, items: 1 },
 };
 
-const calculateTimeRemaining = (endTime) => {
+const calculateTimeRemaining = (endTime, auctionStatus) => {
   if (!endTime) return "Auction Ended";
 
   const now = new Date().getTime();
   const end = new Date(endTime).getTime();
   const difference = end - now;
 
-  if (difference <= 0) return "Auction Ended";
+  if (difference <= 0) return auctionStatus;
 
   const days = Math.floor(difference / (1000 * 60 * 60 * 24));
   
@@ -41,7 +49,7 @@ const calculateTimeRemaining = (endTime) => {
 
 
 const AuctionDetails = () => {
-  const { user } = useContext(AuthContext);
+  const { user } = useAuth();
   const { id } = useParams();
   const [auction, setAuction] = useState(null);
   const [bidAmount, setBidAmount] = useState(0);
@@ -78,9 +86,13 @@ const AuctionDetails = () => {
     if (!auction?.end_time) return; // Ensure end_time exists before setting the interval
 
     const updateRemainingTime = () => {
+<<<<<<< HEAD
       const timeRemaining = calculateTimeRemaining(auction.end_time);
       setRemainingTime(timeRemaining);
       setIsAuctionEnded(timeRemaining === "Auction Ended");
+=======
+      setRemainingTime(calculateTimeRemaining(auction.end_time, auction.auction_status));
+>>>>>>> origin/sprint-2
     };
 
     updateRemainingTime(); // Set initial value immediately
@@ -261,17 +273,13 @@ const AuctionDetails = () => {
           className="relative flex justify-center items-center w-full md:w-1/2 border border-black p-2"
           style={{ minHeight: maxHeight }}
         >
-          {auction.authenticated ? (
+          {auction.authentication_status == 'Approved' ? (
             <img
-              src={authenticated}
-              alt="Authenticated Badge"
+              src={authenticatedIcon}
+              alt="Authenticated Icon"
               className="absolute top-2 left-2 w-12 h-12 z-10 opacity-90"
             />
-          ) : (user && user.id == auction.seller_id ? (
-            <button className="w-fit rounded-md bg-teal text-white absolute top-2 left-2 z-10 p-1 hover:bg-gold cursor-pointer">
-                Request Authentication
-            </button>
-          ) : null )}
+          ) : null}
           
           <Carousel
             responsive={responsive}
@@ -294,7 +302,8 @@ const AuctionDetails = () => {
             )}
           </Carousel>
           <div className="absolute bottom-4 right-4 bg-gray-800 text-white text-sm px-2 py-1 rounded border border-gray-100">
-            {remainingTime}
+            {/* If timer runs out, show Ended instead of Active. On reload, will display real auction_status */}
+            {remainingTime == 'Active' ? "Ended" : remainingTime}
           </div>
         </div>
 

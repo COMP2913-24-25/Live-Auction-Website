@@ -3,6 +3,7 @@ require('dotenv').config({ path: require('path').resolve(__dirname, '../../.env'
 const express = require('express');
 const bodyParser = require('body-parser');
 const cors = require('cors');
+const path = require('path');
 
 const app = express();
 
@@ -14,6 +15,9 @@ const categoriesRoutes = require('./routes/categories');
 const searchRoutes = require('./routes/search');
 const managerRoutes = require('./routes/manager');
 const paymentRoutes = require('./routes/payment');
+const expertRoutes = require('./routes/expert');
+const userRoutes = require('./routes/user');
+const bidRoutes = require('./routes/bid');
 
 // CORS configuration
 app.use(cors({
@@ -38,6 +42,9 @@ app.use('/api', categoriesRoutes);
 app.use('/api', searchRoutes);
 app.use('/api/manager', managerRoutes);
 app.use('/api/payment', paymentRoutes);
+app.use('/api/expert', expertRoutes);
+app.use('/api/users', userRoutes);
+app.use('/api/bids', bidRoutes);
 
 // Example route
 app.get('/', (req, res) => {

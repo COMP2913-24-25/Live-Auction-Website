@@ -1,45 +1,65 @@
-import React from 'react';
-import { Navigate, Route, Routes } from 'react-router-dom';
-import { AuthProvider } from './components/authContext';
-import ProtectedRoute from './components/ProtectedRoute';
+import { Navigate, BrowserRouter as Router, Route, Routes } from 'react-router-dom';
+import { AuthProvider } from "./context/AuthContext";
+import { useAuth } from './context/AuthContext';
 import Browse from "./pages/Browse";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
-import Dashboard from "./pages/Dashboard";  
+import ManagerDashboard from "./pages/ManagerDashboard";
+import ExpertDashboard from "./pages/ExpertDashboard";  
 import NavBar from "./components/navBar";
+import ProtectedRoute from "./context/ProtectedRoute";
 import AuctionDetails from './pages/AuctionDetails';
 import AuctionForm from './pages/AuctionForm';
+import ItemAuthenticationForm from './pages/ItemAuthenticationForm';
 
-const App = () => (
-  <AuthProvider>
-    <NavBar />
-    <Routes>
-      {/* Redirect root to /browse */}
-      <Route path="/" element={<Navigate to="/browse" replace />} />
+const AppContent = () => {
+  const { user, loading } = useAuth();
 
-      {/* Public Routes */ }
-      <Route path="/browse" element={<Browse />} />
-      <Route path="/auctions/:id" element={<AuctionDetails />} />
-      <Route path="/login" element={<Login />} />
-      <Route path="/register" element={<Register />} />
+  if (loading) {
+    return <div>Loading...</div>;
+  }
 
-      {/* Protected Routes */}
-      <Route 
-        path="/create-auction" 
-        element={<AuctionForm />}
-      />
-      <Route
-        path="/dashboard"
-        element={
-          <ProtectedRoute allowedRoles={[2, 3]}>
-            <div className="pt-16 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-              <Dashboard />
-            </div>
-          </ProtectedRoute>
-        }
-      />
-    </Routes>
-  </AuthProvider>
-);
+  return (
+    <>
+      <NavBar />
+      <Routes>
+        {/* Redirect root to /browse */}
+        <Route path="/" element={<Navigate to="/browse" replace />} />
+
+        {/* Public Routes */ }
+        <Route path="/browse" element={<Browse />} />
+        <Route path="/auctions/:id" element={<AuctionDetails />} />
+        <Route path="/login" element={<Login />} />
+        <Route path="/register" element={<Register />} />
+
+        {/* Protected Routes */}
+        <Route
+          path="/dashboard"
+          element={
+            <ProtectedRoute allowedRoles={[2, 3]}>
+                {user && user.role === 2 ? <ExpertDashboard /> : <ManagerDashboard />}
+            </ProtectedRoute>
+          }
+        />
+        <Route 
+          path="/create-auction" 
+          element={
+            <ProtectedRoute allowedRoles={[1]}>
+              <AuctionForm />
+            </ProtectedRoute>
+          }
+        />
+        <Route 
+          path="/authenticate-item" 
+          element={
+            <ProtectedRoute allowedRoles={[1]}>
+              <ItemAuthenticationForm />
+            </ProtectedRoute>
+          }
+        />
+      </Routes>
+    </>
+  )
+};
 
 export default App;

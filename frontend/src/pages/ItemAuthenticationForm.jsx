@@ -1,18 +1,13 @@
 import { useState, useEffect } from 'react';
-import { useAuth } from '../components/authContext';
-import axios from 'axios';
-import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 
-function AuctionForm() {
-  const { currentUser } = useAuth();
-  const navigate = useNavigate();
+function ItemAuthenticationForm() {
+  const { user } = useAuth();
 
   const [formData, setFormData] = useState({
-    user_id: currentUser?.id, // 使用 currentUser 而不是 user
+    user_id: user?.id, // Attach current user ID to the form data
     title: '',
     description: '',
-    min_price: '',
-    duration: 1,
     category: ''
   });
 
@@ -20,6 +15,7 @@ function AuctionForm() {
   const [imagePreviews, setImagePreviews] = useState([]);
   const [fileNames, setFileNames] = useState('No files chosen');
   const [categories, setCategories] = useState([]);
+  const [showModal, setShowModal] = useState(false); // Modal visibiility state
 
   // Fetch categories from backend
   useEffect(() => {
@@ -103,55 +99,21 @@ function AuctionForm() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
-    // 添加日志
-    console.log('Submitting form data:', formData);
-    console.log('Uploaded image files:', imageFiles);
-    
-    // 检查用户 ID
-    if (!formData.user_id) {
-      console.error('User ID is missing');
-      alert('User ID is missing. Please log in again.');
-      return;
-    }
-    
-    // 检查必填字段
-    if (!formData.title || !formData.description || !formData.min_price || !formData.category) {
-      alert('Please fill in all required fields');
-      return;
-    }
-    
-    // 创建 FormData 对象
-    const formDataToSend = new FormData();
-    
-    // 添加表单字段
-    for (const key in formData) {
-      formDataToSend.append(key, formData[key]);
-    }
-    
-    // 添加图片文件
-    imageFiles.forEach(file => {
-      formDataToSend.append('images', file);
-    });
-    
+    console.log(`User ID: ${user.id}`); // Debugging log
+    setShowModal(true); // Show modal on form submission
+  };
+
+  const confirmSubmission = async () => {
+    setShowModal(false); // Hide modal before submitting
+
     try {
-      // 发送请求
-      const response = await axios.post('/api/auctions', formDataToSend, {
-        headers: {
-          'Content-Type': 'multipart/form-data'
-        }
+      const submitData = new FormData();
+      Object.keys(formData).forEach(key => {
+        submitData.append(key, formData[key]);
       });
-<<<<<<< HEAD
-      
-      console.log('Create auction response:', response.data);
-      
-      // 处理成功响应
-      alert('Auction created successfully!');
-      navigate('/browse'); // 导航到浏览页面
-=======
       imageFiles.forEach(file => submitData.append('images', file));
 
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/create-listing`, {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/authenticate-item`, {
         method: 'POST',
         body: submitData
       });
@@ -159,18 +121,16 @@ function AuctionForm() {
       const data = await response.json();
       if (response.ok) {
         alert('Auction item created successfully!');
-        setFormData({ title: '', description: '', min_price: '', duration: '', category: '' });
+        setFormData({ title: '', description: '', category: '' });
         setImageFiles([]);
         setImagePreviews([]);
         setFileNames('No files chosen');
       } else {
         throw new Error(data.error || `Submission failed: ${response.status}`);
       }
->>>>>>> origin/sprint-2
     } catch (error) {
-      console.error('Error creating auction:', error);
-      console.error('Error response:', error.response?.data);
-      alert(`Failed to create auction: ${error.response?.data?.message || 'Unknown error'}`);
+      console.error('Submit error:', error);
+      alert('Error: ' + error.message);
     }
   };
 
@@ -183,7 +143,7 @@ function AuctionForm() {
     <div className='px-4'>
       <div className="max-w-3xl mx-auto bg-off-white rounded-3xl shadow-lg p-12 mt-8 mb-8">
         <h2 className="text-3xl font-bold text-navy text-center mb-12 relative">
-          Create a New Auction
+          Item Authentication
           <div className="absolute bottom-[-8px] left-1/2 transform -translate-x-1/2 w-16 h-1 bg-teal"></div>
         </h2>
 
@@ -221,7 +181,7 @@ function AuctionForm() {
               required
               className="w-full px-4 py-3 rounded-lg border border-gray-200 focus:outline-none focus:border-teal focus:ring-1 focus:ring-teal/20 bg-white text-charcoal"
             >
-              <option value="" disabled>Please select a category</option>
+              <option value="" disabled>Select a category</option>
               {categories.map(category => (
                 <option key={category.id} value={category.id}>{category.name}</option>
               ))}
@@ -262,44 +222,39 @@ function AuctionForm() {
             )}
           </div>
 
-          <div className="grid grid-cols-2 gap-6">
-            <div className="space-y-2">
-              <label className="block text-charcoal font-medium">Minimum Price (£):</label>
-              <input
-                type="number"
-                name="min_price"
-                value={formData.min_price}
-                onChange={handleChange}
-                min="1"
-                required
-                className="w-full px-4 py-3 rounded-lg border border-gray-200 focus:outline-none focus:border-teal focus:ring-1 focus:ring-teal/20 bg-white text-charcoal"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <label className="block text-charcoal font-medium">Duration (1-5 days):</label>
-              <input
-                type="number"
-                name="duration"
-                value={formData.duration}
-                onChange={handleChange}
-                min="1"
-                max="5"
-                required
-                className="w-full px-4 py-3 rounded-lg border border-gray-200 focus:outline-none focus:border-teal focus:ring-1 focus:ring-teal/20 bg-white text-charcoal"
-              />
-            </div>
-          </div>
-
           <div className="text-center mt-8">
             <button type="submit" className="cursor-pointer bg-teal text-white px-8 py-3 rounded-full hover:bg-gold transition-colors duration-300 font-semibold shadow-lg hover:shadow-xl">
-              CREATE
+              REQUEST
             </button>
           </div>
         </form>
       </div>
+
+      {/* Confirmation Modal */}
+      {showModal && (
+        <div className="fixed inset-0 flex items-center justify-center bg-black/50">
+          <div className="bg-white p-6 rounded-lg shadow-lg text-center max-w-md">
+            <h3 className="text-xl font-semibold text-charcoal">Fee Confirmation</h3>
+            <p className="mt-2 text-charcoal">If your request is approved, a fee of 5% of the winning bid will be charged.</p>
+            <div className="mt-4 flex justify-center gap-4">
+              <button
+                className="bg-gray-300 text-charcoal px-4 py-2 rounded-lg hover:bg-gray-400 transition"
+                onClick={() => setShowModal(false)}
+              >
+                Cancel
+              </button>
+              <button
+                className="bg-green-600 text-white font-semibold px-4 py-2 rounded-lg hover:bg-green-800"
+                onClick={confirmSubmission}
+              >
+                Confirm
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
 
-export default AuctionForm;
+export default ItemAuthenticationForm;
