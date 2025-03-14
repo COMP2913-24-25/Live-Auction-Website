@@ -58,7 +58,11 @@ const ExpertPendingRequests = () => {
 
   return (
     <>
+<<<<<<< HEAD
     <div className="text-3xl p-4">Pending Requests ({requests.length})</div>
+=======
+    <div className="text-3xl p-4 -mt-16">Pending Requests ({requests.length})</div>
+>>>>>>> origin/sprint-2
     <div className="grid grid-cols-1 gap-6 p-4 max-w-5xl">
       {requests.map((requests) => (
         <div key={requests.id} className="border border-gray-300 border-b-4 border-b-gray-400 rounded-md p-4 shadow-md flex flex-col md:flex-row lg:flex-row gap-4 bg-gray-200">

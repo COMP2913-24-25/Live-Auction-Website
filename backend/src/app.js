@@ -7,17 +7,21 @@ const path = require('path');
 
 const app = express();
 
-// Import routes
 const uploadRoutes = require('./routes/upload');
 const auctionRoutes = require('./routes/auction');
 const authRoutes = require('./routes/auth');
 const categoriesRoutes = require('./routes/categories');
 const searchRoutes = require('./routes/search');
 const managerRoutes = require('./routes/manager');
+<<<<<<< HEAD
 const paymentRoutes = require('./routes/payment');
 const expertRoutes = require('./routes/expert');
 const userRoutes = require('./routes/user');
 const bidRoutes = require('./routes/bid');
+=======
+const notificationsRoutes = require('./routes/notifications'); 
+const expertRoutes = require('./routes/expert');
+>>>>>>> origin/sprint-2
 
 // CORS configuration
 app.use(cors({
@@ -35,12 +39,13 @@ app.use((req, res, next) => {
 });
 
 // Mount routes
-app.use('/api', uploadRoutes);
+app.use('/api/upload', uploadRoutes);
 app.use('/api/auctions', auctionRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api', categoriesRoutes);
-app.use('/api', searchRoutes);
+app.use('/api/search', searchRoutes);
 app.use('/api/manager', managerRoutes);
+<<<<<<< HEAD
 app.use('/api/payment', paymentRoutes);
 app.use('/api/expert', expertRoutes);
 app.use('/api/users', userRoutes);
@@ -50,6 +55,15 @@ app.use('/api/bids', bidRoutes);
 app.get('/', (req, res) => {
   res.json({ message: 'Server is running' });
 });
+=======
+app.use('/api/notifications', notificationsRoutes); 
+app.use('/api/expert', expertRoutes);
+
+// Example route
+// app.get('/', (req, res) => {
+//   res.send('Hello from the backend!');
+// });
+>>>>>>> origin/sprint-2
 
 app.use(express.json());
 

@@ -1,7 +1,12 @@
 import { useState, useEffect } from 'react';
+<<<<<<< HEAD
 import { useAuth } from '../components/authContext';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
+=======
+import { useAuth } from '../context/AuthContext';
+import axios from 'axios';
+>>>>>>> origin/sprint-2
 
 function AuctionForm() {
   const { currentUser } = useAuth();
@@ -25,9 +30,8 @@ function AuctionForm() {
   useEffect(() => {
     const fetchCategories = async () => {
       try {
-        const response = await fetch(`${import.meta.env.VITE_API_URL}/api/categories`);
-        const data = await response.json();
-        setCategories(data); // Assuming API returns an array of { id, name }
+        const response = await axios.get(`/api/categories`);
+        setCategories(response.data); 
       } catch (error) {
         console.error("Error fetching categories:", error);
       }
@@ -103,6 +107,7 @@ function AuctionForm() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+<<<<<<< HEAD
     
     // 添加日志
     console.log('Submitting form data:', formData);
@@ -134,6 +139,8 @@ function AuctionForm() {
       formDataToSend.append('images', file);
     });
     
+=======
+>>>>>>> origin/sprint-2
     try {
       // 发送请求
       const response = await axios.post('/api/auctions', formDataToSend, {
@@ -151,26 +158,35 @@ function AuctionForm() {
 =======
       imageFiles.forEach(file => submitData.append('images', file));
 
+<<<<<<< HEAD
       const response = await fetch(`${import.meta.env.VITE_API_URL}/api/create-listing`, {
         method: 'POST',
         body: submitData
+=======
+      const response = await axios.post('/api/upload/create-listing', submitData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        }
+>>>>>>> origin/sprint-2
       });
 
-      const data = await response.json();
-      if (response.ok) {
+      if (response.status === 201) {
         alert('Auction item created successfully!');
-        setFormData({ title: '', description: '', min_price: '', duration: '', category: '' });
+        setFormData({ title: '', description: '', min_price: '', duration: 1, category: '' });
         setImageFiles([]);
         setImagePreviews([]);
         setFileNames('No files chosen');
-      } else {
-        throw new Error(data.error || `Submission failed: ${response.status}`);
       }
 >>>>>>> origin/sprint-2
     } catch (error) {
+<<<<<<< HEAD
       console.error('Error creating auction:', error);
       console.error('Error response:', error.response?.data);
       alert(`Failed to create auction: ${error.response?.data?.message || 'Unknown error'}`);
+=======
+      console.error('Submit error:', error);
+      alert('Error: ' + (error.response?.data?.error || error.message));
+>>>>>>> origin/sprint-2
     }
   };
 

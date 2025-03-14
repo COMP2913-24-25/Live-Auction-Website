@@ -4,7 +4,7 @@ const router = express.Router();
 
 router.get('/categories', async (req, res) => {
   try {
-    const categories = await knex('categories').select('*'); // Adjust column names if needed
+    const categories = await knex('categories').select('*');
     res.json(categories);
   } catch (error) {
     console.error('Database error:', error);
