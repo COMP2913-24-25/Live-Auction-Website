@@ -122,15 +122,46 @@ router.put('/authentication-requests/assign', async (req, res) => {
 
     try {
         await knex('authentication_requests')
-            .where({ item_id: item_id })
+            .where({ item_id })
             .update({ expert_id });
 
-        res.json({ message: 'Expert assigned successfully' });
+
+        return res.json({message: 'Expert assigned successfully'});
+
     } catch (error) {
         console.error('Error assigning expert:', error);
-        res.status(500).json({ message: 'Server error' });
+        return res.status(500).json({ message: 'Server error' });
     }
 });
+
+// Read if expert has been assigned to an item
+let lastKnownCount = 0; // Store the last known count of assigned experts
+
+router.get('/authentication-requests/check-updates', async (req, res) => {
+    try {
+        const currentCount = await knex('authentication_requests')
+            .whereNotNull('expert_id')
+            .count('* as count')
+            .first();
+        
+        const updateInfo =   await knew('authentication_requests')
+            .select('item_id', 'expert_id')
+            .whereNotNull('expert_id');
+
+        if (currentCount.count > lastKnownCount) {
+            lastKnownCount = currentCount.count; // Update the last known count
+            return res.json({ respond: true, data: updateInfo });
+        } else {
+            return res.json({ respond: false });
+        }
+    } catch (error) {
+        console.error('Error checking updates:', error);
+        return res.status(500).json({ message: 'Server error' });
+    }
+});
+
+
+
 
 // Reassign an expert for an item
 router.put('/authentication-requests/reassign', async (req, res) => {
@@ -144,6 +175,20 @@ router.put('/authentication-requests/reassign', async (req, res) => {
         res.json({ message: 'Expert reassigned successfully' });
     } catch (error) {
         console.error('Error reassigning expert:', error);
+        res.status(500).json({ message: 'Server error' });
+    }
+});
+
+// Read if expert has been reassigned to an item
+router.get('/authentication-requests/reassign', async (req, res) => {
+    try {
+        const reassignedRequests = await knex('authentication_requests')
+            .select('item_id', 'new_expert_id')
+            .whereNotNull('new_expert_id');
+
+        res.json(reassignedRequests);
+    } catch (error) {
+        console.error('Error fetching reassigned requests:', error);
         res.status(500).json({ message: 'Server error' });
     }
 });

@@ -67,7 +67,7 @@ router.get("/completed/:expertId", async (req, res) => {
 });
 
 // Update the status of an authentication request
-router.post("/authenticate/:requestId", async (req, res) => {
+router.put("/authenticate/:requestId", async (req, res) => {
     const { requestId } = req.params;
     const { action, comment } = req.body;
     try {
@@ -111,7 +111,7 @@ router.post("/authenticate/:requestId", async (req, res) => {
 });
 
 // Request reallocation for an authentication request
-router.post("/request-reallocation/:requestId", async (req, res) => {
+router.put("/request-reallocation/:requestId", async (req, res) => {
     const { requestId } = req.params;
     try {
         const request = await knex("authentication_requests")

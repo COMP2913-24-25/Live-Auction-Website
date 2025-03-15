@@ -11,15 +11,16 @@ function NotificationBell() {
         const fetchAssignedItems = async () => {
             try {
                 // Fetch all authentication requests assigned to the logged-in expert
-                const response = await axios.get('/api/manager/authentication-requests/assign');
-                const assignedRequests = response.data;
+                const response = await axios.get('/api/manager/authentication-requests/check-updates');
+                const { updateInfo } = response.data;
 
-                const itemPromises = assignedRequests
+
+                const itemPromises = updateInfo
                     .filter((request) => request.expert_id === user.id) // Match expert_id with user.id
                     .map(async (request) => {
                         const { item_id } = request;
                         try {
-                            const itemResponse = await axios.get(`/api/auction/${item_id}`);
+                            const itemResponse = await axios.get(`/api/auctions/${item_id}`);
                             return itemResponse.data; // Return the auction item data
                         } catch (error) {
                             console.error(`Failed to fetch item ID ${item_id}:`, error);

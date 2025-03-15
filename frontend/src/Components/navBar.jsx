@@ -11,7 +11,6 @@ function NavBar() {
     const [hasNewNotification, setHasNewNotification] = useState(false);
     const [previousAuctionCount, setPreviousAuctionCount] = useState(0);
     const [hasUpdates, setHasUpdates] = useState(false);
-    const [previousData, setPreviousData] = useState([]);
   
     const notifications = [
       { id: 1, message: "New bid on your item", time: "5 mins ago" },
@@ -34,7 +33,7 @@ function NavBar() {
       if (user?.role === 2 || user?.role === 3) { // Only fetch notifications for manager and expert
           const fetchNotifications = async () => {
               try {
-                const response = await fetch(`${import.meta.env.VITE_API_URL}/api/auction/active`);
+                const response = await axios.get('/api/auctions/active');
                 const data = await response.json();
         
                 // Check if new auctions were added
@@ -53,37 +52,29 @@ function NavBar() {
       }
     }, [user]);
 
+    const fetchUpdates = async () => {
+      try {
+          const response = await axios.get('/api/manager/authentication-requests/check-updates');
+          const { data } = response.data;
+
+          data ? setHasUpdates(true) : setHasUpdates(false);
+
+      } catch (error) {
+          console.error('Error checking for updates:', error);
+      }
+    };
+
+
     useEffect(() => {
-    if ([2, 3].includes(user?.role)) {
-        const fetchUpdates = async () => {
-            try {
-                const response = await axios.get('/api/manager/authentication-requests/completed');
-                const assignedRequests = response.data;
-                
-                // If previousData is null, set it directly without comparison
-                if (!previousData) {
-                    setPreviousData(assignedRequests);
-                    return;
-                }
-
-                // Compare only if previousData is already set
-                const hasNewUpdate = JSON.stringify(assignedRequests) !== JSON.stringify(previousData);
-
-                if (hasNewUpdate) {
-                    setHasUpdates(true);
-                    setPreviousData(assignedRequests);
-                }
-            } catch (error) {
-                console.error('Error checking for updates:', error);
-            }
-        };
+      if ([2, 3].includes(user?.role)) {
+        
 
         fetchUpdates();
-        const interval = setInterval(fetchUpdates, 10000);
+        const interval = setInterval(fetchUpdates, 5000); //check every 5 sec
 
         return () => clearInterval(interval);
-    }
-}, [previousData, user?.role]);
+      }
+    }, [user]);
 
     const handleNotificationClick = () => {
       if (user?.role === 1) {
