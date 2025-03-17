@@ -1,6 +1,7 @@
 import { Navigate, BrowserRouter as Router, Route, Routes } from 'react-router-dom';
 import { AuthProvider } from "./context/AuthContext";
 import { useAuth } from './context/AuthContext';
+import { NotificationProvider } from './context/notificationContext';
 import Browse from "./pages/Browse";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
@@ -10,61 +11,76 @@ import NavBar from "./components/NavBar";
 import ProtectedRoute from "./context/ProtectedRoute";
 import AuctionDetails from './pages/AuctionDetails';
 import AuctionForm from './pages/AuctionForm';
-import NotificationBell from './pages/NotificationBell';
+import ItemAuthenticationForm from './pages/ItemAuthenticationForm';
+import Notifications from './pages/Notifications';
 
-const App = () => (
-  <AuthProvider>
-    <NavBar />
-    <Routes>
-      {/* Redirect root to /browse */}
-      <Route path="/" element={<Navigate to="/browse" replace />} />
+const DashboardRouter = () => {
+  const { user } = useAuth();
+  
+  switch (user?.role) {
+    case 2:
+      return <ExpertDashboard />;
+    case 3:
+      return <ManagerDashboard />;
+    default:
+      return <Navigate to="/browse" replace />;
+  }
+};
 
-      {/* Public Routes */ }
-      <Route path="/browse" element={<Browse />} />
-      <Route path="/auctions/:id" element={<AuctionDetails />} />
-      <Route path="/login" element={<Login />} />
-      <Route path="/register" element={<Register />} />
+function App() {
+  return (
+    <AuthProvider>
+      <NotificationProvider>
+        <NavBar />
+        <Routes>
+          {/* Redirect root to /browse */}
+          <Route path="/" element={<Navigate to="/browse" />} />
 
-      {/* Protected Routes */}
-      <Route 
-        path="/notifications" 
-        element={
-          <ProtectedRoute allowedRoles={[2]}>
-            <NotificationBell />
-          </ProtectedRoute>
-        }
-      />
-      <Route 
-        path="/create-auction" 
-        element={
-          <ProtectedRoute allowedRoles={[1]}>
-            <AuctionForm />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/manger-dashboard"
-        element={
-          <ProtectedRoute allowedRoles={[3]}>
-            <div className="pt-16 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-              <ExpertDashboard />
-            </div>
-          </ProtectedRoute>
-        }
-      />
+          {/* Public Routes */}
+          <Route path="/browse" element={<Browse />} />
+          <Route path="/auctions/:id" element={<AuctionDetails />} />
+          <Route path="/login" element={<Login />} />
+          <Route path="/register" element={<Register />} />
+          
+          {/* Protected Routes */}
 
-      <Route
-        path="/expert-dashboard"
-        element={
-          <ProtectedRoute allowedRoles={[2]}>
-            <div className="pt-16 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-              <ManagerDashboard />
-            </div>
-          </ProtectedRoute>
-        }
-      />
-    </Routes>
-  </AuthProvider>
-);
+          <Route 
+            path="/notification-bell" 
+            element={
+              <ProtectedRoute allowedRoles={[2]}>
+                <NotificationBell />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route path="/dashboard" element={
+            <ProtectedRoute>
+              <DashboardRouter />
+            </ProtectedRoute>
+          } />
+          <Route path="/create-auction" 
+            element={
+              <ProtectedRoute allowedRoles={[1]}>
+                <AuctionForm />
+              </ProtectedRoute>
+            }
+          />
+          <Route path="authenticate-item"
+            element={
+              <ProtectedRoute allowedRoles={[1]}>
+                <ItemAuthenticationForm />
+              </ProtectedRoute>
+            }
+          />
+          <Route path="/notifications" element={
+            <ProtectedRoute>
+              <Notifications />
+            </ProtectedRoute>
+          } />
+        </Routes>
+      </NotificationProvider>
+    </AuthProvider>
+  );
+}
 
 export default App;

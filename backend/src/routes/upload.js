@@ -31,10 +31,15 @@ const storage = new CloudinaryStorage({
 
 const upload = multer({ storage });
 
-// Create a new listing
+// Make sure the route matches exactly
 router.post('/create-listing', upload.array('images', 6), async (req, res) => {
   try {
+    console.log('Received form data:', req.body); // Debug log
+    console.log('Received files:', req.files); // Debug log
+    
     const { user_id, title, description, min_price, duration, category } = req.body;
+    
+    // Add validation
     if (!title || !description || !min_price || !duration || !category) {
       return res.status(400).json({ error: 'All fields are required.' });
     }
@@ -76,7 +81,7 @@ router.post('/create-listing', upload.array('images', 6), async (req, res) => {
     res.status(201).json({ message: 'Auction item created successfully', auctionId });
   } catch (error) {
     console.error('Upload error:', error);
-    res.status(500).json({ error: 'Internal server error' });
+    res.status(500).json({ error: error.message });
   }
 });
 
