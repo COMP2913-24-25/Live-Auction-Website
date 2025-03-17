@@ -1,15 +1,8 @@
-<<<<<<< HEAD
-import { useState, useRef, useEffect, useContext } from "react";
-import { Link } from "react-router-dom";
-import { Menu, Bell, User, UserPlus, X, Search } from "lucide-react";
-import { useAuth } from "../context/AuthContext";
-=======
 import { useState, useRef, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Menu, Bell, Search, LogOut, AlertCircle, Check, Clock, ArrowRight } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import { useNotifications } from "../context/notificationContext";
->>>>>>> sprint-2
 
 function NavBar() {
     const { isAuthenticated, logout, user } = useAuth();
@@ -17,14 +10,11 @@ function NavBar() {
     const [isNotificationOpen, setIsNotificationOpen] = useState(false);
     const [searchQuery, setSearchQuery] = useState("");
     const notificationRef = useRef(null);
-<<<<<<< HEAD
     const [hasNewNotification, setHasNewNotification] = useState(false);
     const [previousAuctionCount, setPreviousAuctionCount] = useState(0);
     const [hasUpdates, setHasUpdates] = useState(false);
-=======
     const searchRef = useRef(null);
     const navigate = useNavigate();
->>>>>>> sprint-2
   
     const { notifications, unreadCount, markAsRead } = useNotifications();
     console.log(notifications);
@@ -64,17 +54,18 @@ function NavBar() {
       }
     };
 
-    const handleKeyDown = (e) => {
-      if (e.key === 'Enter') {
-        handleSearch(e);
-      }
-    };
   
           fetchNotifications();
           const interval = setInterval(fetchNotifications, 10000);
           return () => clearInterval(interval);
       }
     }, [user]);
+
+    const handleKeyDown = (e) => {
+      if (e.key === 'Enter') {
+        handleSearch(e);
+      }
+    };
 
     const fetchUpdates = async () => {
       try {
@@ -130,102 +121,6 @@ function NavBar() {
               </div>
 
               {/* Desktop Navigation */}
-<<<<<<< HEAD
-              <nav className="hidden md:flex items-center space-x-8">
-              <Link to="/browse" className="text-white/90 hover:text-white transition-colors">
-                Browse
-              </Link>
-              <Link to="/how-it-works" className="text-white/90 hover:text-white transition-colors">
-                How It Works
-              </Link>
-                {isAuthenticated && (
-                  <>
-                    {(user.role === 2) && (
-                      <Link to="/expert-dashboard" className="text-white/90 hover:text-white transition-colors">
-                        Expert Dashboard
-                      </Link>
-                    )}
-                    {(user.role === 3) && (
-                      <Link to="/manager-dashboard" className="text-white/90 hover:text-white transition-colors">
-                        Manager Dashboard
-                      </Link>
-                    )}
-                    {user.role === 1 && (
-                      <Link to="/create-auction" className="text-white/90 hover:text-white transition-colors">
-                        Create Auction
-                      </Link>
-                    )}
-                  </>
-                )}
-              </nav>
-
-              {/* Auth and Notification Section */}
-              <div className="hidden md:flex items-center space-x-4">
-                <div className="relative">
-                  <input
-                    type="text"
-                    placeholder="Search..."
-                    className="w-48 px-3 py-1 rounded-full text-sm bg-white/10 border border-transparent focus:border-white/30 focus:outline-none text-white placeholder-white/70"
-                  />
-                  <Search className="absolute right-3 top-1.5 h-4 w-4 text-white/70" />
-                </div>
-                
-                {!isAuthenticated ? (
-                  <div className="flex items-center space-x-4">
-                    <Link to="/login" className="text-white/90 hover:text-white transition-colors flex items-center">
-                      <User className="h-5 w-5 mr-1" />
-                      <span>Login</span>
-                    </Link>
-                    <Link to="/register" className="bg-secondary text-white px-4 py-2 rounded-md hover:bg-opacity-90 transition-colors flex items-center">
-                      <UserPlus className="h-5 w-5 mr-1" />
-                      <span>Register</span>
-                    </Link>
-                  </div>
-                ) : (
-                  <div className="flex items-center space-x-4">
-                    {/* Notification Bell */}
-                    <div className="relative" ref={notificationRef}>
-                      <button 
-                        className="text-white/90 hover:text-white transition-colors relative"
-                        onClick= {handleNotificationClick}
-                      >
-                        <Bell className={`h-6 w-6 ${(hasNewNotification && hasUpdates) ? 'animate-[bounce_1s_infinite] text-gold' : 'text-white'}`} />
-                        <span className="absolute -top-1 -right-1 h-4 w-4 bg-accent rounded-full text-xs flex items-center justify-center text-white">
-                          {notifications.length}
-                        </span>
-                      </button>
-
-                      {/* We are gonna override the use of this bell for user/expert/manager */}
-                      {isNotificationOpen && (
-                          // User notifications
-                          <div className="notification-dropdown">
-                            <div className="px-4 py-2 border-b border-gray-200">
-                              <h3 className="text-sm font-semibold text-gray-900">Notifications</h3>
-                            </div>
-                            {notifications.map((notification) => (
-                              <div 
-                                key={notification.id} 
-                                className="px-4 py-3 hover:bg-gray-50 cursor-pointer"
-                              >
-                                <p className="text-sm text-gray-800">{notification.message}</p>
-                                <p className="text-xs text-gray-500 mt-1">{notification.time}</p>
-                              </div>
-                            ))}
-                            <div className="px-4 py-2 border-t border-gray-200">
-                              <button 
-                                className="text-sm text-secondary hover:text-secondary/80 w-full text-center"
-                                onClick={() => {/* Handle view all notifications */}}
-                              >
-                                View all notifications
-                              </button>
-                            </div>
-                          </div>
-                      )}
-
-                    </div>
-                    <button onClick={logout} className="text-white/90 hover:text-white transition-colors">
-                      Logout
-=======
               <nav className="hidden md:flex items-center w-full ml-6">
                 <div className="flex space-x-8">
                   <Link to="/browse" className="text-white hover:text-blue-200 font-medium transition-colors duration-200">
@@ -287,7 +182,7 @@ function NavBar() {
                         type="text"
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
-                        onKeyDown={handleKeyDown}
+                        onKeyDown={ handleKeyDown }
                         placeholder="Search auctions..."
                         className="w-full pl-10 pr-4 py-2 rounded-full bg-white border-0 shadow-sm focus:ring-2 focus:ring-blue-300 focus:outline-none text-gray-700 placeholder-gray-400"
                         ref={searchRef}
@@ -306,7 +201,7 @@ function NavBar() {
                           className="text-white hover:text-blue-200 transition-colors relative"
                           onClick={() => setIsNotificationOpen(!isNotificationOpen)}
                         >
-                          <Bell className="h-5 w-5" />
+                          <Bell className={`h-6 w-6 ${(hasNewNotification && hasUpdates) ? 'animate-[bounce_1s_infinite] text-gold' : 'text-white'}`} />
                           {unreadCount > 0 && (
                             <span className="absolute -top-1 -right-1 h-5 w-5 bg-orange-500 rounded-full text-xs flex items-center justify-center text-white font-bold">
                               {unreadCount}
@@ -411,13 +306,12 @@ function NavBar() {
                       className="text-white hover:text-blue-200 transition-colors relative"
                       onClick={() => setIsNotificationOpen(!isNotificationOpen)}
                     >
-                      <Bell className="h-6 w-6" />
+                      <Bell className={`h-6 w-6 ${(hasNewNotification && hasUpdates) ? 'animate-[bounce_1s_infinite] text-gold' : 'text-white'}`} />
                       {unreadCount > 0 && (
                         <span className="absolute -top-1 -right-1 h-5 w-5 bg-orange-500 rounded-full text-xs flex items-center justify-center text-white font-bold">
                           {unreadCount}
                         </span>
                       )}
->>>>>>> sprint-2
                     </button>
 
                     {isNotificationOpen && (

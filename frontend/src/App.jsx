@@ -13,6 +13,7 @@ import AuctionDetails from './pages/AuctionDetails';
 import AuctionForm from './pages/AuctionForm';
 import ItemAuthenticationForm from './pages/ItemAuthenticationForm';
 import Notifications from './pages/Notifications';
+import NotificationBell from './pages/notificationBell';
 
 const DashboardRouter = () => {
   const { user } = useAuth();
