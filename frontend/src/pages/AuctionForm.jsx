@@ -1,19 +1,14 @@
 import { useState, useEffect } from 'react';
-<<<<<<< HEAD
-import { useAuth } from '../components/authContext';
+import { useAuth } from '../context/authContext';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
-=======
-import { useAuth } from '../context/AuthContext';
-import axios from 'axios';
->>>>>>> origin/sprint-2
 
 function AuctionForm() {
-  const { currentUser } = useAuth();
+  const { user } = useAuth();
   const navigate = useNavigate();
 
   const [formData, setFormData] = useState({
-    user_id: currentUser?.id, // 使用 currentUser 而不是 user
+    user_id: user?.id,
     title: '',
     description: '',
     min_price: '',
@@ -30,8 +25,9 @@ function AuctionForm() {
   useEffect(() => {
     const fetchCategories = async () => {
       try {
-        const response = await axios.get(`/api/categories`);
-        setCategories(response.data); 
+        const response = await fetch(`${import.meta.env.VITE_API_URL}/api/categories`);
+        const data = await response.json();
+        setCategories(data); // Assuming API returns an array of { id, name }
       } catch (error) {
         console.error("Error fetching categories:", error);
       }
@@ -105,90 +101,73 @@ function AuctionForm() {
     }
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-<<<<<<< HEAD
-    
-    // 添加日志
-    console.log('Submitting form data:', formData);
-    console.log('Uploaded image files:', imageFiles);
-    
-    // 检查用户 ID
-    if (!formData.user_id) {
-      console.error('User ID is missing');
-      alert('User ID is missing. Please log in again.');
-      return;
+const handleSubmit = async (e) => {
+  e.preventDefault();
+  
+  // 添加日志
+  console.log('Submitting form data:', formData);
+  
+  // 创建 FormData 对象
+  const formDataToSend = new FormData();
+  
+  // 计算结束时间
+  const endTime = new Date();
+  endTime.setDate(endTime.getDate() + parseInt(formData.duration));
+  
+  // 添加表单字段
+  formDataToSend.append('user_id', formData.user_id);
+  formDataToSend.append('title', formData.title);
+  formDataToSend.append('description', formData.description);
+  formDataToSend.append('min_price', formData.min_price);
+  formDataToSend.append('category', formData.category);
+  formDataToSend.append('end_time', endTime.toISOString());
+  formDataToSend.append('auction_status', 'Active');
+  
+  // 添加图片文件
+  imageFiles.forEach(file => {
+    formDataToSend.append('images', file);
+  });
+  
+  try {
+    // 发送请求前打印完整的表单数据
+    for (let pair of formDataToSend.entries()) {
+      console.log(pair[0] + ': ' + pair[1]);
     }
     
-    // 检查必填字段
-    if (!formData.title || !formData.description || !formData.min_price || !formData.category) {
-      alert('Please fill in all required fields');
-      return;
-    }
-    
-    // 创建 FormData 对象
-    const formDataToSend = new FormData();
-    
-    // 添加表单字段
-    for (const key in formData) {
-      formDataToSend.append(key, formData[key]);
-    }
-    
-    // 添加图片文件
-    imageFiles.forEach(file => {
-      formDataToSend.append('images', file);
+    const response = await axios.post(`${import.meta.env.VITE_API_URL}/api/auctions`, formDataToSend, {
+      headers: {
+        'Content-Type': 'multipart/form-data'
+      }
     });
     
-=======
->>>>>>> origin/sprint-2
-    try {
-      // 发送请求
-      const response = await axios.post('/api/auctions', formDataToSend, {
-        headers: {
-          'Content-Type': 'multipart/form-data'
-        }
+    console.log('Create auction response:', response.data);
+    
+    if (response.data) {
+      alert('Auction item created successfully!');
+      // 重置表单
+      setFormData({ 
+        user_id: user?.id,
+        title: '', 
+        description: '', 
+        min_price: '', 
+        duration: 1, 
+        category: '' 
       });
-<<<<<<< HEAD
+      setImageFiles([]);
+      setImagePreviews([]);
+      setFileNames('No files chosen');
       
-      console.log('Create auction response:', response.data);
-      
-      // 处理成功响应
-      alert('Auction created successfully!');
-      navigate('/browse'); // 导航到浏览页面
-=======
-      imageFiles.forEach(file => submitData.append('images', file));
-
-<<<<<<< HEAD
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/create-listing`, {
-        method: 'POST',
-        body: submitData
-=======
-      const response = await axios.post('/api/upload/create-listing', submitData, {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        }
->>>>>>> origin/sprint-2
-      });
-
-      if (response.status === 201) {
-        alert('Auction item created successfully!');
-        setFormData({ title: '', description: '', min_price: '', duration: 1, category: '' });
-        setImageFiles([]);
-        setImagePreviews([]);
-        setFileNames('No files chosen');
-      }
->>>>>>> origin/sprint-2
-    } catch (error) {
-<<<<<<< HEAD
-      console.error('Error creating auction:', error);
-      console.error('Error response:', error.response?.data);
-      alert(`Failed to create auction: ${error.response?.data?.message || 'Unknown error'}`);
-=======
-      console.error('Submit error:', error);
-      alert('Error: ' + (error.response?.data?.error || error.message));
->>>>>>> origin/sprint-2
+      // 导航到浏览页面并添加时间戳参数，避免缓存
+      navigate(`/browse?t=${Date.now()}`);
+    } else {
+      throw new Error('Failed to create auction');
     }
-  };
+  } catch (error) {
+    console.error('Error creating auction:', error);
+    console.error('Error details:', error.response?.data);
+    alert(`Failed to create auction: ${error.response?.data?.message || error.message}`);
+  }
+};
 
   const handleChange = (e) => {
     const { name, value } = e.target;

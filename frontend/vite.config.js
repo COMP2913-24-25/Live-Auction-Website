@@ -17,14 +17,8 @@ export default defineConfig({
   server: {
     proxy: {
       '/api': {
-<<<<<<< HEAD
         target: 'http://localhost:5000',
         changeOrigin: true
-=======
-        target: process.env.VITE_API_URL || 'http://localhost:5000',
-        changeOrigin: true,
-        secure: false
->>>>>>> origin/sprint-2
       }
     }
   }

@@ -1,31 +1,15 @@
 import { useEffect, useState, useRef, useContext } from "react";
-<<<<<<< HEAD
-<<<<<<< HEAD
-import { AuthContext } from "../components/authContext";
-=======
-import { useAuth } from "../context/AuthContext";
->>>>>>> origin/sprint-2
-=======
-import { useAuth } from "../context/AuthContext";
->>>>>>> origin/sprint-2
+import { useAuth } from "../context/authContext";
 import axios from "axios";
 import Carousel from "react-multi-carousel";
 import "react-multi-carousel/lib/styles.css";
 import { Star } from "lucide-react";
 import { useParams } from "react-router-dom";
-<<<<<<< HEAD
-<<<<<<< HEAD
-import authenticated from "../assets/authenticated.png";
 import PaymentForm from '../components/payment/PaymentForm';
 import PaymentSuccess from '../components/payment/PaymentSuccess';
 import PaymentCardSelector from '../components/PaymentCardSelector';
 import { validateBidAmount } from '../components/BidForm';
-=======
 import authenticatedIcon from "../assets/authenticatedIcon.png";
->>>>>>> origin/sprint-2
-=======
-import authenticatedIcon from "../assets/authenticatedIcon.png";
->>>>>>> origin/sprint-2
 
 const responsive = {
   desktop: { breakpoint: { max: 3000, min: 1024 }, items: 1 },
@@ -94,17 +78,7 @@ const AuctionDetails = () => {
     if (!auction?.end_time) return; // Ensure end_time exists before setting the interval
 
     const updateRemainingTime = () => {
-<<<<<<< HEAD
-<<<<<<< HEAD
-      const timeRemaining = calculateTimeRemaining(auction.end_time);
-      setRemainingTime(timeRemaining);
-      setIsAuctionEnded(timeRemaining === "Auction Ended");
-=======
       setRemainingTime(calculateTimeRemaining(auction.end_time, auction.auction_status));
->>>>>>> origin/sprint-2
-=======
-      setRemainingTime(calculateTimeRemaining(auction.end_time, auction.auction_status));
->>>>>>> origin/sprint-2
     };
 
     updateRemainingTime(); // Set initial value immediately

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useContext } from 'react';
 import axios from 'axios';
-import { AuthContext } from './authContext';
+import { AuthContext } from '../context/authContext';
 import PaymentForm from './payment/PaymentForm';
 import { useNavigate } from "react-router-dom";
 import PropTypes from "prop-types";

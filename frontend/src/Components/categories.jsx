@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Book, Clock, Diamond, ShoppingBag, Smartphone, Bookmark, Car, Home, Palette, Gamepad2, Dumbbell, Package } from "lucide-react";
 
-function Categories({ onCategorySelect, selectedCategory, allSelectedCategories }) {
+function Categories({ onCategorySelect, selectedCategory }) {
   const [showMore, setShowMore] = useState(false);
 
   const categories = [
@@ -21,10 +21,6 @@ function Categories({ onCategorySelect, selectedCategory, allSelectedCategories 
 
   const displayedCategories = showMore ? categories : categories.slice(0, 4);
 
-  const handleCategoryClick = (categoryId) => {
-    onCategorySelect(categoryId === selectedCategory ? null : categoryId);
-  };
-
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="flex justify-between items-center mb-6">
@@ -41,22 +37,22 @@ function Categories({ onCategorySelect, selectedCategory, allSelectedCategories 
         {displayedCategories.map(category => (
           <div 
             key={category.id}
-            onClick={() => handleCategoryClick(category.id)}
+            onClick={() => onCategorySelect(category.id)}
             className={`cursor-pointer rounded-lg border p-4 text-center transition-all hover:shadow-md ${
-              selectedCategory === category.id || allSelectedCategories?.includes(category.id)
+              selectedCategory === category.id
                 ? 'border-blue-500 bg-blue-50'
                 : 'border-gray-200 bg-white hover:border-blue-200'
             }`}
           >
             <div className={`mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full ${
-              selectedCategory === category.id || allSelectedCategories?.includes(category.id)
+              selectedCategory === category.id
                 ? 'bg-blue-100 text-blue-600'
                 : 'bg-gray-100 text-gray-600'
             }`}>
               {category.icon}
             </div>
             <h3 className={`text-sm font-medium ${
-              selectedCategory === category.id || allSelectedCategories?.includes(category.id)
+              selectedCategory === category.id
                 ? 'text-blue-700'
                 : 'text-gray-700'
             }`}>

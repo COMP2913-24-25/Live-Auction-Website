@@ -1,28 +1,50 @@
 import { useEffect, useState } from "react";
-import { useAuth } from "../context/AuthContext";
+import { useAuth } from "../context/authContext";
+import { useLocation } from "react-router-dom";
 import axios from "axios";
 import Carousel from 'react-multi-carousel';
-import { MessageCircle, X, ArrowLeft, ArrowRight } from "lucide-react";
+import { MessageCircle, X, ArrowLeft, ArrowRight, ChevronRight, ChevronLeft } from "lucide-react";
 
-const ExpertPendingRequests = () => {
+const ExpertDashboard = () => {
   const { user } = useAuth();
+  const location = useLocation();
+  const [activeTab, setActiveTab] = useState(
+    location.pathname === "/reviewed" ? "reviewed" : "pending"
+  );
   const [requests, setRequests] = useState([]);
+  const [reviewedItems, setReviewedItems] = useState([]); // 添加已审核项目状态
   const [comments, setComments] = useState({});
   const [modal, setModal] = useState({ open: false, images: [], index: 0 });
-  const [reallocateModal, setShowModal] = useState(false); // Modal visibiility state
+  const [reallocateModal, setShowModal] = useState(false);
   const [selectedRequestId, setSelectedRequestId] = useState(null);
 
   useEffect(() => {
+    // 获取待审核请求
+    if (activeTab === "pending") {
       axios.get(`/api/expert/pending/${user.id}`)
         .then(response => {
-            const data = Array.isArray(response.data) ? response.data.map(requests => ({
-                ...requests,
-                imageUrls: requests.image_urls.split(",")
-            })) : [];
-        setRequests(data);
+          const data = Array.isArray(response.data) ? response.data.map(request => ({
+            ...request,
+            imageUrls: request.image_urls ? request.image_urls.split(",") : []
+          })) : [];
+          setRequests(data);
         })
         .catch((err) => console.error("Error fetching requests:", err));
-  }, [user?.id]);
+    }
+    
+    // 获取已审核项目
+    if (activeTab === "reviewed") {
+      axios.get(`/api/expert/reviewed/${user.id}`)
+        .then(response => {
+          const data = Array.isArray(response.data) ? response.data.map(item => ({
+            ...item,
+            imageUrls: item.image_urls ? item.image_urls.split(",") : []
+          })) : [];
+          setReviewedItems(data);
+        })
+        .catch((err) => console.error("Error fetching reviewed items:", err));
+    }
+  }, [user?.id, activeTab]);
 
   const handleCommentChange = (id, value) => {
     setComments({ ...comments, [id]: value });
@@ -30,12 +52,12 @@ const ExpertPendingRequests = () => {
 
   const handleReallocate = () => {
     if (selectedRequestId) {
-        axios.post(`/api/expert/request-reallocation/${selectedRequestId}`)
-            .then(() => {
-                setRequests(requests.filter(req => req.id !== selectedRequestId));
-                setShowModal(false);
-            })
-            .catch((err) => console.error("Error reallocating request:", err));
+      axios.post(`/api/expert/request-reallocation/${selectedRequestId}`)
+        .then(() => {
+          setRequests(requests.filter(req => req.id !== selectedRequestId));
+          setShowModal(false);
+        })
+        .catch((err) => console.error("Error reallocating request:", err));
     }
   };
 
@@ -58,91 +80,173 @@ const ExpertPendingRequests = () => {
 
   return (
     <>
-<<<<<<< HEAD
-    <div className="text-3xl p-4">Pending Requests ({requests.length})</div>
-=======
-    <div className="text-3xl p-4 -mt-16">Pending Requests ({requests.length})</div>
->>>>>>> origin/sprint-2
-    <div className="grid grid-cols-1 gap-6 p-4 max-w-5xl">
-      {requests.map((requests) => (
-        <div key={requests.id} className="border border-gray-300 border-b-4 border-b-gray-400 rounded-md p-4 shadow-md flex flex-col md:flex-row lg:flex-row gap-4 bg-gray-200">
-            {/* Left: Image Carousel */}
-            <div className="w-full md:w-1/3 h-fit">
-                <Carousel
+      {/* 添加标签切换 */}
+      <div className="flex space-x-4 p-4 -mt-16 mb-4">
+        <button
+          className={`px-4 py-2 rounded-md ${activeTab === "pending" ? "bg-blue-600 text-white" : "bg-gray-200 text-gray-700"}`}
+          onClick={() => setActiveTab("pending")}
+        >
+          Pending Requests ({requests.length})
+        </button>
+        <button
+          className={`px-4 py-2 rounded-md ${activeTab === "reviewed" ? "bg-blue-600 text-white" : "bg-gray-200 text-gray-700"}`}
+          onClick={() => setActiveTab("reviewed")}
+        >
+          Reviewed Items
+        </button>
+      </div>
+
+      {/* 待审核请求 */}
+      {activeTab === "pending" && (
+        <div className="grid grid-cols-1 gap-6 p-4 max-w-5xl">
+          {requests.length === 0 ? (
+            <div className="text-center p-8">No pending requests</div>
+          ) : (
+            requests.map((request) => (
+              <div key={request.id} className="border border-gray-300 border-b-4 border-b-gray-400 rounded-md p-4 shadow-md flex flex-col md:flex-row lg:flex-row gap-4 bg-gray-200">
+                {/* Left: Image Carousel */}
+                <div className="w-full md:w-1/3 h-fit">
+                  <Carousel
                     responsive={responsive}
                     infinite={true}
                     autoPlay={false}
                     showDots={true}
                     itemClass="w-full h-60 flex items-center justify-center bg-black"
                     containerClass="relative"
-                >
-                    {requests.imageUrls.map((url, index) => (
-                        <div key={index} className="flex justify-center">
-                            <img
-                                src={url}
-                                alt={`${requests.item_title} image ${index + 1}`}
-                                className="object-contain w-full"
-                                onClick={() => openModal(requests.imageUrls, index)}
-                            />
-                        </div>
+                  >
+                    {request.imageUrls.map((url, index) => (
+                      <div key={index} className="flex justify-center">
+                        <img
+                          src={url}
+                          alt={`${request.item_title} image ${index + 1}`}
+                          className="object-contain w-full"
+                          onClick={() => openModal(request.imageUrls, index)}
+                        />
+                      </div>
                     ))}
-                </Carousel>
-            </div>
-          
-          {/* Middle: Item Details */}
-          <div className="flex-1 flex flex-col justify-between">
-            <div>
-              <h2 className="text-3xl font-semibold">{requests.item_title}</h2>
-              <p className="text-gray-600 pb-5">{requests.item_description}</p>
-              <span className="text-sm text-gray-500 font-semibold">Category: {requests.category}</span>
-            </div>
-            <div className="flex items-center justify-between mt-2">
-              <span className="text-xl text-charcoal italic underline">Seller: {requests.seller_id}</span>
-              <MessageCircle className="cursor-pointer text-black hover:text-gray-600" size={25} />
-            </div>
-          </div>
+                  </Carousel>
+                </div>
+                
+                {/* Middle: Item Details */}
+                <div className="flex-1 flex flex-col justify-between">
+                  <div>
+                    <h2 className="text-3xl font-semibold">{request.item_title}</h2>
+                    <p className="text-gray-600 pb-5">{request.item_description}</p>
+                    <span className="text-sm text-gray-500 font-semibold">Category: {request.category}</span>
+                  </div>
+                  <div className="flex items-center justify-between mt-2">
+                    <span className="text-xl text-charcoal italic underline">Seller: {request.seller_id}</span>
+                    <MessageCircle className="cursor-pointer text-black hover:text-gray-600" size={25} />
+                  </div>
+                </div>
 
-          {/* Right: Comment Box & Actions */}
-          <div className="w-full md:w-1/3 flex flex-col gap-2">
-            <div className="justify-between flex">
-                <h3 className="text-xl text-gray-500 font-semibold">Comments</h3>
-                <button 
-                  className="w-fit text-off-white bg-gray-700 py-1 px-2 cursor-pointer hover:bg-gray-600 rounded"
-                  onClick={() => {
-                    setSelectedRequestId(requests.id);
-                    setShowModal(true);
-                  }}
-                >
-                    Request 2nd Opinion
-                </button>
-            </div>
-            <textarea
-              className="w-full h-full p-2 bg-gray-300"
-              placeholder="Please enter any feedback..."
-              value={comments[requests.id] || ""}
-              onChange={(e) => handleCommentChange(requests.id, e.target.value)}
-            />
-            <div className="flex gap-2">
-                <button
-                    className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-800 w-full"
-                    onClick={() => handleAction(requests.id, "Approved")}
-                >
-                    Approve
-                </button>
-                <button
-                    className="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-800 w-full"
-                    onClick={() => handleAction(requests.id, "Rejected")}
-                >
-                    Reject
-                </button>
-            </div>
-          </div>
+                {/* Right: Comment Box & Actions */}
+                <div className="w-full md:w-1/3 flex flex-col gap-2">
+                  <div className="justify-between flex">
+                    <h3 className="text-xl text-gray-500 font-semibold">Comments</h3>
+                    <button 
+                      className="w-fit text-off-white bg-gray-700 py-1 px-2 cursor-pointer hover:bg-gray-600 rounded"
+                      onClick={() => {
+                        setSelectedRequestId(request.id);
+                        setShowModal(true);
+                      }}
+                    >
+                      Request 2nd Opinion
+                    </button>
+                  </div>
+                  <textarea
+                    className="w-full h-full p-2 bg-gray-300"
+                    placeholder="Please enter any feedback..."
+                    value={comments[request.id] || ""}
+                    onChange={(e) => handleCommentChange(request.id, e.target.value)}
+                  />
+                  <div className="flex gap-2">
+                    <button
+                      className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-800 w-full"
+                      onClick={() => handleAction(request.id, "Approved")}
+                    >
+                      Approve
+                    </button>
+                    <button
+                      className="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-800 w-full"
+                      onClick={() => handleAction(request.id, "Rejected")}
+                    >
+                      Reject
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ))
+          )}
         </div>
-      ))}
-    </div>
+      )}
 
-    {/* Full-Screen Modal */}
-    {modal.open && (
+      {/* 已审核项目 */}
+      {activeTab === "reviewed" && (
+        <div className="grid grid-cols-1 gap-6 p-4 max-w-5xl">
+          {reviewedItems.length === 0 ? (
+            <div className="text-center p-8">No reviewed items</div>
+          ) : (
+            reviewedItems.map((item) => (
+              <div key={item.id} className="border border-gray-300 border-b-4 border-b-gray-400 rounded-md p-4 shadow-md flex flex-col md:flex-row lg:flex-row gap-4 bg-gray-200">
+                {/* Left: Image Carousel */}
+                <div className="w-full md:w-1/3 h-fit">
+                  <Carousel
+                    responsive={responsive}
+                    infinite={true}
+                    autoPlay={false}
+                    showDots={true}
+                    itemClass="w-full h-60 flex items-center justify-center bg-black"
+                    containerClass="relative"
+                  >
+                    {item.imageUrls.map((url, index) => (
+                      <div key={index} className="flex justify-center">
+                        <img
+                          src={url}
+                          alt={`${item.item_title} image ${index + 1}`}
+                          className="object-contain w-full"
+                          onClick={() => openModal(item.imageUrls, index)}
+                        />
+                      </div>
+                    ))}
+                  </Carousel>
+                </div>
+                
+                {/* Middle: Item Details */}
+                <div className="flex-1 flex flex-col justify-between">
+                  <div>
+                    <h2 className="text-3xl font-semibold">{item.item_title}</h2>
+                    <p className="text-gray-600 pb-5">{item.item_description}</p>
+                    <span className="text-sm text-gray-500 font-semibold">Category: {item.category}</span>
+                  </div>
+                  <div className="flex items-center justify-between mt-2">
+                    <span className="text-xl text-charcoal italic underline">Seller: {item.seller_id}</span>
+                  </div>
+                </div>
+
+                {/* Right: Review Status */}
+                <div className="w-full md:w-1/3 flex flex-col gap-2">
+                  <h3 className="text-xl text-gray-500 font-semibold">Review Status</h3>
+                  <div className={`p-3 rounded-md ${
+                    item.authentication_status === 'Approved' 
+                      ? 'bg-green-100 text-green-800' 
+                      : 'bg-red-100 text-red-800'
+                  }`}>
+                    <p className="font-bold">{item.authentication_status}</p>
+                    <p className="text-sm mt-2">Your comment:</p>
+                    <p className="italic">{item.comments || "No comment provided"}</p>
+                    <p className="text-sm mt-2">Review date:</p>
+                    <p>{new Date(item.decision_timestamp).toLocaleDateString()}</p>
+                  </div>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+      )}
+
+      {/* Full-Screen Modal */}
+      {modal.open && (
         <div className="fixed inset-0 bg-black bg-opacity-90 flex justify-center items-center z-50">
           <button className="absolute top-4 right-4 text-white text-2xl" onClick={closeModal}>
             <X size={32} />
@@ -155,10 +259,10 @@ const ExpertPendingRequests = () => {
             <ArrowRight size={40} />
           </button>
         </div>
-    )}
+      )}
 
-    {/* Reallocate Confirmation Modal */}
-    {reallocateModal && (
+      {/* Reallocate Confirmation Modal */}
+      {reallocateModal && (
         <div className="fixed inset-0 z-20 flex items-center justify-center bg-black/50">
           <div className="bg-white p-6 rounded-lg shadow-lg text-center max-w-md">
             <h3 className="text-xl font-semibold text-charcoal">Reallocation Confirmation</h3>
@@ -184,4 +288,4 @@ const ExpertPendingRequests = () => {
   );
 };
 
-export default ExpertPendingRequests;
+export default ExpertDashboard;

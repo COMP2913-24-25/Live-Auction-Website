@@ -1,6 +1,6 @@
 import React, { useState, useContext } from 'react';
 import axios from 'axios';
-import { AuthContext } from '../../components/authContext';
+import { AuthContext } from '../../context/authContext';
 import PropTypes from 'prop-types';
 
 const PaymentForm = ({ amount, itemId, onSuccess, onSave, onCancel }) => {

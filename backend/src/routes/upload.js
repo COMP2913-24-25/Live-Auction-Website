@@ -31,11 +31,7 @@ const storage = new CloudinaryStorage({
 
 const upload = multer({ storage });
 
-<<<<<<< HEAD
-// Create a new listing
-=======
 // Make sure the route matches exactly
->>>>>>> origin/sprint-2
 router.post('/create-listing', upload.array('images', 6), async (req, res) => {
   try {
     console.log('Received form data:', req.body); // Debug log
@@ -78,7 +74,7 @@ router.post('/create-listing', upload.array('images', 6), async (req, res) => {
       auction_status: 'Active'
     }).returning(['id']);
 
-    // Insert images into item_images table 
+    // Insert images into item_images table
     const imageRecords = imageUrls.map(url => ({ item_id: auctionId, image_url: url }));
     await knex('item_images').insert(imageRecords);
 
@@ -86,49 +82,6 @@ router.post('/create-listing', upload.array('images', 6), async (req, res) => {
   } catch (error) {
     console.error('Upload error:', error);
     res.status(500).json({ error: error.message });
-  }
-});
-
-// Create item authentication request 
-router.post('/authenticate-item', upload.array('images', 6), async (req, res) => {
-  try {
-    const { user_id, title, description, category } = req.body;
-    if (!title || !description || !category) {
-      return res.status(400).json({ error: 'All fields are required.' });
-    }
-
-    if (!req.files || req.files.length === 0) {
-      return res.status(400).json({ error: 'At least one image is required.' });
-    }
-
-    // Store Cloudinary image URLs
-    const imageUrls = req.files.map(file => file.path);
-
-    // Insert item into the database
-    const [{ id: itemId }] = await knex('items').insert({
-      user_id,
-      title,
-      description,
-      category_id: category,
-      authentication_status: 'Pending',
-      auction_status: 'Not Listed'
-    }).returning(['id']);
-
-    // Insert authentication request into the database
-    await knex('authentication_requests').insert({
-      item_id: itemId,
-      user_id,
-      status: 'Pending'
-    });
-
-    // Insert images into item_images table
-    const imageRecords = imageUrls.map(url => ({ item_id: itemId, image_url: url }));
-    await knex('item_images').insert(imageRecords);
-
-    res.status(201).json({ message: 'Authentication request created successfully', itemId });
-  } catch (error) {
-    console.error('Upload error:', error);
-    res.status(500).json({ error: 'Internal server error' });
   }
 });
 
