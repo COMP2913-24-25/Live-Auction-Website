@@ -7,13 +7,16 @@ import Login from "./pages/Login";
 import Register from "./pages/Register";
 import ManagerDashboard from "./pages/ManagerDashboard";
 import ExpertDashboard from "./pages/ExpertDashboard";  
-import NavBar from "./components/NavBar";
+import NavBar from "./components/navBar";
 import ProtectedRoute from "./context/ProtectedRoute";
 import AuctionDetails from './pages/AuctionDetails';
 import AuctionForm from './pages/AuctionForm';
 import ItemAuthenticationForm from './pages/ItemAuthenticationForm';
 import Notifications from './pages/Notifications';
 import NotificationBell from './pages/notificationBell';
+import Profile from './Components/profile';
+
+// const { isAuthenticated } = useAuth();
 
 const DashboardRouter = () => {
   const { user } = useAuth();
@@ -42,8 +45,28 @@ function App() {
           <Route path="/auctions/:id" element={<AuctionDetails />} />
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
+
+          {/* <Route path="/profile-settings" element={<Profile />} />
+          <Route path="/my-auctions" element={<Profile />} />
+          <Route path="/watchlist" element={<Profile />} />
+          <Route path="/purchase-history" element={<Profile />} /> */}
+
+
           
           {/* Protected Routes */}
+
+          {/* <Route 
+            path={["/profile-settings", "/my-auctions", "/watchlist", "/purchase-history"]}  
+            element={<Profile />} 
+          /> */}
+          <Route 
+            path={["/profile-settings", "/my-auctions", "/watchlist", "/purchase-history"]}  
+            element={
+              <ProtectedRoute>
+                <Profile />
+              </ProtectedRoute>
+            }
+          />
 
           <Route 
             path="/notification-bell" 

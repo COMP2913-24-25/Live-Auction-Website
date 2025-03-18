@@ -67,7 +67,7 @@ export default function Notifications() {
                       <div className="mt-1 space-y-1">
                         <p className="text-sm text-gray-500">
                           {new Date(notification.created_at).toLocaleDateString()} at{' '}
-                          {new Date(notification.created_at).toLocaleTimeString()}
+                          {new Date(notification.created_at).toLocaleTimeString()} 
                         </p>
                         {notification.auction_title && (
                           <p className="text-sm text-gray-600 flex items-center gap-1">

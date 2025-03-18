@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Menu, Bell, Search, LogOut, AlertCircle, Check, Clock, ArrowRight } from "lucide-react";
+import { Settings, List, Heart, ShoppingCart } from 'lucide-react';
 import { useAuth } from "../context/AuthContext";
 import { useNotifications } from "../context/notificationContext";
 
@@ -13,6 +14,7 @@ function NavBar() {
     const [hasNewNotification, setHasNewNotification] = useState(false);
     const [previousAuctionCount, setPreviousAuctionCount] = useState(0);
     const [hasUpdates, setHasUpdates] = useState(false);
+    const [isDropdownOpen, setIsDropdownOpen] = useState(false);
     const searchRef = useRef(null);
     const navigate = useNavigate();
   
@@ -47,12 +49,6 @@ function NavBar() {
                 console.error('Failed to fetch notifications', error);
             }
           };
-    const handleSearch = (e) => {
-      e.preventDefault();
-      if (searchQuery.trim()) {
-        navigate(`/browse?search=${encodeURIComponent(searchQuery)}`);
-      }
-    };
 
   
           fetchNotifications();
@@ -60,6 +56,13 @@ function NavBar() {
           return () => clearInterval(interval);
       }
     }, [user]);
+
+    const handleSearch = (e) => {
+      e.preventDefault();
+      if (searchQuery.trim()) {
+        navigate(`/browse?search=${encodeURIComponent(searchQuery)}`);
+      }
+    };
 
     const handleKeyDown = (e) => {
       if (e.key === 'Enter') {
@@ -106,6 +109,41 @@ function NavBar() {
       }
     };
 
+    const menuItems = [
+      { label: 'Profile Settings', icon: Settings, path: '/profile-settings' },
+      { label: 'My Auctions', icon: List, path: '/my-auctions' },
+      { label: 'Watchlist', icon: Heart, path: '/watchlist' },
+      { label: 'Purchase History', icon: ShoppingCart, path: '/purchase-history' },
+      { label: 'Logout', icon: LogOut, path: '/logout' }
+    ];
+  
+    const toggleDropdown = () => {
+      setIsDropdownOpen((prev) => !prev);
+    };
+  
+    // Unified click handler
+    const handleClick = (label) => {
+      switch (label) {
+        case 'Profile Settings':
+          navigate('/profile-settings');
+          break;
+        case 'My Auctions':
+          navigate('/my-auctions');
+          break;
+        case 'Watchlist':
+          navigate('/watchlist');
+          break;
+        case 'Purchase History':
+          navigate('/purchase-history');
+          break;
+        case 'Logout':
+          logout();
+          break;
+        default:
+          console.warn('Unknown action');
+      }
+      setIsDropdownOpen(false);
+    };
 
 
     return (
@@ -268,14 +306,60 @@ function NavBar() {
                         )}
                       </div>
 
+                      <div className="relative inline-block ml-36">
+                        {/* Profile Main Box */}
+                        <div className="flex items-center gap-6">
+                          
+                          {/* Username */}
+                          <div className="ml-4">
+                            <p className="text-white hover:text-blue-200 font-medium transition-colors duration-200">Welcome, {user.username}</p>
+                          </div>
+                          
+                          {/* Profile Picture */}
+                          <div
+                            key={user.username}
+                            className="w-12 h-12 rounded-full bg-gray-300 flex items-center justify-center overflow-hidden"
+                            onClick={toggleDropdown} // Click to toggle
+                          >
+                            <img 
+                              src="https://via.placeholder.com/150" 
+                              alt="Profile"
+                              className="w-full h-full object-cover transition-shadow hover:shadow-lg"
+                            />
+                          </div>
+                        </div>
+
+                        {/* Dropdown Menu */}
+                        {isDropdownOpen && (
+                          <div 
+                            className="absolute right-0 mt-2 w-56 bg-white border border-gray-200 rounded-lg shadow-lg z-50"
+                            onMouseLeave={() => setIsDropdownOpen(false)}
+                            onMouseEnter={() => setIsDropdownOpen(true)}
+                          >
+                            <div className="flex flex-col divide-y divide-gray-200">
+                              {menuItems.map((item, index) => (
+                                <button 
+                                  key={index}
+                                  onClick={() => handleClick(item.label)}
+                                  className="flex items-center px-4 py-3 hover:bg-gray-100 text-gray-700"
+                                >
+                                  <item.icon className="w-4 h-4 mr-2" />
+                                  {item.label}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+
                       {/* Logout Button */}
-                      <button 
+                      {/* <button 
                         onClick={logout} 
                         className="text-white hover:text-blue-200 font-medium transition-colors duration-200 flex items-center"
                       >
                         <LogOut className="h-4 w-4 mr-1" />
                         Logout
-                      </button>
+                      </button> */}
                     </>
                   )}
                   
