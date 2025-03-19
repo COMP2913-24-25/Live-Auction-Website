@@ -1,306 +1,146 @@
 const express = require('express');
+const knex = require('../db');
 const router = express.Router();
-const knex = require('../database/knex');
 
-// 初始化通知表
-const initializeNotificationsTable = async () => {
-  try {
-    // 检查notifications表是否存在
-    const exists = await knex.schema.hasTable('notifications');
-    if (!exists) {
-      await knex.schema.createTable('notifications', table => {
-        table.increments('id').primary();
-        table.integer('user_id').notNullable();
-        table.string('type').notNullable();
-        table.string('message').notNullable();
-        table.integer('item_id').nullable();
-        table.string('item_title').nullable();
-        table.boolean('read').defaultTo(false);
-        table.timestamp('created_at').defaultTo(knex.fn.now());
-        
-        // 添加索引
-        table.index(['user_id', 'read']);
-      });
-      console.log('Created notifications table');
-    }
-  } catch (error) {
-    console.error('Failed to initialize notifications table:', error);
-  }
-};
-
-// 初始化表
-initializeNotificationsTable();
-
-// 获取用户的通知
-router.get('/user', async (req, res) => {
-  try {
-    console.log('Get user notifications request received');
-    console.log('User in request:', req.user);
-    
-    if (!req.user || !req.user.id) {
-      console.log('No authenticated user found');
-      return res.status(401).json({
-        success: false,
-        error: 'Authentication required'
-      });
-    }
-
-    // 确认notifications表存在
-    const tableExists = await knex.schema.hasTable('notifications');
-    if (!tableExists) {
-      console.log('Notifications table does not exist, creating it now');
-      await initializeNotificationsTable();
-    }
-
-    const notifications = await knex('notifications')
-      .where('user_id', req.user.id)
-      .orderBy('created_at', 'desc')
-      .limit(20);
-
-    console.log(`Found ${notifications.length} notifications for user ${req.user.id}`);
-    
-    return res.json({
-      success: true,
-      notifications
-    });
-  } catch (error) {
-    console.error('Error fetching notifications:', error);
-    return res.status(500).json({
-      success: false,
-      error: 'Server error'
-    });
-  }
-});
-
-// 标记通知为已读
-router.put('/:id/read', async (req, res) => {
-  try {
-    if (!req.user || !req.user.id) {
-      return res.status(401).json({
-        success: false,
-        error: 'Authentication required'
-      });
-    }
-
-    const { id } = req.params;
-    
-    // 确保通知属于该用户
-    const notification = await knex('notifications')
-      .where({
-        id,
-        user_id: req.user.id
-      })
-      .first();
-      
-    if (!notification) {
-      return res.status(404).json({
-        success: false,
-        error: 'Notification not found or not owned by user'
-      });
-    }
-    
-    // 更新为已读
-    await knex('notifications')
-      .where('id', id)
-      .update({ read: true });
-      
-    return res.json({
-      success: true
-    });
-  } catch (error) {
-    console.error('Error marking notification as read:', error);
-    return res.status(500).json({
-      success: false,
-      error: 'Server error'
-    });
-  }
-});
-
-// 创建竞标成功通知的工具函数
-const createBidWinNotification = async (userId, itemId, itemTitle) => {
+const createNotification = async (userId, auctionId, type) => {
   try {
     await knex('notifications').insert({
       user_id: userId,
-      type: 'bid_win',
-      message: `You've successfully won the auction for ${itemTitle}`,
-      item_id: itemId,
-      item_title: itemTitle,
+      auction_id: auctionId,
+      type,
       read: false,
-      created_at: knex.fn.now()
+      deleted: false,
+      created_at: new Date()
     });
-    return true;
   } catch (error) {
-    console.error('Error creating bid win notification:', error);
-    return false;
+    console.error('Error creating notification:', error);
   }
 };
 
-// 添加调试路由
-router.get('/debug', async (req, res) => {
+// Get user's notifications 
+router.get('/:id', async (req, res) => {
   try {
-    // 检查表是否存在
-    const tableExists = await knex.schema.hasTable('notifications');
-    console.log('Notifications table exists:', tableExists);
+    const userId = req.params.id;
+    const notifications = await knex('notifications')
+      .select(
+        'notifications.*',
+        'items.title as auction_title',
+        'items.description as auction_description',
+        'items.min_price',
+        'items.end_time as auction_end_time',
+        'item_current_bids.current_bid',
+        knex.raw('GROUP_CONCAT(item_images.image_url) as image_urls')
+      )
+      .leftJoin('items', 'notifications.auction_id', 'items.id')
+      .leftJoin('item_current_bids', 'items.id', 'item_current_bids.item_id')
+      .leftJoin('item_images', 'items.id', 'item_images.item_id')
+      .where({ 
+        'notifications.user_id': userId,
+        'notifications.deleted': false 
+      })
+      .groupBy('notifications.id')
+      .orderBy('notifications.created_at', 'desc');
     
-    // 检查数据库连接
-    let dbConnectionOk = false;
-    try {
-      const result = await knex.raw('SELECT 1+1 as result');
-      dbConnectionOk = result && result.length > 0;
-      console.log('Database connection test:', result);
-    } catch (dbError) {
-      console.error('Database connection error:', dbError);
-    }
-    
-    // 手动检查通知表结构
-    let tableColumns = [];
-    if (tableExists) {
-      try {
-        tableColumns = Object.keys(await knex('notifications').columnInfo());
-        console.log('Notification table columns:', tableColumns);
-      } catch (tableError) {
-        console.error('Error getting table columns:', tableError);
-      }
-    }
-    
-    // 获取所有通知数量
-    let count = 0;
-    let notifications = [];
-    
-    if (tableExists) {
-      count = await knex('notifications').count('* as total').first();
-      console.log('Notifications count:', count);
+    const formattedNotifications = notifications.map(notification => {
+      const createdAt = new Date(notification.created_at);
+      const now = new Date();
+      const diffInMinutes = Math.floor((now - createdAt) / (1000 * 60));
       
-      // 获取最近10条通知
-      notifications = await knex('notifications')
-        .orderBy('created_at', 'desc')
-        .limit(10);
-      console.log('Recent notifications:', notifications);
-    }
-    
-    // 获取用户信息
-    const userInfo = req.user ? {
-      id: req.user.id,
-      username: req.user.username,
-      email: req.user.email
-    } : 'Not authenticated';
-    
-    res.json({
-      success: true,
-      tableExists,
-      tableColumns,
-      dbConnectionOk,
-      notificationsCount: count ? count.total : 0,
-      recentNotifications: notifications,
-      currentUser: userInfo
+      let timeAgo;
+      if (diffInMinutes < 1) {
+        timeAgo = 'Just now';
+      } else if (diffInMinutes < 60) {
+        timeAgo = `${diffInMinutes}m ago`;
+      } else if (diffInMinutes < 1440) {
+        timeAgo = `${Math.floor(diffInMinutes / 60)}h ago`;
+      } else {
+        timeAgo = createdAt.toLocaleDateString();
+      }
+
+      let message;
+      switch(notification.type) {
+        case 'outbid':
+          message = `You have been outbid on "${notification.auction_title}"`;
+          break;
+        case 'won':
+          message = `You won the auction for "${notification.auction_title}"`;
+          break;
+        case 'ending_soon':
+          message = `Auction "${notification.auction_title}" is ending in 1 hour`;
+          break;
+        case 'ended':
+          message = `Auction "${notification.auction_title}" has ended`;
+          break;
+        default:
+          message = notification.message;
+      }
+      
+      return {
+        ...notification,
+        message,
+        timeAgo
+      };
     });
+
+    res.json(formattedNotifications);
   } catch (error) {
-    console.error('Debug route error:', error);
-    res.status(500).json({
-      success: false,
-      error: error.message
-    });
+    console.error('Error fetching notifications:', error);
+    res.status(500).json({ error: 'Server error' });
   }
 });
 
-// 添加创建测试通知的临时路由
-router.post('/create-test', async (req, res) => {
+// Mark notification as read
+router.put('/:id/read', async (req, res) => {
   try {
-    console.log('Create test notification request received');
-    console.log('User in request:', req.user);
+    const { id } = req.params;
     
-    if (!req.user || !req.user.id) {
-      console.log('Authentication required for test notification');
-      return res.status(401).json({
-        success: false,
-        error: 'Authentication required'
-      });
-    }
+    await knex('notifications')
+      .where('id', id)
+      .update({ read: true });
     
-    const message = req.body.message || 'Test notification';
-    console.log(`Creating test notification for user ${req.user.id} with message: ${message}`);
-    
-    // 确认表已存在
-    const tableExists = await knex.schema.hasTable('notifications');
-    if (!tableExists) {
-      console.log('Notifications table does not exist, creating it');
-      await initializeNotificationsTable();
-    }
-    
-    await knex('notifications').insert({
-      user_id: req.user.id,
-      type: 'test',
-      message,
-      item_id: null,
-      item_title: null,
-      read: false,
-      created_at: knex.fn.now()
-    });
-    
-    console.log('Test notification created successfully');
-    res.json({
-      success: true,
-      message: 'Test notification created'
-    });
+    res.json({ success: true });
   } catch (error) {
-    console.error('Error creating test notification:', error);
-    
-    // 检查是否是数据库错误
-    let errorMessage = error.message;
-    if (error.code) {
-      errorMessage = `Database error (${error.code}): ${error.message}`;
-    }
-    
-    res.status(500).json({
-      success: false,
-      error: errorMessage,
-      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
-    });
+    console.error('Error marking notification as read:', error);
+    res.status(500).json({ error: 'Server error' });
   }
 });
 
-// 添加重置通知表的路由（仅用于调试）
-router.get('/reset-table', async (req, res) => {
+// Delete notification
+router.delete('/:id', async (req, res) => {
   try {
-    console.log('Resetting notifications table');
+    const { id } = req.params;
     
-    // 删除表（如果存在）
-    const exists = await knex.schema.hasTable('notifications');
-    if (exists) {
-      await knex.schema.dropTable('notifications');
-      console.log('Dropped existing notifications table');
-    }
+    await knex('notifications')
+      .where('id', id)
+      .update({ deleted: true });
     
-    // 重新创建表
-    await initializeNotificationsTable();
-    
-    // 创建一个测试通知（如果用户已登录）
-    if (req.user && req.user.id) {
-      await knex('notifications').insert({
-        user_id: req.user.id,
-        type: 'system',
-        message: 'Notifications system initialized',
-        read: false,
-        created_at: knex.fn.now()
-      });
-      console.log('Created test notification after reset');
-    }
-    
-    res.json({
-      success: true,
-      message: 'Notifications table reset successfully'
-    });
+    res.json({ success: true });
   } catch (error) {
-    console.error('Error resetting notifications table:', error);
-    res.status(500).json({
-      success: false,
-      error: error.message
-    });
+    console.error('Error deleting notification:', error);
+    res.status(500).json({ error: 'Server error' });
   }
+});
+
+// Clear all notifications
+router.delete('/all', async (req, res) => {
+  try {
+    const userId = req.user.id;
+    await knex('notifications').where({ user_id: userId }).delete();
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Error clearing notifications:', error);
+    res.status(500).json({ error: 'Failed to clear notifications' });
+  }
+});
+
+//route to handle bid notifications
+router.post('/bid-notification', async (req, res) => {
+  const { userId, auctionId, type } = req.body;
+  await createNotification(userId, auctionId, type);
+  res.json({ success: true });
 });
 
 // 导出路由器和工具函数
-module.exports = {
-  router,
-  createBidWinNotification
-}; 
+module.exports = router;
+// 导出工具函数 - 使其他文件仍能访问此函数
+module.exports.createNotification = createNotification;

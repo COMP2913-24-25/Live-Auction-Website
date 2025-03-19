@@ -64,4 +64,31 @@ router.post('/login', async (req, res) => {
     }
 });
 
+// 添加用户信息检查路由
+router.get('/check-user', async (req, res) => {
+  if (!req.user) {
+    return res.status(401).json({ authenticated: false });
+  }
+  
+  try {
+    // 检查用户是否存在于数据库
+    const user = await knex('users')
+      .where({ id: req.user.id })
+      .first();
+      
+    res.json({
+      authenticated: true,
+      userExists: !!user,
+      user: user ? {
+        id: user.id,
+        username: user.username,
+        // 其他非敏感字段
+      } : null
+    });
+  } catch (error) {
+    console.error('Error checking user:', error);
+    res.status(500).json({ error: 'Database error' });
+  }
+});
+
 module.exports = router;

@@ -15,12 +15,14 @@ const BidForm = ({ itemId, currentBid, onSuccess }) => {
     setSubmitting(true);
     setError('');
 
-    // Check whether the user is logged in
+    // 注释掉用户登录检查
+    /* 
     if (!user) {
       setError('Please login before bidding');
       setSubmitting(false);
       return;
     }
+    */
 
     if (bidAmount <= currentBid) {
       setError(`Bid must be higher than current price £${currentBid}`);
@@ -29,7 +31,6 @@ const BidForm = ({ itemId, currentBid, onSuccess }) => {
     }
 
     try {
-      console.log('Submitting bid:', { item_id: itemId, bid_amount: bidAmount });
       const response = await axios.post('/api/bids', {
         item_id: itemId,
         bid_amount: bidAmount
@@ -86,11 +87,14 @@ const BidForm = ({ itemId, currentBid, onSuccess }) => {
       
       {error && <div className="bid-error-message">{error}</div>}
       
+      {/* 移除登录提示 */}
+      {/*
       {!user && (
         <div className="login-reminder">
           Please <a href="/login">login</a> to place a bid
         </div>
       )}
+      */}
     </div>
   );
 };

@@ -18,6 +18,9 @@ exports.up = function (knex) {
             table.timestamp('created_at').defaultTo(knex.fn.now());
             table.timestamp('end_time').notNullable();
             table.boolean('authenticated').defaultTo(false);
+            // 添加这两行
+            table.string('auction_status').defaultTo('Active');
+            table.string('authentication_status').defaultTo('Pending');
         })
         .createTable('bids', function (table) {
             table.increments('id').primary();
@@ -48,17 +51,12 @@ exports.up = function (knex) {
             table.integer('item_id').notNullable().references('id').inTable('items').onDelete('CASCADE');
             table.timestamp('added_at').defaultTo(knex.fn.now());
         })
-        .hasTable('notifications').then(exists => {
-            if (!exists) {
-                return knex.schema.createTable('notifications', table => {
-                    table.increments('id').primary();
-                    table.integer('user_id').notNullable().references('id').inTable('users').onDelete('CASCADE');
-                    table.text('message').notNullable();
-                    table.boolean('read').defaultTo(false);
-                    table.timestamp('created_at').defaultTo(knex.fn.now());
-                    table.foreign('user_id').references('users.id').onDelete('CASCADE');
-                });
-            }
+        .createTable('notifications', function (table) {
+            table.increments('id').primary();
+            table.integer('user_id').notNullable().references('id').inTable('users').onDelete('CASCADE');
+            table.text('message').notNullable();
+            table.boolean('read').defaultTo(false);
+            table.timestamp('created_at').defaultTo(knex.fn.now());
         })
         .createTable('item_images', function (table) {
             table.increments('id').primary();

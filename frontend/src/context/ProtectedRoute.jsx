@@ -1,10 +1,9 @@
-import { useContext } from 'react';
-import { Navigate, Outlet } from 'react-router-dom';
-import { AuthContext } from './AuthContext';
+import { Navigate } from 'react-router-dom';
+import { useAuth } from './AuthContext';
 import PropTypes from 'prop-types';
 
 const ProtectedRoute = ({ children, allowedRoles }) => {
-    const { user, loading } = useContext(AuthContext);
+    const { user, loading } = useAuth();
 
     if (loading) {
         return <div>Loading...</div>; // Show loading indicator instead of redirecting

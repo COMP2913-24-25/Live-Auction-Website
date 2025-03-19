@@ -18,16 +18,47 @@ const AuthRequestForm = ({ itemId, onClose, onSuccess }) => {
     }
 
     try {
+      let token = null;
+      
+      if (user && user.token) {
+        token = user.token;
+      } 
+      else {
+        try {
+          const userData = JSON.parse(localStorage.getItem('user'));
+          if (userData && userData.token) {
+            token = userData.token;
+          }
+        } catch (e) {
+          console.error('解析localStorage中的user数据失败:', e);
+        }
+      }
+      
+      console.log('提交认证请求使用的token:', token);
+      
+      if (!token) {
+        setError('无法获取认证信息，请重新登录');
+        setLoading(false);
+        return;
+      }
+      
       const response = await axios.post('/api/authentication/request', {
         item_id: itemId
+      }, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
       });
       
       if (response.data.success) {
         onSuccess();
         onClose();
+      } else {
+        setError(response.data.error || '认证请求提交失败');
       }
     } catch (error) {
-      setError(error.response?.data?.error || 'An error occurred while submitting the authentication request');
+      console.error('认证请求错误:', error.response || error);
+      setError(error.response?.data?.error || '提交认证请求时发生错误');
     } finally {
       setLoading(false);
     }

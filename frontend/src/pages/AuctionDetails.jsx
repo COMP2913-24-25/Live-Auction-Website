@@ -1,10 +1,11 @@
 import { useEffect, useState, useRef, useContext } from "react";
+import { useAuth } from "../context/AuthContext";
 import axios from "axios";
 import Carousel from "react-multi-carousel";
 import "react-multi-carousel/lib/styles.css";
 import { Star } from "lucide-react";
 import { useParams } from "react-router-dom";
-import authenticated from "../assets/authenticated.png";
+import authenticatedIcon from "../assets/authenticatedIcon.png";
 import AuthRequestForm from '../Components/authentication/AuthRequestForm';
 import PlaceBidModal from '../Components/PlaceBidModal';
 import BidForm from '../Components/BidForm';
@@ -17,14 +18,14 @@ const responsive = {
   mobile: { breakpoint: { max: 464, min: 0 }, items: 1 },
 };
 
-const calculateTimeRemaining = (endTime) => {
+const calculateTimeRemaining = (endTime, auctionStatus) => {
   if (!endTime) return "Auction Ended";
 
   const now = new Date().getTime();
   const end = new Date(endTime).getTime();
   const difference = end - now;
 
-  if (difference <= 0) return "Auction Ended";
+  if (difference <= 0) return auctionStatus;
 
   const days = Math.floor(difference / (1000 * 60 * 60 * 24));
   
@@ -41,8 +42,8 @@ const calculateTimeRemaining = (endTime) => {
 
 
 const AuctionDetails = () => {
+  const { user, devMode, skipAuthentication } = useContext(AuthContext);
   const { id } = useParams();
-  const { user } = useContext(AuthContext);
   const [auction, setAuction] = useState(null);
   const [bidAmount, setBidAmount] = useState(0);
   const [isFavorite, setIsFavorite] = useState(false);
@@ -60,7 +61,16 @@ const AuctionDetails = () => {
   const section1Ref = useRef(null);
   const section2Ref = useRef(null);
 
+  console.log("当前用户状态:", user);
+  console.log("localStorage中的数据:", localStorage.getItem('user'));
+
   useEffect(() => {
+    // 设置请求头中的令牌
+    const token = localStorage.getItem('token');
+    if (token) {
+      axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+    }
+    
     axios
       .get(`/api/auctions/${id}`)
       .then((response) => {
@@ -76,7 +86,7 @@ const AuctionDetails = () => {
     if (!auction?.end_time) return; // Ensure end_time exists before setting the interval
 
     const updateRemainingTime = () => {
-      setRemainingTime(calculateTimeRemaining(auction.end_time));
+      setRemainingTime(calculateTimeRemaining(auction.end_time, auction.auction_status));
     };
 
     updateRemainingTime(); // Set initial value immediately
@@ -116,6 +126,21 @@ const AuctionDetails = () => {
     }
   }, [auction, user]);
 
+  useEffect(() => {
+    // 强制从localStorage刷新用户状态
+    const storedUser = localStorage.getItem('user');
+    if (storedUser && !user) {
+      try {
+        const userData = JSON.parse(storedUser);
+        console.log('重新加载用户数据:', userData);
+        // 这里我们可以直接使用userData，
+        // 或者您可以调用全局的login函数来更新context
+      } catch (e) {
+        console.error('解析用户数据错误:', e);
+      }
+    }
+  }, [user]);
+
   const handleAuthRequest = () => {
     setShowAuthForm(true);
   };
@@ -129,8 +154,9 @@ const AuctionDetails = () => {
   };
 
   const handleBidSubmit = async () => {
+    // 恢复登录检查
     if (!user) {
-      setBidError("Please login before bidding");
+      setBidError("Please login first");
       return;
     }
     
@@ -144,9 +170,14 @@ const AuctionDetails = () => {
     setBidSuccess(false);
     
     try {
+      const token = localStorage.getItem('token');
       const response = await axios.post('/api/bids', {
         item_id: auction.id,
         bid_amount: bidAmount
+      }, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
       });
       
       if (response.data.success) {
@@ -192,6 +223,8 @@ const AuctionDetails = () => {
       );
   };
 
+  console.log("渲染竞价按钮前，user值:", !!user);
+
   if (!auction) return <p>Loading auction details...</p>;
 
   return (
@@ -203,10 +236,10 @@ const AuctionDetails = () => {
           className="relative flex justify-center items-center w-full md:w-1/2 border border-black p-2"
           style={{ minHeight: maxHeight }}
         >
-          {auction.authenticated == true ? (
+          {auction.authentication_status == 'Approved' == true ? (
             <img
-              src={authenticated}
-              alt="Authenticated Badge"
+              src={authenticatedIcon}
+              alt="Authenticated Icon"
               className="absolute top-2 left-2 w-12 h-12 z-10 opacity-90"
             />
           ) : null }
@@ -230,8 +263,9 @@ const AuctionDetails = () => {
               <p>No images available</p>
             )}
           </Carousel>
-          <div className="absolute bottom-2 right-2 bg-gray-800 text-white text-sm px-2 py-1 rounded">
-            {remainingTime}
+          <div className="absolute bottom-4 right-4 bg-gray-800 text-white text-sm px-2 py-1 rounded border border-gray-100">
+            {/* If timer runs out, show Ended instead of Active. On reload, will display real auction_status */}
+            {remainingTime == 'Active' ? "Ended" : remainingTime}
           </div>
         </div>
 
@@ -271,13 +305,29 @@ const AuctionDetails = () => {
               value={bidAmount}
               onChange={(e) => setBidAmount(parseFloat(e.target.value))}
             />
-            <button 
-              className="w-full bg-gold text-white py-2 mt-2 hover:bg-yellow-600 cursor-pointer"
-              onClick={handleBidSubmit}
-              disabled={submittingBid}
-            >
-              {submittingBid ? "In process..." : "Place Bid"}
-            </button>
+            <div>
+              {/* 显示调试信息 */}
+              {process.env.NODE_ENV !== 'production' && (
+                <div className="text-xs text-gray-500 mb-2">
+                  User status: {user ? 'Logged in as ' + user.username : 'Not logged in'}
+                </div>
+              )}
+              
+              {/* 修改条件渲染逻辑，确保只渲染一个元素 */}
+              {user ? (
+                <button 
+                  className="w-full bg-yellow-700 hover:bg-yellow-800 text-white py-2 px-4 rounded"
+                  onClick={handleBidSubmit}
+                  disabled={submittingBid}
+                >
+                  {submittingBid ? "Processing..." : "Place Bid"}
+                </button>
+              ) : (
+                <div className="bg-pink-100 text-red-500 p-4 text-center rounded-md">
+                  Please login before bidding
+                </div>
+              )}
+            </div>
             
             {bidError && (
               <div className="text-red-500 bg-red-100 p-2 mt-2 rounded text-center">

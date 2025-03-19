@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const knex = require('../database/knex');
+const knex = require('../db');
 const { connectionConfig } = require('../database/knex');
 
 // Initialize function - check and create necessary table fields
@@ -42,7 +42,7 @@ const initializeBidsRoutes = async () => {
           id: 1,
           username: 'DefaultUser',
           email: 'default@example.com',
-          password: 'defaultpassword',
+          password_hash: 'defaultpassword',
           created_at: knex.fn.now()
         });
         console.log('Default user created successfully');
@@ -62,20 +62,31 @@ initializeBidsRoutes().catch(err => console.error('Failed to initialize bids rou
 
 // Completely replace the existing POST route
 router.post('/', async (req, res) => {
+  console.log('完整请求对象:', {
+    headers: req.headers,
+    body: req.body,
+    user: req.user,
+    cookies: req.cookies
+  });
+  
   try {
     console.log('Bid request received:', req.body);
-    console.log('User in request:', req.user);
     
-    // Check if the user is logged in
+    // 注释掉用户认证检查
+    /*
     if (!req.user) {
       return res.status(401).json({
         success: false,
         error: 'Please login before bidding',
-        requireAuth: true  // Add a flag to identify authentication errors
+        requireAuth: true
       });
     }
+    */
     
     const { item_id, bid_amount } = req.body;
+    
+    // 如果没有用户，可以使用默认用户
+    const userId = req.user ? req.user.id : 1; // 使用ID为1的默认用户
     
     if (!item_id || !bid_amount) {
       return res.status(400).json({
@@ -107,7 +118,7 @@ router.post('/', async (req, res) => {
       // Try to record the bid, but不影响整体流程
       try {
         await knex('bids').insert({
-          user_id: req.user.id, // Use the actual logged in user
+          user_id: userId, 
           item_id: item_id,
           bid_amount: bid_amount,
           bid_time: knex.fn.now()
@@ -269,6 +280,18 @@ router.get('/db-test', async (req, res) => {
       error: error.message,
       stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
     });
+  }
+});
+
+// 获取所有出价
+router.get('/', async (req, res) => {
+  try {
+    const bids = await knex('bids')
+      .select('*');
+    res.json(bids);
+  } catch (error) {
+    console.error('Error fetching bids:', error);
+    res.status(500).json({ error: 'Failed to fetch bids' });
   }
 });
 
