@@ -13,6 +13,7 @@ import AuctionDetails from './pages/AuctionDetails';
 import AuctionForm from './pages/AuctionForm';
 import ItemAuthenticationForm from './pages/ItemAuthenticationForm';
 import Notifications from './pages/Notifications';
+import ExpertAvailability from './components/ExpertAvailability';
 
 const DashboardRouter = () => {
   const { user } = useAuth();
@@ -65,6 +66,11 @@ function App() {
           <Route path="/notifications" element={
             <ProtectedRoute>
               <Notifications />
+            </ProtectedRoute>
+          } />
+          <Route path="/working-hours" element={
+            <ProtectedRoute allowedRoles={[2]}>
+              <ExpertAvailability />
             </ProtectedRoute>
           } />
         </Routes>
