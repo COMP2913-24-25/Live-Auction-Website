@@ -9,6 +9,7 @@ async function getNextSunday() {
     return today.toISOString().split('T')[0]; // YYYY-MM-DD format
 }
 
+// Set availability for the next week starting Sunday
 router.post('/availability', async (req, res) => {
     try {
         const { expert_id, slots } = req.body;
@@ -43,6 +44,7 @@ async function getCurrentSunday() {
     return today.toISOString().split('T')[0]; // YYYY-MM-DD format
 }
 
+// Modify availability for the current week
 router.patch('/availability/:id', async (req, res) => {
     try {
         const { id } = req.params;
@@ -66,6 +68,37 @@ router.patch('/availability/:id', async (req, res) => {
 
         await knex('expert_availability').where({ id }).update({ is_available });
         return res.json({ message: 'Availability updated successfully' });
+
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
+// Mark entire week unavailable
+router.post('/availability/unavailable', async (req, res) => {
+    try {
+        const { expert_id, is_fully_unavailable } = req.body;
+
+        if (typeof is_fully_unavailable !== 'boolean') {
+            return res.status(400).json({ error: 'Invalid availability status' });
+        }
+
+        // Update the expert's full availability status
+        await knex('users').where({ id: expert_id }).update({ is_fully_unavailable });
+
+        if (is_fully_unavailable) {
+            // Mark all availability slots as unavailable for both current and next week
+            const currentWeek = await getCurrentSunday();
+            const nextWeek = await getNextSunday();
+
+            await knex('expert_availability')
+                .where({ expert_id })
+                .andWhere(builder => builder.where('week_start_date', currentWeek).orWhere('week_start_date', nextWeek))
+                .update({ is_available: false });
+        }
+
+        return res.json({ message: 'Expert availability updated successfully' });
 
     } catch (error) {
         console.error(error);
