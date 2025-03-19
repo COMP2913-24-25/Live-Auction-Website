@@ -106,4 +106,30 @@ router.post('/availability/unavailable', async (req, res) => {
     }
 });
 
+// Get availability for the current and next week
+router.get('/availability/:expert_id', async (req, res) => {
+    try {
+        const { expert_id } = req.params;
+
+        const currentWeek = await getCurrentSunday();
+        const nextWeek = await getNextSunday();
+
+        const availability = await knex('expert_availability')
+            .where({ expert_id })
+            .andWhere(builder => builder.where('week_start_date', currentWeek).orWhere('week_start_date', nextWeek))
+            .select('*');
+
+        const isFullyUnavailable = await knex('users').where({ id: expert_id }).select('is_fully_unavailable').first();
+
+        return res.json({
+            is_fully_unavailable: isFullyUnavailable?.is_fully_unavailable ?? false,
+            availability
+        });
+
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
 module.exports = router;
