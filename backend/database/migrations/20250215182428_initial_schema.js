@@ -18,9 +18,6 @@ exports.up = function (knex) {
             table.timestamp('created_at').defaultTo(knex.fn.now());
             table.timestamp('end_time').notNullable();
             table.boolean('authenticated').defaultTo(false);
-            // 添加这两行
-            table.string('auction_status').defaultTo('Active');
-            table.string('authentication_status').defaultTo('Pending');
         })
         .createTable('bids', function (table) {
             table.increments('id').primary();
