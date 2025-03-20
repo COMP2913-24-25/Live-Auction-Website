@@ -17,12 +17,7 @@ export function NotificationProvider({ children }) {
     }
     
     try {
-      const { data } = await axios.get(`/api/notifications/${user.id}`, {
-        headers: {
-          'Cache-Control': 'no-cache',
-          'Pragma': 'no-cache'
-        }
-      });
+      const { data } = await axios.get(`/api/auctions/active`);
       
       // Only accept notifications with valid types
       const validNotifications = data.filter(n => 
