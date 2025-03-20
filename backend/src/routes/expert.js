@@ -137,4 +137,47 @@ router.post("/request-reallocation/:requestId", async (req, res) => {
     }
 });
 
+// 获取专家已审核的项目
+router.get('/reviewed/:expertId', async (req, res) => {
+  try {
+    const { expertId } = req.params;
+    console.log('Received request for reviewed items with expertId:', expertId);
+    
+    // 查询已审核的项目
+    const reviewedItems = await knex("authentication_requests as ar")
+      .select(
+        "ar.id",
+        "ar.request_time",
+        "ar.decision_timestamp",
+        "ar.comments",
+        "i.title as item_title",
+        "i.description as item_description",
+        "c.name as category",
+        knex.raw("GROUP_CONCAT(ii.image_url) as image_urls"),
+        "ar.status as authentication_status",
+        "i.user_id as seller_id"
+      )
+      .leftJoin("items as i", "ar.item_id", "i.id")
+      .leftJoin("categories as c", "i.category_id", "c.id")
+      .leftJoin("item_images as ii", "i.id", "ii.item_id")
+      .where(function () {
+        this.where("ar.expert_id", expertId).andWhere("ar.second_opinion_requested", false)
+          .orWhere("ar.new_expert_id", expertId).andWhere("ar.second_opinion_requested", true);
+      })
+      .whereIn("ar.status", ["Approved", "Rejected"])
+      .groupBy("ar.id")
+      .orderBy("ar.decision_timestamp", "desc");
+    
+    res.json(reviewedItems);
+  } catch (error) {
+    console.error('Error fetching reviewed items:', error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// 添加一个测试路由
+router.get('/test', (req, res) => {
+  res.json({ message: 'Test route works!' });
+});
+
 module.exports = router;
