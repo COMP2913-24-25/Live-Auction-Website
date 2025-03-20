@@ -140,7 +140,4 @@ router.post('/bid-notification', async (req, res) => {
   res.json({ success: true });
 });
 
-// 导出路由器和工具函数
 module.exports = router;
-// 导出工具函数 - 使其他文件仍能访问此函数
-module.exports.createNotification = createNotification;
