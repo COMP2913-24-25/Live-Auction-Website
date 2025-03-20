@@ -19,10 +19,11 @@ const managerRoutes = require('./routes/manager');
 const notificationsRoutes = require('./routes/notifications');
 const authenticationRoutes = require('./routes/authentication');
 const bidsRoutes = require('./routes/bids'); 
+const expertRoutes = require('./routes/expert');
 
 // CORS configuration
 app.use(cors({
-  origin: process.env.FRONTEND_URL || 'http://localhost:5173',
+  origin: process.env.VITE_FRONTEND_URL || 'http://localhost:5173',
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
@@ -34,11 +35,11 @@ app.use(cookieParser());
 // Add authentication middleware
 app.use(async (req, res, next) => {
   try {
-    console.log('🔐 认证中间件 - 请求路径:', req.path);
-    console.log('🔐 认证中间件 - Headers:', req.headers);
+    console.log('🔐 Authentication Middleware - Request path:', req.path);
+    console.log('🔐 Authentication middleware - Headers:', req.headers);
     
     const token = req.cookies.token || (req.headers.authorization && req.headers.authorization.split(' ')[1]);
-    console.log('🔐 认证中间件 - 提取的token:', token ? '存在' : '不存在');
+    console.log('🔐 Authentication middleware - Extracts tokens:', token ? 'exist' : 'inexistence');
 
     if (token) {
       try {
@@ -69,7 +70,7 @@ app.use(async (req, res, next) => {
     
     next();
   } catch (error) {
-    console.error('💥 认证中间件错误:', error);
+    console.error('💥 Authentication middleware error:', error);
     next();
   }
 });
@@ -80,29 +81,30 @@ app.use('/api/auctions', auctionRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api', categoriesRoutes);
 app.use('/api/authentication', authenticationRoutes);
-app.use('/api/bids', bidsRoutes);  // 暂时注释掉
+app.use('/api/bids', bidsRoutes);  
 app.use('/api/search', searchRoutes);
 app.use('/api/manager', managerRoutes);
 app.use('/api/notifications', notificationsRoutes);
+app.use('/api/expert', expertRoutes);
 
 // Example route
 app.get('/', (req, res) => {
   res.send('Hello from the backend!');
 });
 
-// 添加测试路由
+// Add test route
 app.get('/api/test', (req, res) => {
-  res.json({ message: '服务器正常运行' });
+  res.json({ message: 'The server is running properly' });
 });
 
 app.use((req, res) => {
-  console.log('未找到路由:', req.method, req.path);
-  res.status(404).json({ error: '路由未找到' });
+  console.log('No route found:', req.method, req.path);
+  res.status(404).json({ error: 'Route not found' });
 });
 
 app.use((err, req, res, next) => {
-  console.error('服务器错误:', err);
-  res.status(500).json({ error: '服务器内部错误' });
+  console.error('Server error:', err);
+  res.status(500).json({ error: 'Server internal error' });
 });
 
 module.exports = app;
