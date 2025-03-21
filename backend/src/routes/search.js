@@ -5,6 +5,7 @@ const router = express.Router();
 // Remove '/search' from here since it's already mounted with '/api/search' in app.js
 router.get('/', async (req, res) => {
   try {
+    console.log('Search request received:', req.query);
     const { query, categories, minPrice, maxPrice, authenticatedOnly, daysRemaining } = req.query;
 
     let queryBuilder = knex('item_current_bids as icb')
@@ -65,6 +66,7 @@ router.get('/', async (req, res) => {
     queryBuilder.groupBy('icb.item_id').orderBy('i.created_at', 'desc');
 
     const results = await queryBuilder;
+    console.log('Search results:', results.length);
     res.json(results);
   } catch (error) {
     console.error('Search error:', error);

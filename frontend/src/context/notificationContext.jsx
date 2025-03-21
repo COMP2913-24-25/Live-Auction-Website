@@ -4,6 +4,12 @@ import { useAuth } from './AuthContext';
 
 const NotificationContext = createContext();
 
+// Create axios instance with proper config
+const api = axios.create({
+  baseURL: 'http://localhost:5000',
+  withCredentials: true
+});
+
 export function NotificationProvider({ children }) {
   const [notifications, setNotifications] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
@@ -17,28 +23,33 @@ export function NotificationProvider({ children }) {
     }
     
     try {
-      const { data } = await axios.get(`/api/auctions/active`);
+      console.log('Fetching notifications for user:', user.id);
+      const { data } = await api.get(`/api/auctions/active`);
       
       // Only accept notifications with valid types
       const validNotifications = data.filter(n => 
         n.type && ['outbid', 'won', 'ending_soon', 'ended'].includes(n.type)
       );
       
+      console.log('Received notifications:', validNotifications);
       setNotifications(validNotifications);
       setUnreadCount(validNotifications.filter(n => !n.read).length);
     } catch (error) {
-      console.error('Error fetching notifications:', error);
+      console.error('Error fetching notifications:', {
+        message: error.message,
+        status: error.response?.status,
+        data: error.response?.data
+      });
       setNotifications([]);
       setUnreadCount(0);
     }
   };
 
-  // Update markAsRead function
   const markAsRead = async (notificationId) => {
     try {
       if (!user) return;
       
-      await axios.put(`/api/notifications/${notificationId}/read`);
+      await api.put(`/api/notifications/${notificationId}/read`);
       
       setNotifications(notifications.map(notification => 
         notification.id === notificationId 
@@ -51,12 +62,11 @@ export function NotificationProvider({ children }) {
     }
   };
 
-  // Update deleteNotification function
   const deleteNotification = async (notificationId) => {
     try {
       if (!user) return;
       
-      await axios.delete(`/api/notifications/${notificationId}`);
+      await api.delete(`/api/notifications/${notificationId}`);
       
       setNotifications(notifications.filter(n => n.id !== notificationId));
       const deletedNotification = notifications.find(n => n.id === notificationId);

@@ -1,83 +1,61 @@
 const express = require('express');
 const router = express.Router();
-const knex = require('../database/knex');
+const knex = require('../db');
 
 router.post('/request', async (req, res) => {
   try {
-    // Print request message
-    console.log('Authentication Request Body:', req.body);
-    console.log('Current User:', req.user);
+    const { itemId } = req.body;
+    const user_id = req.user?.id;
 
-    // Check whether the user is logged in
-    if (!req.user) {
-      console.log('User not logged in');
+    if (!user_id) {
       return res.status(401).json({
         success: false,
-        error: 'Please log in first'
+        error: 'You must be logged in to request authentication'
       });
     }
 
-    const { item_id } = req.body;
-    console.log('Attempting to create auth request for item:', item_id);
-
-    // Check whether the goods exist
- 
-    const item = await knex('items')
-      .where('id', item_id)
-      .first();
-
-    console.log('Found item:', item);
-
-    if (!item) {
-      console.log('Item not found:', item_id);
-      return res.status(404).json({
-        success: false,
-        error: 'Commodity nonexistence'
-      });
-    }
-
-    // Check if there are already pending authentication requests
- 
-    const existingRequest = await knex('authentication_requests')
-      .where({
-        item_id: item_id,
-        status: 'Pending'
-      })
-      .first();
-
-    if (existingRequest) {
-      console.log('Existing request found:', existingRequest);
+    if (!itemId) {
       return res.status(400).json({
         success: false,
-        error: 'The product has a pending certification request'
+        error: 'Item ID is required'
       });
     }
 
-    // Create a new authentication request
- 
-    const [request] = await knex('authentication_requests')
-      .insert({
-        user_id: req.user.id,
-        item_id: item_id,
-        status: 'Pending',
-        request_time: knex.fn.now()
-      })
-      .returning('*');
+    // Check if item exists
+    const item = await knex('items').where('id', itemId).first();
+    if (!item) {
+      return res.status(404).json({
+        success: false,
+        error: 'Item not found'
+      });
+    }
 
-    console.log('Created new request:', request);
+    // Create authentication request
+    await knex('authentication_requests').insert({
+      item_id: itemId,
+      user_id,
+      status: 'Pending',
+      created_at: knex.fn.now()
+    });
+
+    // Update item status
+    await knex('items')
+      .where('id', itemId)
+      .update({
+        authentication_status: 'Pending'
+      });
 
     res.json({
       success: true,
-      request: request
+      message: 'Authentication request submitted successfully'
     });
-
   } catch (error) {
-    console.error('Detailed authentication request error:', error);
+    console.error('Authentication request error:', error);
     res.status(500).json({
       success: false,
-      error: 'An error occurred while submitting the authentication request'
+      error: 'Failed to submit authentication request'
     });
   }
 });
 
-module.exports = router; 
+module.exports = router;

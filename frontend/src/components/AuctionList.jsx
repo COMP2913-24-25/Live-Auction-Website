@@ -5,6 +5,12 @@ import 'react-multi-carousel/lib/styles.css';
 import { useNavigate } from 'react-router-dom';
 import authenticatedIcon from '../assets/authenticatedIcon.png';
 
+// Create axios instance with default config
+const api = axios.create({
+  baseURL: 'http://localhost:5000',
+  withCredentials: true
+});
+
 const calculateTimeRemaining = (endTime, auctionStatus) => {
   if (!endTime) return "Auction Ended";
 
@@ -44,8 +50,11 @@ const AuctionList = ({ filters }) => {
         if (filters.authenticatedOnly) params.append('authenticatedOnly', 'true');
         if (filters.daysRemaining) params.append('daysRemaining', filters.daysRemaining);
 
-        const response = await axios.get(`/api/search?${params.toString()}`);
+        console.log('Fetching auctions with URL:', `/api/search?${params.toString()}`);
         
+        const response = await api.get(`/api/search?${params.toString()}`);
+        console.log('Response received:', response.data);
+
         if (!response.data) throw new Error('No data received');
 
         const formattedAuctions = response.data.map(auction => ({
@@ -57,7 +66,11 @@ const AuctionList = ({ filters }) => {
         setAuctions(formattedAuctions);
         setLoading(false);
       } catch (error) {
-        console.error('Fetch error:', error);
+        console.error('Fetch error details:', {
+          message: error.message,
+          status: error.response?.status,
+          data: error.response?.data
+        });
         setError(error.message);
         setLoading(false);
       }

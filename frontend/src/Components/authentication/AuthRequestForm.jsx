@@ -2,6 +2,12 @@ import React, { useState, useContext } from 'react';
 import axios from 'axios';
 import { AuthContext } from '../../context/authContext';
 
+// Create axios instance with proper config
+const api = axios.create({
+  baseURL: 'http://localhost:5000',  // Match server port
+  withCredentials: true
+});
+
 const AuthRequestForm = ({ itemId, onClose, onSuccess }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -18,47 +24,29 @@ const AuthRequestForm = ({ itemId, onClose, onSuccess }) => {
     }
 
     try {
-      let token = null;
-      
-      if (user && user.token) {
-        token = user.token;
-      } 
-      else {
-        try {
-          const userData = JSON.parse(localStorage.getItem('user'));
-          if (userData && userData.token) {
-            token = userData.token;
-          }
-        } catch (e) {
-          console.error('解析localStorage中的user数据失败:', e);
-        }
-      }
-      
-      console.log('提交认证请求使用的token:', token);
-      
-      if (!token) {
-        setError('无法获取认证信息，请重新登录');
-        setLoading(false);
-        return;
-      }
-      
-      const response = await axios.post('/api/authentication/request', {
-        item_id: itemId
-      }, {
+      const formData = new FormData();
+      // Add item details to formData
+      formData.append('itemId', itemId);
+
+      const response = await api.post('/api/authentication/request', formData, {
         headers: {
-          'Authorization': `Bearer ${token}`
+          'Content-Type': 'multipart/form-data'
         }
       });
-      
+
       if (response.data.success) {
         onSuccess();
         onClose();
       } else {
-        setError(response.data.error || '认证请求提交失败');
+        throw new Error(response.data.error || 'Failed to submit authentication request');
       }
     } catch (error) {
-      console.error('认证请求错误:', error.response || error);
-      setError(error.response?.data?.error || '提交认证请求时发生错误');
+      console.error('Authentication request error:', {
+        message: error.message,
+        status: error.response?.status,
+        data: error.response?.data
+      });
+      alert('Error submitting authentication request. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -135,4 +123,4 @@ const AuthRequestForm = ({ itemId, onClose, onSuccess }) => {
   );
 };
 
-export default AuthRequestForm; 
+export default AuthRequestForm;

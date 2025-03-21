@@ -88,43 +88,69 @@ router.post('/create-listing', upload.array('images', 6), async (req, res) => {
 // Create item authentication request 
 router.post('/authenticate-item', upload.array('images', 6), async (req, res) => {
   try {
+    console.log('Authentication request received:', req.body);
+    
     const { user_id, title, description, category } = req.body;
-    if (!title || !description || !category) {
-      return res.status(400).json({ error: 'All fields are required.' });
+
+    if (!user_id || !title || !description || !category) {
+      return res.status(400).json({ 
+        error: 'Missing required fields. Please fill in all information.'
+      });
     }
 
     if (!req.files || req.files.length === 0) {
-      return res.status(400).json({ error: 'At least one image is required.' });
+      return res.status(400).json({ 
+        error: 'Please upload at least one image for authentication.'
+      });
     }
 
-    // Store Cloudinary image URLs
     const imageUrls = req.files.map(file => file.path);
 
-    // Insert item into the database
-    const [{ id: itemId }] = await knex('items').insert({
-      user_id,
-      title,
-      description,
-      category_id: category,
-      authentication_status: 'Pending',
-      auction_status: 'Not Listed'
-    }).returning(['id']);
+    // Begin transaction
+    const trx = await knex.transaction();
 
-    // Insert authentication request into the database
-    await knex('authentication_requests').insert({
-      item_id: itemId,
-      user_id,
-      status: 'Pending'
-    });
+    try {
+      // Insert item
+      const [item] = await trx('items')
+        .insert({
+          user_id,
+          title,
+          description,
+          category_id: category,
+          authentication_status: 'Pending',
+          auction_status: 'Not Listed'
+        })
+        .returning(['id']);
 
-    // Insert images into item_images table
-    const imageRecords = imageUrls.map(url => ({ item_id: itemId, image_url: url }));
-    await knex('item_images').insert(imageRecords);
+      // Insert images
+      const imageRecords = imageUrls.map(url => ({
+        item_id: item.id,
+        image_url: url
+      }));
+      await trx('item_images').insert(imageRecords);
 
-    res.status(201).json({ message: 'Authentication request created successfully', itemId });
+      // Create authentication request
+      await trx('authentication_requests').insert({
+        item_id: item.id,
+        user_id,
+        status: 'Pending'
+      });
+
+      await trx.commit();
+
+      res.status(201).json({
+        message: 'Authentication request submitted successfully',
+        itemId: item.id
+      });
+    } catch (trxError) {
+      await trx.rollback();
+      throw trxError;
+    }
   } catch (error) {
-    console.error('Upload error:', error);
-    res.status(500).json({ error: 'Internal server error' });
+    console.error('Authentication request error:', error);
+    res.status(500).json({
+      error: 'Failed to submit authentication request. Please try again.'
+    });
   }
 });
 

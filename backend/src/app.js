@@ -26,8 +26,7 @@ app.use(cors({
   origin: process.env.VITE_FRONTEND_URL || 'http://localhost:5173',
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
-  exposedHeaders: ['set-cookie']
+  allowedHeaders: ['Content-Type', 'Authorization']
 }));
 app.use(bodyParser.json());
 app.use(cookieParser());
@@ -75,14 +74,14 @@ app.use(async (req, res, next) => {
   }
 });
 
-// Mount routes
+// Mount routes in correct order
+app.use('/api/auth', authRoutes);
+app.use('/api/authentication', authenticationRoutes);  // Authentication routes
 app.use('/api/upload', uploadRoutes);
 app.use('/api/auctions', auctionRoutes);
-app.use('/api/auth', authRoutes);
-app.use('/api', categoriesRoutes);
-app.use('/api/authentication', authenticationRoutes);
-app.use('/api/bids', bidsRoutes);  
+app.use('/api/bids', bidsRoutes);
 app.use('/api/search', searchRoutes);
+app.use('/api', categoriesRoutes);
 app.use('/api/manager', managerRoutes);
 app.use('/api/notifications', notificationsRoutes);
 app.use('/api/expert', expertRoutes);

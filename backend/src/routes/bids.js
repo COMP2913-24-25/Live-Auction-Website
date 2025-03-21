@@ -62,89 +62,84 @@ initializeBidsRoutes().catch(err => console.error('Failed to initialize bids rou
 
 // Completely replace the existing POST route
 router.post('/', async (req, res) => {
-  console.log('完整请求对象:', {
-    headers: req.headers,
-    body: req.body,
-    user: req.user,
-    cookies: req.cookies
-  });
-  
   try {
     console.log('Bid request received:', req.body);
     
-    // 注释掉用户认证检查
-    /*
-    if (!req.user) {
-      return res.status(401).json({
-        success: false,
-        error: 'Please login before bidding',
-        requireAuth: true
-      });
-    }
-    */
-    
     const { item_id, bid_amount } = req.body;
-    
-    // 如果没有用户，可以使用默认用户
-    const userId = req.user ? req.user.id : 1; // 使用ID为1的默认用户
-    
+    const user_id = req.user?.id || 1; // Fallback to default user if not authenticated
+
     if (!item_id || !bid_amount) {
       return res.status(400).json({
         success: false,
         error: 'Missing required fields'
       });
     }
-    
+
     // Get the item information
-    const item = await knex('items').where('id', item_id).first();
-    
+    const item = await knex('items')
+      .where('id', item_id)
+      .first();
+
     if (!item) {
       return res.status(404).json({
         success: false,
         error: 'Item not found'
       });
     }
-    
-    // Simulate successful bidding and update the item price directly
+
+    // Check if auction is still active
+    if (item.auction_status !== 'Active') {
+      return res.status(400).json({
+        success: false,
+        error: 'This auction is no longer active'
+      });
+    }
+
+    // Check if bid is high enough
+    const currentBid = item.current_bid || item.min_price;
+    if (bid_amount <= currentBid) {
+      return res.status(400).json({
+        success: false,
+        error: `Bid must be higher than current price £${currentBid}`
+      });
+    }
+
+    // Begin transaction
+    const trx = await knex.transaction();
+
     try {
-      // Update the item current price
-      await knex('items')
+      // Update item current price
+      await trx('items')
         .where('id', item_id)
         .update({
           current_bid: bid_amount,
-          last_bid_time: knex.fn.now()
+          last_bid_time: trx.fn.now()
         });
-        
-      // Try to record the bid, but不影响整体流程
-      try {
-        await knex('bids').insert({
-          user_id: userId, 
-          item_id: item_id,
-          bid_amount: bid_amount,
-          bid_time: knex.fn.now()
-        });
-      } catch (bidError) {
-        console.error('Failed to record the bid, but the item price was updated:', bidError);
-      }
-      
-      // Return the success response
-      return res.json({
+
+      // Record the bid
+      await trx('bids').insert({
+        user_id,
+        item_id,
+        bid_amount,
+        bid_time: trx.fn.now()
+      });
+
+      await trx.commit();
+
+      res.json({
         success: true,
-        message: 'Bidding successful!',
+        message: 'Bid placed successfully',
         current_bid: bid_amount
       });
-    } catch (updateError) {
-      console.error('Failed to update the item price:', updateError);
-      return res.status(500).json({
-        success: false,
-        error: 'Error processing the bid'
-      });
+    } catch (trxError) {
+      await trx.rollback();
+      throw trxError;
     }
   } catch (error) {
-    console.error('Error processing the bid request:', error);
-    return res.status(500).json({
+    console.error('Bid error:', error);
+    res.status(500).json({
       success: false,
-      error: 'Server error'
+      error: 'Failed to process bid. Please try again.'
     });
   }
 });
@@ -295,4 +290,4 @@ router.get('/', async (req, res) => {
   }
 });
 
-module.exports = router; 
+module.exports = router;
