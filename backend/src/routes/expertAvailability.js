@@ -18,8 +18,9 @@ function getNext48HoursRange() {
 router.get('/available-experts', async (req, res) => {
     try {
         const { start, end } = getNext48HoursRange();
+        const now = new Date();
 
-        // Step 1: Find all experts with available slots in the next 48 hours
+        // Fetch availability in the next 48 hours
         const availableExperts = await knex('expert_availability')
             .where('date', '>=', start)
             .andWhere('date', '<=', end)
@@ -33,18 +34,18 @@ router.get('/available-experts', async (req, res) => {
         // Extract unique expert IDs
         const expertIds = [...new Set(availableExperts.map(e => e.expert_id))];
 
-        // Fetch expert details (id, username, category)
+        // Fetch expert details
         const experts = await knex('users')
             .whereIn('id', expertIds)
             .select('id', 'username');
 
-        // Get expert categories
+        // Get categories
         const categories = await knex('expert_categories')
             .whereIn('expert_id', expertIds)
             .join('categories', 'expert_categories.category_id', '=', 'categories.id')
             .select('expert_id', 'categories.name as category');
 
-        // Get expert workload (count of pending authentication requests)
+        // Get workloads
         const workloads = await knex('authentication_requests')
             .whereIn('expert_id', expertIds)
             .andWhere('status', 'pending')
@@ -60,7 +61,8 @@ router.get('/available-experts', async (req, res) => {
                 username: expert.username,
                 category: [],
                 workload: 0,
-                working_hours: []
+                next_available: null,
+                available_now: false
             };
         });
 
@@ -78,19 +80,48 @@ router.get('/available-experts', async (req, res) => {
             }
         });
 
-        // Attach working hours
+        // Debug: Log all expert time values
+        console.log("Available experts data:", availableExperts);
+
+        // Attach next available time (with proper date handling)
         availableExperts.forEach(slot => {
-            if (expertMap[slot.expert_id]) {
-                expertMap[slot.expert_id].working_hours.push({
-                    date: slot.date,
-                    start_time: slot.start_time,
-                    end_time: slot.end_time
-                });
+            const expert = expertMap[slot.expert_id];
+
+            if (expert) {
+                let startTime = null;
+                let endTime = null;
+
+                // Debug: Log raw database values
+                console.log(`Processing Expert ${slot.expert_id} - Date: ${slot.date}, Start: ${slot.start_time}, End: ${slot.end_time}`);
+
+                if (slot.start_time && slot.date) {
+                    startTime = new Date(`${slot.date}T${slot.start_time}`);
+                }
+                if (slot.end_time && slot.date) {
+                    endTime = new Date(`${slot.date}T${slot.end_time}`);
+                }
+
+                // Debug: Log converted values
+                console.log(`Converted - Start: ${startTime}, End: ${endTime}`);
+
+                // Validate the conversion
+                if (isNaN(startTime) || isNaN(endTime)) {
+                    console.error(`Invalid date-time format for expert ${slot.expert_id}:`, slot);
+                    return; // Skip this entry
+                }
+
+                if (startTime && endTime) {
+                    if (now >= startTime && now <= endTime) {
+                        expert.available_now = true;
+                    } else if (!expert.next_available || startTime < new Date(expert.next_available)) {
+                        expert.next_available = startTime.toISOString();
+                    }
+                }
             }
         });
 
         return res.json({
-            experts: Object.values(expertMap) // Convert object back to an array
+            experts: Object.values(expertMap)
         });
 
     } catch (error) {
