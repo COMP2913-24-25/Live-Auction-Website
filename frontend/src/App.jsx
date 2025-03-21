@@ -45,7 +45,7 @@ function App() {
             
             {/* Protected Routes */}
             <Route path="/dashboard" element={
-              <ProtectedRoute>
+              <ProtectedRoute allowedRoles={[2, 3]}>
                 <DashboardRouter />
               </ProtectedRoute>
             } />
