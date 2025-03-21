@@ -2,6 +2,103 @@ const express = require('express');
 const router = express.Router();
 const knex = require('../db');
 
+// Function to get the date range (next 48 hours)
+function getNext48HoursRange() {
+    const now = new Date();
+    const future = new Date();
+    future.setHours(now.getHours() + 48);
+
+    return {
+        start: now.toISOString().split('T')[0],   // YYYY-MM-DD format
+        end: future.toISOString().split('T')[0]   // YYYY-MM-DD format
+    };
+}
+
+// Get available experts in the next 48 hours
+router.get('/available-experts', async (req, res) => {
+    try {
+        const { start, end } = getNext48HoursRange();
+
+        // Step 1: Find all experts with available slots in the next 48 hours
+        const availableExperts = await knex('expert_availability')
+            .where('date', '>=', start)
+            .andWhere('date', '<=', end)
+            .andWhere('is_available', true)
+            .select('expert_id', 'date', 'start_time', 'end_time');
+
+        if (!availableExperts.length) {
+            return res.json({ message: 'No experts available in the next 48 hours', experts: [] });
+        }
+
+        // Extract unique expert IDs
+        const expertIds = [...new Set(availableExperts.map(e => e.expert_id))];
+
+        // Fetch expert details (id, username, category)
+        const experts = await knex('users')
+            .whereIn('id', expertIds)
+            .select('id', 'username');
+
+        // Get expert categories
+        const categories = await knex('expert_categories')
+            .whereIn('expert_id', expertIds)
+            .join('categories', 'expert_categories.category_id', '=', 'categories.id')
+            .select('expert_id', 'categories.name as category');
+
+        // Get expert workload (count of pending authentication requests)
+        const workloads = await knex('authentication_requests')
+            .whereIn('expert_id', expertIds)
+            .andWhere('status', 'pending')
+            .groupBy('expert_id')
+            .select('expert_id')
+            .count('id as pending_requests');
+
+        // Organize expert data
+        const expertMap = {};
+        experts.forEach(expert => {
+            expertMap[expert.id] = {
+                id: expert.id,
+                username: expert.username,
+                category: [],
+                workload: 0,
+                working_hours: []
+            };
+        });
+
+        // Attach categories
+        categories.forEach(cat => {
+            if (expertMap[cat.expert_id]) {
+                expertMap[cat.expert_id].category.push(cat.category);
+            }
+        });
+
+        // Attach workload
+        workloads.forEach(wl => {
+            if (expertMap[wl.expert_id]) {
+                expertMap[wl.expert_id].workload = wl.pending_requests;
+            }
+        });
+
+        // Attach working hours
+        availableExperts.forEach(slot => {
+            if (expertMap[slot.expert_id]) {
+                expertMap[slot.expert_id].working_hours.push({
+                    date: slot.date,
+                    start_time: slot.start_time,
+                    end_time: slot.end_time
+                });
+            }
+        });
+
+        return res.json({
+            experts: Object.values(expertMap) // Convert object back to an array
+        });
+
+    } catch (error) {
+        console.error('Error fetching available experts:', error);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
 async function getNextSunday() {
     const today = new Date();
     const daysUntilSunday = 7 - today.getDay(); // Days until next Sunday
