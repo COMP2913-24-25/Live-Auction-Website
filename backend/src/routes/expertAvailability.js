@@ -91,17 +91,30 @@ router.get('/available-experts', async (req, res) => {
                 let startTime = null;
                 let endTime = null;
 
-                // Debug: Log raw database values
-                console.log(`Processing Expert ${slot.expert_id} - Date: ${slot.date}, Start: ${slot.start_time}, End: ${slot.end_time}`);
+                // Ensure hours are always two digits
+                const fixTimeFormat = (time) => {
+                    if (!time) return null;
+                    const parts = time.split(':');
+                    if (parts.length === 3) {
+                        parts[0] = parts[0].padStart(2, '0'); // Ensure two-digit hour
+                        return parts.join(':');
+                    }
+                    return null;
+                };
 
-                if (slot.start_time && slot.date) {
-                    startTime = new Date(`${slot.date}T${slot.start_time}`);
+                const fixedStart = fixTimeFormat(slot.start_time);
+                const fixedEnd = fixTimeFormat(slot.end_time);
+
+                console.log(`Fixed Format - Start: ${fixedStart}, End: ${fixedEnd}`);
+
+                if (fixedStart && slot.date) {
+                    startTime = new Date(`${slot.date}T${fixedStart}`);
                 }
-                if (slot.end_time && slot.date) {
-                    endTime = new Date(`${slot.date}T${slot.end_time}`);
+                if (fixedEnd && slot.date) {
+                    endTime = new Date(`${slot.date}T${fixedEnd}`);
                 }
 
-                // Debug: Log converted values
+                // Debug converted values
                 console.log(`Converted - Start: ${startTime}, End: ${endTime}`);
 
                 // Validate the conversion
