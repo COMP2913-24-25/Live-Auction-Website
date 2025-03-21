@@ -133,12 +133,140 @@ router.get('/available-experts', async (req, res) => {
             }
         });
 
+        // Sort experts by next_available time
+        const sortedExperts = Object.values(expertMap).sort((a, b) => {
+            if (!a.next_available) return 1; // Place experts with no availability at the end
+            if (!b.next_available) return -1;
+            return new Date(a.next_available) - new Date(b.next_available);
+        });
+
         return res.json({
-            experts: Object.values(expertMap)
+            experts: sortedExperts
         });
 
     } catch (error) {
         console.error('Error fetching available experts:', error);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
+// Function to get the date range (next 3 to 7 days)
+function getNext3to7DaysRange() {
+    const now = new Date();
+    const futureStart = new Date();
+    const futureEnd = new Date();
+
+    futureStart.setDate(now.getDate() + 3);
+    futureEnd.setDate(now.getDate() + 7);
+
+    return {
+        start: futureStart.toISOString().split('T')[0],  // YYYY-MM-DD format
+        end: futureEnd.toISOString().split('T')[0]       // YYYY-MM-DD format
+    };
+}
+
+// Get soon-to-be available experts in the next 3-7 days
+router.get('/soon-available-experts', async (req, res) => {
+    try {
+        const { start, end } = getNext3to7DaysRange();
+
+        // Fetch availability in the next 3-7 days
+        const upcomingAvailability = await knex('expert_availability')
+            .where('date', '>=', start)
+            .andWhere('date', '<=', end)
+            .andWhere('is_available', true)
+            .select('expert_id', 'date', 'start_time', 'end_time');
+
+        if (!upcomingAvailability.length) {
+            return res.json({ message: 'No experts becoming available in the next 3-7 days', experts: [] });
+        }
+
+        // Extract unique expert IDs
+        const expertIds = [...new Set(upcomingAvailability.map(e => e.expert_id))];
+
+        // Fetch expert details
+        const experts = await knex('users')
+            .whereIn('id', expertIds)
+            .select('id', 'username');
+
+        // Get categories
+        const categories = await knex('expert_categories')
+            .whereIn('expert_id', expertIds)
+            .join('categories', 'expert_categories.category_id', '=', 'categories.id')
+            .select('expert_id', 'categories.name as category');
+
+        // Get workloads
+        const workloads = await knex('authentication_requests')
+            .whereIn('expert_id', expertIds)
+            .andWhere('status', 'pending')
+            .groupBy('expert_id')
+            .select('expert_id')
+            .count('id as pending_requests');
+
+        // Organize expert data
+        const expertMap = {};
+        experts.forEach(expert => {
+            expertMap[expert.id] = {
+                id: expert.id,
+                username: expert.username,
+                category: [],
+                workload: 0,
+                next_available: null
+            };
+        });
+
+        // Attach categories
+        categories.forEach(cat => {
+            if (expertMap[cat.expert_id]) {
+                expertMap[cat.expert_id].category.push(cat.category);
+            }
+        });
+
+        // Attach workload
+        workloads.forEach(wl => {
+            if (expertMap[wl.expert_id]) {
+                expertMap[wl.expert_id].workload = wl.pending_requests;
+            }
+        });
+
+        // Attach next available time (choosing the earliest slot)
+        upcomingAvailability.forEach(slot => {
+            const expert = expertMap[slot.expert_id];
+
+            if (expert) {
+                // Ensure hours are always two digits
+                const fixTimeFormat = (time) => {
+                    if (!time) return null;
+                    const parts = time.split(':');
+                    if (parts.length === 3) {
+                        parts[0] = parts[0].padStart(2, '0'); // Ensure two-digit hour
+                        return parts.join(':');
+                    }
+                    return null;
+                };
+
+                const fixedStart = fixTimeFormat(slot.start_time);
+
+                if (fixedStart && slot.date) {
+                    const startTime = new Date(`${slot.date}T${fixedStart}`);
+
+                    // Choose the earliest next available time
+                    if (!expert.next_available || startTime < new Date(expert.next_available)) {
+                        expert.next_available = startTime.toISOString();
+                    }
+                }
+            }
+        });
+
+        experts.sort((a, b) => new Date(a.next_available) - new Date(b.next_available));
+
+        return res.json({
+            // experts: Object.values(expertMap)
+            experts: experts
+        });
+
+    } catch (error) {
+        console.error('Error fetching soon-to-be-available experts:', error);
         res.status(500).json({ error: 'Internal server error' });
     }
 });
