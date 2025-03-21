@@ -13,6 +13,7 @@ import AuctionForm from './pages/AuctionForm';
 import ItemAuthenticationForm from './pages/ItemAuthenticationForm';
 import Notifications from './pages/Notifications';
 import ExpertAvailability from './components/ExpertAvailability';
+import AvailableExperts from './pages/AvailableExperts';
 
 const DashboardRouter = () => {
   const { user } = useAuth();
@@ -45,8 +46,13 @@ function App() {
             
             {/* Protected Routes */}
             <Route path="/dashboard" element={
-              <ProtectedRoute>
+              <ProtectedRoute allowedRoles={[2, 3]}>
                 <DashboardRouter />
+              </ProtectedRoute>
+            } />
+            <Route path="/experts" element={
+              <ProtectedRoute allowedRoles={[3]}>
+                <AvailableExperts />
               </ProtectedRoute>
             } />
             <Route path="/create-auction" 
