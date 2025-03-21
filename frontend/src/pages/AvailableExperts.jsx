@@ -31,47 +31,51 @@ const AvailableExpertsTable = () => {
   };
 
   return (
-    <div className="p-6">
+    <div className="p-6 md:p-6 space-y-6 pt-16 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
       <h2 className="text-2xl font-semibold mb-4">Available Experts (Next 48 Hours)</h2>
       {loading ? (
         <p>Loading...</p>
       ) : (
-        <table className="min-w-full bg-white border border-gray-300 rounded-lg">
-            <thead>
-                <tr className="bg-gray-100">
-                <th className="py-2 px-4 border">Expert ID</th>
-                <th className="py-2 px-4 border">Username</th>
-                <th className="py-2 px-4 border">Category Expertise</th>
-                <th className="py-2 px-4 border">Current Workload</th>
-                <th className="py-2 px-4 border">Next Available</th>
-                </tr>
-            </thead>
-            <tbody>
-                {experts.length === 0 ? (
-                <tr>
-                    <td colSpan="5" className="py-3 px-4 text-center">No available experts</td>
-                </tr>
-                ) : (
-                experts.map((expert) => (
-                    <tr key={expert.id} className="text-center border-b">
-                    <td className="py-2 px-4 border">{expert.id}</td>
-                    <td className="py-2 px-4 border">{expert.username}</td>
-                    <td className="py-2 px-4 border">{expert.category.join(", ")}</td>
-                    <td className="py-2 px-4 border">{expert.workload} request(s)</td>
-                    <td className="py-2 px-4 border">
-                        {expert.available_now ? (
-                        <span className="text-green-600 font-bold">
-                            ● Available
-                        </span>
+        <div className="border border-gray-300 p-4 rounded-lg">
+            <div className="overflow-x-auto">
+                <table className="w-full min-w-[600px] border border-gray-300 border-b-3 border-b-gray-400">
+                    <thead>
+                        <tr className="bg-navy text-off-white font-light">
+                            <th className="p-2">Expert ID</th>
+                            <th className="p-2">Username</th>
+                            <th className="p-2">Category Expertise</th>
+                            <th className="p-2">Current Workload</th>
+                            <th className="p-2">Next Available</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {experts.length === 0 ? (
+                        <tr>
+                            <td colSpan="5" className="py-3 px-4 text-center">No available experts</td>
+                        </tr>
                         ) : (
-                        formatTimeDifference(expert.next_available)
+                        experts.map((expert) => (
+                            <tr key={expert.id} className="odd:bg-white even:bg-gray-200">
+                                <td className="p-2 text-center">{expert.id}</td>
+                                <td className="p-2 text-center">{expert.username}</td>
+                                <td className="p-2 text-center">{expert.category.join(", ")}</td>
+                                <td className="p-2 text-center">{expert.workload} request(s)</td>
+                                <td className="p-2 text-center">
+                                    {expert.available_now ? (
+                                    <span className="text-green-600 font-bold">
+                                        ● Available
+                                    </span>
+                                    ) : (
+                                    formatTimeDifference(expert.next_available)
+                                    )}
+                                </td>
+                            </tr>
+                        ))
                         )}
-                    </td>
-                    </tr>
-                ))
-                )}
-            </tbody>
-        </table>
+                    </tbody>
+                </table>
+            </div>
+        </div>
       )}
     </div>
   );
