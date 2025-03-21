@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Menu, Bell, Search, LogOut, AlertCircle, Check, Clock, ArrowRight } from "lucide-react";
-import { useAuth } from "../context/authContext";
+import { useAuth } from "../context/AuthContext";
 import { useNotifications } from "../context/notificationContext";
 
 function NavBar() {
@@ -15,7 +15,11 @@ function NavBar() {
   
     const { notifications, unreadCount, markAsRead } = useNotifications();
     
+    // Re-render when authentication changes
+    const [authState, setAuthState] = useState(isAuthenticated);
+
     useEffect(() => {
+      setAuthState(isAuthenticated);
       function handleClickOutside(event) {
         if (notificationRef.current && !notificationRef.current.contains(event.target)) {
           setIsNotificationOpen(false);
@@ -25,7 +29,7 @@ function NavBar() {
       return () => {
         document.removeEventListener("mousedown", handleClickOutside);
       };
-    }, []);
+    }, [isAuthenticated]);
 
     const handleSearch = (e) => {
       e.preventDefault();
