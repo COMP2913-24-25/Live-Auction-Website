@@ -258,13 +258,16 @@ router.get('/soon-available-experts', async (req, res) => {
             }
         });
 
-        experts.sort((a, b) => new Date(a.next_available) - new Date(b.next_available));
-
-        return res.json({
-            // experts: Object.values(expertMap)
-            experts: experts
+        // Sort experts by next_available time
+        const sortedExperts = Object.values(expertMap).sort((a, b) => {
+            if (!a.next_available) return 1; // Place experts with no availability at the end
+            if (!b.next_available) return -1;
+            return new Date(a.next_available) - new Date(b.next_available);
         });
 
+        return res.json({
+            experts: sortedExperts
+        });
     } catch (error) {
         console.error('Error fetching soon-to-be-available experts:', error);
         res.status(500).json({ error: 'Internal server error' });
