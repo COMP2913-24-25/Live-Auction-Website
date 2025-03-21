@@ -1,4 +1,5 @@
 require('dotenv').config({ path: require('path').resolve(__dirname, '../../.env') });
+require('./routes/cleanupScheduler');
 
 const express = require('express');
 const bodyParser = require('body-parser');
