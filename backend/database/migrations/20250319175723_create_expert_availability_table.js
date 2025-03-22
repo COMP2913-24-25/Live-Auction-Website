@@ -3,12 +3,11 @@ exports.up = function (knex) {
         table.increments('id').primary();
         table.integer('expert_id').unsigned().notNullable().references('id').inTable('users').onDelete('CASCADE');
         table.date('date').notNullable(); // Specific day (YYYY-MM-DD)
-        table.time('start_time').notNullable(); // Start time (HH:MM:SS)
-        table.time('end_time').notNullable(); // End time (HH:MM:SS)
-        table.boolean('is_available').notNullable().defaultTo(true); // 1 = Available, 0 = Unavailable
-        table.date('week_start_date').notNullable(); // The Sunday of the week this slot belongs to
+        table.time('start_time').defaultTo("08:00"); // Start time (HH:MM:SS)
+        table.time('end_time').defaultTo("08:00"); // End time (HH:MM:SS)
+        table.boolean('unavailable').notNullable().defaultTo(true); // 1 = Unavailable, 0 = Available
 
-        table.unique(['expert_id', 'date', 'start_time', 'end_time']); // Prevent duplicate time slots
+        table.unique(['expert_id', 'date']); // Ensure that an expert can only have one availability per day
     });
 };
 
