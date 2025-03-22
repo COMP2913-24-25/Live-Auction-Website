@@ -1,157 +1,165 @@
-import { useEffect, useState } from "react";
+import React, { useState, useEffect, useContext } from "react";
 import axios from "axios";
 import { useAuth } from "../context/AuthContext";
-import React from "react";
 
-export default function ExpertAvailability() {
-    const { user } = useAuth();
-    const expertId = user.id;
-    const [currentWeek, setCurrentWeek] = useState([]);
-    const [nextWeek, setNextWeek] = useState([]);
-    const [isFullyUnavailableCurrent, setIsFullyUnavailableCurrent] = useState(false);
-    const [isFullyUnavailableNext, setIsFullyUnavailableNext] = useState(false);
-    const [loading, setLoading] = useState(true);
+const ExpertAvailability = () => {
+  const { user } = useAuth();
+  const [currentWeekAvailability, setCurrentWeekAvailability] = useState([]);
+  const [nextWeekAvailability, setNextWeekAvailability] = useState([]);
+  const [modified, setModified] = useState(false);
 
-    const hours = Array.from({ length: 12 }, (_, i) => i + 8); // 8AM - 8PM
-    const days = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+  useEffect(() => {
+    fetchAvailability();
+  }, [user]);
 
-    useEffect(() => {
-        fetchAvailability();
-    }, []);
-
-    async function fetchAvailability() {
-        try {
-            const { data } = await axios.get(`/api/expertAvailability/availability/${expertId}`);
-        
-            // Ensure availability is filtered correctly for the current and next week
-            const currentWeekStart = getDateForWeek(0, 0); // Get Sunday of current week
-            const nextWeekStart = getDateForWeek(1, 0); // Get Sunday of next week
-        
-            console.log("Expected current week start:", currentWeekStart);
-            console.log("Available data dates:", data.availability.map(slot => slot.week_start_date));
-
-            const currentWeekAvailability = data.availability.filter(slot => new Date(slot.week_start_date).toISOString().slice(0, 10) === currentWeekStart);
-            const nextWeekAvailability = data.availability.filter(slot => new Date(slot.week_start_date).toISOString().slice(0, 10) === nextWeekStart);
-
-            setCurrentWeek(currentWeekAvailability);
-            setNextWeek(nextWeekAvailability);
-        
-            setIsFullyUnavailableCurrent(data.is_fully_unavailable_current);
-            setIsFullyUnavailableNext(data.is_fully_unavailable_next);
-        } catch (error) {
-            console.error("Error fetching availability", error);
-        } finally {
-            setLoading(false);
-        }
+  const fetchAvailability = async () => {
+    if (!user) return;
+    try {
+      const response = await axios.get(`/api/expert-availability/${user.id}`);
+      setCurrentWeekAvailability(response.data.currentWeek);
+      setNextWeekAvailability(response.data.nextWeek);
+    } catch (error) {
+      console.error("Error fetching availability:", error);
     }
+  };
 
-    function getDateForWeek(weekOffset, dayIndex) {
-        const today = new Date();
-        const firstDayOfWeek = new Date();
-        firstDayOfWeek.setDate(today.getDate() - today.getDay() + 7 * weekOffset); // Move back to the most recent Sunday
-        firstDayOfWeek.setHours(0, 0, 0, 0); // Ensure midnight time
-
-        const targetDate = new Date(firstDayOfWeek);
-        targetDate.setDate(targetDate.getDate() + dayIndex);
-        
-        return targetDate.toISOString().split("T")[0];
+  const handleCheckboxChange = (week, index) => {
+    if (week === "current") {
+      const updatedAvailability = [...currentWeekAvailability];
+      updatedAvailability[index].unavailable = !updatedAvailability[index].unavailable;
+      setCurrentWeekAvailability(updatedAvailability);
+    } else {
+      const updatedAvailability = [...nextWeekAvailability];
+      updatedAvailability[index].unavailable = !updatedAvailability[index].unavailable;
+      setNextWeekAvailability(updatedAvailability);
+      setModified(true);
     }
+  };
 
-    async function toggleAvailability(week, setWeek, date, hour) {
-        const isFullyUnavailable = week === currentWeek ? isFullyUnavailableCurrent : isFullyUnavailableNext;
-        if (isFullyUnavailable) return;
+  const handleTimeChange = (index, type, value) => {
+    const updatedAvailability = [...nextWeekAvailability];
+    updatedAvailability[index][type] = value;
+    setNextWeekAvailability(updatedAvailability);
+    setModified(true);
+  };
 
-        const existingSlot = Array.isArray(week) ? week.find(slot => slot.date === date && slot.start_time === `${hour}:00:00`) : null;
-
-        try {
-        if (existingSlot) {
-            await axios.patch(`/api/expertAvailability/availability/${existingSlot.id}`, { is_available: false });
-            setWeek(prev => prev ? prev.filter(slot => slot.id !== existingSlot.id) : []);
-        } else {
-            const newSlot = { expert_id: expertId, date, start_time: `${hour}:00:00`, end_time: `${hour + 1}:00:00` };
-            await axios.post("/api/expertAvailability/availability", { expert_id: expertId, slots: [newSlot] });
-            setWeek(prev => [...(prev || []), { ...newSlot, id: Date.now(), is_available: true }]);
-        }
-        } catch (error) {
-        console.error("Error updating availability", error);
-        }
+  const saveNextWeekAvailability = async () => {
+    if (!user || !modified) return;
+    try {
+      await axios.put(`/api/expert-availability/${user.id}`, {
+        workingHours: nextWeekAvailability.map(slot => ({
+          date: slot.date,
+          start_time: slot.unavailable ? null : slot.start_time || "08:00",
+          end_time: slot.unavailable ? null : slot.end_time || "20:00",
+          unavailable: slot.unavailable,
+        })),
+      });
+      setModified(false);
+      fetchAvailability();
+    } catch (error) {
+      console.error("Error saving availability:", error);
     }
+  };  
 
-  async function toggleFullWeek(isNextWeek) {
-        try {
-            const endpoint = "/api/expertAvailability/availability/unavailable";
-            const isCurrentlyUnavailable = isNextWeek ? isFullyUnavailableNext : isFullyUnavailableCurrent;
-
-            await axios.post(endpoint, { expert_id: expertId, is_fully_unavailable: !isCurrentlyUnavailable, is_next_week: isNextWeek });
-
-            if (isNextWeek) {
-                setIsFullyUnavailableNext(!isFullyUnavailableNext);
-                if (!isFullyUnavailableNext) setNextWeek([]);
-            } else {
-                setIsFullyUnavailableCurrent(!isFullyUnavailableCurrent);
-                if (!isFullyUnavailableCurrent) setCurrentWeek([]);
-            }
-        } catch (error) {
-            console.error("Error toggling full week availability", error);
-        }
-  }
-
-  if (loading) return <p>Loading availability...</p>;
+  const renderTimeOptions = () => {
+    const times = [];
+    for (let i = 8; i <= 20; i++) {
+      const hour = i < 10 ? `0${i}` : i;
+      times.push(`${hour}:00`);
+    }
+    return times.map((time) => <option key={time} value={time}>{time}</option>);
+  };
 
   return (
-    <div className="p-4 max-w-4xl mx-auto space-y-8">
-      <h2 className="text-2xl font-bold text-center">Manage Your Availability</h2>
-
+    <div className="p-4 md:p-6 sm:space-y-6 pt-16 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
       {/* Current Week Section */}
-      <div className="border p-4 rounded-lg shadow-md">
-        <h3 className="text-lg font-semibold mb-4">Current Week</h3>
-        <label className="flex items-center mb-4 cursor-pointer">
-          <input type="checkbox" className="mr-2" checked={isFullyUnavailableCurrent} onChange={() => toggleFullWeek(false)} />
-          Mark entire current week as unavailable
-        </label>
-        {renderAvailabilityGrid(currentWeek, setCurrentWeek, 0, isFullyUnavailableCurrent)}
+      <h3 className="mb-4 font-semibold text-xl md:text-2xl text-center md:text-left">Working Hours (Current Week)</h3>
+      <div className="overflow-x-auto">
+        <table className="w-full min-w-[500px] border border-gray-300 border-b-3 border-b-gray-400">
+          <thead>
+            <tr className="bg-navy text-off-white font-light">
+              <th className="p-2">Date</th>
+              <th className="p-2">Day</th>
+              <th className="p-2">Time Slot</th>
+            </tr>
+          </thead>
+          <tbody>
+            {currentWeekAvailability.map((slot, index) => (
+              <tr key={index} className="odd:bg-white even:bg-gray-200">
+                <td className="p-2 text-center">{slot.date}</td>
+                <td className="p-2 text-center">{slot.day}</td>
+                <td className="p-2 text-center">
+                  {(slot.start_time && slot.end_time) || !slot.unavailable ? (
+                    `${slot.start_time} - ${slot.end_time}`
+                  ) : (
+                    "Unavailable"
+                  )}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </div>
 
       {/* Next Week Section */}
-      <div className="border p-4 rounded-lg shadow-md">
-        <h3 className="text-lg font-semibold mb-4">Next Week</h3>
-        <label className="flex items-center mb-4 cursor-pointer">
-          <input type="checkbox" className="mr-2" checked={isFullyUnavailableNext} onChange={() => toggleFullWeek(true)} />
-          Mark entire next week as unavailable
-        </label>
-        {renderAvailabilityGrid(nextWeek, setNextWeek, 1, isFullyUnavailableNext)}
+      <div className="w-full flex flex-col sm:flex-row justify-between items-center mb-2">
+        <h3 className="font-semibold text-xl md:text-2xl mb-2 sm:mb-0">Working Hours (Next Week)</h3>
+        <button
+          className={`px-4 py-2 bg-blue-600 text-white rounded w-full sm:w-auto shrink-0 ${
+            modified ? "cursor-pointer" : "disabled:opacity-50"
+          }`}
+          onClick={saveNextWeekAvailability}
+          disabled={!modified}
+        >
+          Save
+        </button>
+      </div>
+      <div className="overflow-x-auto">
+        <table className="w-full min-w-[600px] border border-gray-300 border-b-3 border-b-gray-400">
+          <thead>
+            <tr className="bg-navy text-off-white font-light">
+              <th className="p-2">Date</th>
+              <th className="p-2">Day</th>
+              <th className="p-2">Time Slot</th>
+              <th className="p-2">Unavailable</th>
+            </tr>
+          </thead>
+          <tbody>
+            {nextWeekAvailability.map((slot, index) => (
+              <tr key={index} className="odd:bg-white even:bg-gray-200">
+                <td className="p-2 text-center">{slot.date}</td>
+                <td className="p-2 text-center">{slot.day}</td>
+                <td className="p-2 text-center">
+                  <select
+                    value={slot.start_time ?? ""}
+                    onChange={(e) => handleTimeChange(index, "start_time", e.target.value)}
+                    className="border p-1 border-teal rounded"
+                  >
+                    {renderTimeOptions()}
+                  </select>
+                  <span className="mx-2">to</span>
+                  <select
+                    value={slot.end_time ?? ""}
+                    onChange={(e) => handleTimeChange(index, "end_time", e.target.value)}
+                    className="border p-1 border-teal rounded"
+                  >
+                    {renderTimeOptions()}
+                  </select>
+                </td>
+                <td className="p-2 text-center">
+                  <input
+                    type="checkbox"
+                    checked={slot.unavailable}
+                    onChange={() => handleCheckboxChange("next", index)}
+                  />
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </div>
     </div>
   );
+};
 
-  function renderAvailabilityGrid(week, setWeek, weekOffset, isFullyUnavailable) {
-    return (
-      <div className="grid grid-cols-8 gap-2 border p-2 overflow-x-auto">
-        <div className="font-bold text-center">Time</div>
-        {days.map(day => <div key={day} className="font-bold text-center">{day}</div>)}
-
-        {hours.map(hour => (
-          <React.Fragment key={`row-${hour}`}>
-            <div key={`hour-${hour}`} className="font-bold text-center">{hour}:00</div>
-            {days.map((day, dayIndex) => {
-              const date = getDateForWeek(weekOffset, dayIndex);
-              const isAvailable = Array.isArray(week) && week.some(slot => slot.date === date && slot.start_time === `${hour}:00:00`);
-
-              return (
-                <div
-                  key={`${dayIndex}-${hour}-${weekOffset}`}
-                  className={`p-2 text-center cursor-pointer rounded-md ${
-                    isAvailable ? "bg-green-400" : "bg-gray-300"
-                  } ${isFullyUnavailable ? "opacity-50 cursor-not-allowed" : ""}`}
-                  onClick={() => toggleAvailability(week, setWeek, date, hour)}
-                >
-                  {isAvailable ? "✔" : "✖"}
-                </div>
-              );
-            })}
-          </React.Fragment>
-        ))}
-      </div>
-    );
-  }
-}
+export default ExpertAvailability;
