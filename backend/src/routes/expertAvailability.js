@@ -274,138 +274,117 @@ router.get('/soon-available-experts', async (req, res) => {
     }
 });
 
-async function getNextSunday() {
+// Helper function to get the start of the current and next week
+function getWeekStartDates() {
     const today = new Date();
-    const daysUntilSunday = 7 - today.getDay(); // Days until next Sunday
-    today.setDate(today.getDate() + daysUntilSunday);
-    return today.toISOString().split('T')[0]; // YYYY-MM-DD format
+    const dayOfWeek = today.getDay(); // 0 (Sunday) to 6 (Saturday)
+    const diff = dayOfWeek; // Days to subtract to get to Sunday
+    const startOfCurrentWeek = new Date(today);
+    startOfCurrentWeek.setDate(today.getDate() - diff);
+    startOfCurrentWeek.setHours(0, 0, 0, 0);
+
+    const startOfNextWeek = new Date(startOfCurrentWeek);
+    startOfNextWeek.setDate(startOfCurrentWeek.getDate() + 7);
+
+    return { startOfCurrentWeek, startOfNextWeek };
 }
 
-// Set availability for the next week starting Sunday
-router.post('/availability', async (req, res) => {
-    try {
-        const { expert_id, slots } = req.body;
-
-        if (!expert_id || !slots || !Array.isArray(slots)) {
-            return res.status(400).json({ error: 'Invalid request data' });
-        }
-
-        const currentWeekStart = await getCurrentSunday();
-        const nextWeekStart = await getNextSunday();
-
-        const availabilityRecords = slots.map(slot => {
-            const slotDate = new Date(slot.date);
-            const slotWeekStart = slotDate >= new Date(nextWeekStart) ? nextWeekStart : currentWeekStart;
-
-            return {
-                expert_id,
-                date: slot.date,
-                start_time: slot.start_time,
-                end_time: slot.end_time,
-                is_available: true,
-                week_start_date: slotWeekStart
-            };
+// Function to generate all dates for a week
+function generateWeekDates(startDate) {
+    const dates = [];
+    for (let i = 0; i < 7; i++) {
+        const date = new Date(startDate);
+        date.setDate(startDate.getDate() + i);
+        dates.push({
+            date: date.toISOString().split('T')[0],
+            day: date.toLocaleDateString('en-US', { weekday: 'long' })
         });
-
-        await knex('expert_availability').insert(availabilityRecords);
-        return res.status(201).json({ message: 'Availability set successfully' });
-    } catch (error) {
-        console.error(error);
-        res.status(500).json({ error: 'Internal server error' });
     }
-});
-
-async function getCurrentSunday() {
-    const today = new Date();
-    today.setDate(today.getDate() - today.getDay()); // Move back to the most recent Sunday
-    return today.toISOString().split('T')[0]; // YYYY-MM-DD format
+    return dates;
 }
 
-// Modify availability for the current week
-router.patch('/availability/:id', async (req, res) => {
+// Get working hours for an expert (current & next week)
+router.get('/:expert_id', async (req, res) => {
+    const { expert_id } = req.params;
+    const { startOfCurrentWeek, startOfNextWeek } = getWeekStartDates();
+
     try {
-        const { id } = req.params;
-        const { is_available } = req.body;
+        // Fetch existing working hours
+        const workingHours = await knex('expert_availability')
+            .where('expert_id', expert_id)
+            .andWhere('date', '>=', startOfCurrentWeek.toISOString().split('T')[0])
+            .andWhere('date', '<', new Date(startOfNextWeek.getTime() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]);
 
-        if (typeof is_available !== 'boolean') {
-            return res.status(400).json({ error: 'Invalid availability status' });
-        }
+        const currentWeekDates = generateWeekDates(startOfCurrentWeek);
+        const nextWeekDates = generateWeekDates(startOfNextWeek);
 
-        // Ensure it's for the current week
-        const currentWeekStart = await getCurrentSunday();
+        const formatAvailability = (dates, weekType) => {
+            return dates.map(({ date, day }) => {
+                const entry = workingHours.find(w => w.date === date);
+                return entry ? {
+                    date,
+                    day,
+                    start_time: entry.start_time,
+                    end_time: entry.end_time,
+                    unavailable: entry.unavailable
+                } : {
+                    date,
+                    day,
+                    start_time: weekType === 'current' ? 'Unavailable' : null,
+                    end_time: null,
+                    unavailable: weekType === 'current' ? true : false
+                };
+            });
+        };
 
-        const availability = await knex('expert_availability')
-            .where({ id })
-            .andWhere('week_start_date', currentWeekStart)
-            .first();
-
-        if (!availability) {
-            return res.status(404).json({ error: 'Availability slot not found or cannot be changed' });
-        }
-
-        await knex('expert_availability').where({ id }).update({ is_available });
-        return res.json({ message: 'Availability updated successfully' });
-
+        res.json({
+            currentWeek: formatAvailability(currentWeekDates, 'current'),
+            nextWeek: formatAvailability(nextWeekDates, 'next')
+        });
     } catch (error) {
-        console.error(error);
-        res.status(500).json({ error: 'Internal server error' });
+        res.status(500).json({ error: 'Error fetching availability' });
     }
 });
 
-// Mark entire week unavailable
-router.post('/availability/unavailable', async (req, res) => {
+// Update working hours for next week
+router.put('/:expert_id', async (req, res) => {
+    const { expert_id } = req.params;
+    const { workingHours } = req.body;
+    const { startOfNextWeek } = getWeekStartDates();
+    const nextWeekDates = generateWeekDates(startOfNextWeek).map(d => d.date);
+
     try {
-        const { expert_id, is_fully_unavailable } = req.body;
+        await knex.transaction(async trx => {
+            await Promise.all(workingHours.map(async ({ date, start_time, end_time, unavailable }) => {
+                if (!nextWeekDates.includes(date)) {
+                    throw new Error(`Invalid date range: ${date}`);
+                }
 
-        if (typeof is_fully_unavailable !== 'boolean') {
-            return res.status(400).json({ error: 'Invalid availability status' });
-        }
+                // Ensure unavailable days store NULL, otherwise provide defaults
+                const finalStartTime = unavailable ? null : start_time || '08:00';
+                const finalEndTime = unavailable ? null : end_time || '20:00';
 
-        // Update the expert's full availability status
-        await knex('users').where({ id: expert_id }).update({ is_fully_unavailable });
-
-        if (is_fully_unavailable) {
-            // Mark all availability slots as unavailable for both current and next week
-            const currentWeek = await getCurrentSunday();
-            const nextWeek = await getNextSunday();
-
-            await knex('expert_availability')
-                .where({ expert_id })
-                .andWhere(builder => builder.where('week_start_date', currentWeek).orWhere('week_start_date', nextWeek))
-                .update({ is_available: false });
-        }
-
-        return res.json({ message: 'Expert availability updated successfully' });
-
-    } catch (error) {
-        console.error(error);
-        res.status(500).json({ error: 'Internal server error' });
-    }
-});
-
-// Get availability for the current and next week
-router.get('/availability/:expert_id', async (req, res) => {
-    try {
-        const { expert_id } = req.params;
-
-        const currentWeek = await getCurrentSunday();
-        const nextWeek = await getNextSunday();
-
-        const availability = await knex('expert_availability')
-            .where({ expert_id })
-            .andWhere(builder => builder.where('week_start_date', currentWeek).orWhere('week_start_date', nextWeek))
-            .select('*');
-
-        const isFullyUnavailable = await knex('users').where({ id: expert_id }).select('is_fully_unavailable').first();
-
-        return res.json({
-            is_fully_unavailable: isFullyUnavailable?.is_fully_unavailable ?? false,
-            availability
+                await trx('expert_availability')
+                    .insert({
+                        expert_id,
+                        date,
+                        start_time: finalStartTime,
+                        end_time: finalEndTime,
+                        unavailable
+                    })
+                    .onConflict(['expert_id', 'date'])
+                    .merge({
+                        start_time: knex.raw('excluded.start_time'),
+                        end_time: knex.raw('COALESCE(excluded.end_time, expert_availability.end_time)'), // Keep existing end_time if none provided
+                        unavailable: knex.raw('excluded.unavailable')
+                    });
+            }));
         });
 
+        res.json({ message: 'Working hours updated successfully' });
     } catch (error) {
-        console.error(error);
-        res.status(500).json({ error: 'Internal server error' });
+        console.error('Update Error:', error);
+        res.status(500).json({ error: error.message });
     }
 });
 

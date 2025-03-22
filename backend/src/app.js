@@ -48,7 +48,7 @@ app.use('/api/manager', managerRoutes);
 app.use('/api/payment', paymentRoutes);
 app.use('/api/notifications', notificationsRoutes);
 app.use('/api/expert', expertRoutes);
-app.use('/api/expertAvailability', expertAvailabilityRoutes);
+app.use('/api/expert-availability', expertAvailabilityRoutes);
 
 // Example route
 app.get('/', (req, res) => {
