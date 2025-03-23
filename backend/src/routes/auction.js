@@ -2,6 +2,7 @@ const express = require('express');
 const knex = require('../db'); // Assuming you have a Knex setup in db/knex.js
 const router = express.Router();
 const cron = require('node-cron');
+const { sendWinningBidEmail } = require('./email');
 
 // Fetch all active auctions
 router.get('/active', async (req, res) => {
@@ -130,27 +131,44 @@ cron.schedule('* * * * *', async () => {
     console.log('Checking and updating expired auctions...');
 
     await knex.transaction(async (trx) => {
-      // Update auctions that have ended but have bids
-      await trx('items')
-        .where('end_time', '<=', knex.raw("datetime('now')"))
-        .where('auction_status', '=', 'Active')
-        .whereNotExists(function () {
-          this.select('*')
-            .from('bids')
-            .whereRaw('bids.item_id = items.id');
-        })
-        .update({ auction_status: 'Ended - Unsold' });
-
-      // Update auctions that have ended and have at least one bid
-      await trx('items')
+      // 找到刚刚结束的拍卖
+      const endedAuctions = await trx('items')
         .where('end_time', '<=', knex.raw("datetime('now')"))
         .where('auction_status', '=', 'Active')
         .whereExists(function () {
           this.select('*')
             .from('bids')
             .whereRaw('bids.item_id = items.id');
-        })
-        .update({ auction_status: 'Ended - Sold' });
+        });
+
+      for (const auction of endedAuctions) {
+        // 获取最高出价者信息
+        const winningBid = await trx('bids')
+          .select('bids.*', 'users.email')
+          .join('users', 'bids.user_id', 'users.id')
+          .where('item_id', auction.id)
+          .orderBy('amount', 'desc')
+          .first();
+
+        if (winningBid) {
+          // 更新拍卖状态
+          await trx('items')
+            .where('id', auction.id)
+            .update({ auction_status: 'Ended - Sold' });
+
+          // 发送获胜邮件
+          await sendWinningBidEmail(
+            winningBid.email,
+            auction.title,
+            winningBid.amount
+          );
+        } else {
+          // 如果没有出价，标记为流拍
+          await trx('items')
+            .where('id', auction.id)
+            .update({ auction_status: 'Ended - Unsold' });
+        }
+      }
     });
 
     console.log('Expired auctions updated successfully.');

@@ -18,6 +18,7 @@ const managerRoutes = require('./routes/manager');
 const paymentRoutes = require('./routes/payment');
 const notificationsRoutes = require('./routes/notifications'); 
 const expertRoutes = require('./routes/expert');
+const { router: emailRouter } = require('./routes/email');
 
 const upload = multer({ dest: 'uploads/' }); // 临时存储上传的文件
 
@@ -46,6 +47,7 @@ app.use('/api/manager', managerRoutes);
 app.use('/api/payment', paymentRoutes);
 app.use('/api/notifications', notificationsRoutes); 
 app.use('/api/expert', expertRoutes);
+app.use('/api/email', emailRouter);
 
 // Example route
 app.get('/', (req, res) => {
@@ -58,5 +60,10 @@ app.use(express.urlencoded({ extended: true }));
 
 // 添加静态文件服务
 app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
+
+console.log('Email config:', {
+  user: process.env.EMAIL_USER ? 'Set' : 'Not set',
+  pass: process.env.EMAIL_PASSWORD ? 'Set' : 'Not set'
+});
 
 module.exports = app;
