@@ -61,6 +61,13 @@ const AuctionDetails = () => {
   }, [id]);
 
   useEffect(() => {
+    axios
+      .put(`/api/users/${user.id}/favorites`, 
+           {auction_id : id, favorite : isFavorite})
+
+  }, [isFavorite]);
+
+  useEffect(() => {
     if (!auction?.end_time) return; // Ensure end_time exists before setting the interval
 
     const updateRemainingTime = () => {
