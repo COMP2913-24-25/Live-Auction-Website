@@ -148,4 +148,14 @@ router.put('/authentication-requests/reassign', async (req, res) => {
     }
 });
 
+// Fetch all users (ID, username, email, created_at, role)
+router.get('/users', async (req, res) => {
+    try {
+        const users = await knex('users').select('id', 'username', 'email', 'created_at', 'role');
+        res.json(users);
+    } catch (error) {
+        res.status(500).json({ error: 'Failed to fetch users' });
+    }
+});
+
 module.exports = router;
