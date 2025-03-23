@@ -192,5 +192,48 @@ router.get('/authentication-requests/reassign', async (req, res) => {
         res.status(500).json({ message: 'Server error' });
     }
 });
+// Fetch all users (ID, username, email, created_at, role)
+router.get('/users', async (req, res) => {
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const offset = (page - 1) * limit;
+
+    try {
+        // Fetch paginated users
+        const users = await knex("users")
+            .select("id", "username", "email", "created_at", "role")
+            .limit(limit)
+            .offset(offset);
+
+        // Get total user count for pagination
+        const totalUsers = await knex("users").count("id as count").first();
+
+        res.json({
+            users,
+            totalPages: Math.ceil(totalUsers.count / limit),
+            totalUsers: totalUsers.count,
+        });
+    } catch (error) {
+        res.status(500).json({ error: "Failed to fetch users" });
+    }
+});
+
+// Update user role
+router.patch('/users/:id/role', async (req, res) => {
+    const { id } = req.params;
+    const { role } = req.body;
+
+    if (![1, 2, 3].includes(role)) {
+        return res.status(400).json({ error: 'Invalid role' });
+    }
+
+    try {
+        const updated = await knex('users').where({ id }).update({ role });
+        if (!updated) return res.status(404).json({ error: 'User not found' });
+        res.json({ message: 'User role updated successfully' });
+    } catch (error) {
+        res.status(500).json({ error: 'Failed to update user role' });
+    }
+});
 
 module.exports = router;

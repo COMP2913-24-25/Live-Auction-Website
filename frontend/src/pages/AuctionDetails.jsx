@@ -1,10 +1,14 @@
 import { useEffect, useState, useRef, useContext } from "react";
-import { useAuth } from "../context/AuthContext";
+import { useAuth } from "../context/authContext";
 import axios from "axios";
 import Carousel from "react-multi-carousel";
 import "react-multi-carousel/lib/styles.css";
 import { Star } from "lucide-react";
 import { useParams } from "react-router-dom";
+import PaymentForm from '../components/payment/PaymentForm';
+import PaymentSuccess from '../components/payment/PaymentSuccess';
+import PaymentCardSelector from '../components/PaymentCardSelector';
+import { validateBidAmount } from '../components/BidForm';
 import authenticatedIcon from "../assets/authenticatedIcon.png";
 
 const responsive = {
@@ -44,6 +48,16 @@ const AuctionDetails = () => {
   const [isFavorite, setIsFavorite] = useState(false);
   const [maxHeight, setMaxHeight] = useState("auto");
   const [remainingTime, setRemainingTime] = useState("");
+  const [showPayment, setShowPayment] = useState(false);
+  const [paymentSuccess, setPaymentSuccess] = useState(false);
+  const [isAuctionEnded, setIsAuctionEnded] = useState(false);
+  const [paymentMethod, setPaymentMethod] = useState(null);
+  const [showBidForm, setShowBidForm] = useState(false);
+  const [bidError, setBidError] = useState("");
+  const [showPaymentSelector, setShowPaymentSelector] = useState(false);
+  const [success, setSuccess] = useState("");
+  const [error, setError] = useState("");
+  const [processing, setProcessing] = useState(false);
 
   const section1Ref = useRef(null);
   const section2Ref = useRef(null);
@@ -95,6 +109,151 @@ const AuctionDetails = () => {
     window.addEventListener("resize", adjustHeight);
     return () => window.removeEventListener("resize", adjustHeight);
   }, [auction]);
+
+  const handlePlaceBid = () => {
+    // 清除之前的错误
+    setBidError("");
+    
+    // 检查出价是否满足最低要求
+    const minimumBid = auction.current_bid + 5;
+    if (parseFloat(bidAmount) < minimumBid) {
+      setBidError(`Your bid must be at least £${minimumBid}`);
+      return;
+    }
+    
+    if (!paymentMethod) {
+      // 如果用户还没有添加支付方式，先显示支付表单
+      setShowBidForm(true);
+      return;
+    }
+    
+    // 实际实现中会调用API提交出价
+    console.log(`Placing bid of £${bidAmount} on item ${id}`);
+    // 模拟成功出价
+    setAuction({
+      ...auction,
+      current_bid: parseFloat(bidAmount)
+    });
+  };
+
+  const handlePaymentSuccess = (paymentInfo) => {
+    // 保存支付方式信息
+    setPaymentMethod(paymentInfo);
+    // 关闭支付表单
+    setShowBidForm(false);
+    // 提交出价
+    setAuction({
+      ...auction,
+      current_bid: parseFloat(bidAmount),
+      highest_bidder_id: user?.id
+    });
+  };
+
+  const handleWinPayment = () => {
+    // 模拟自动支付处理
+    setTimeout(() => {
+      setPaymentSuccess(true);
+    }, 1500);
+  };
+
+  // 当用户更改出价时，清除已保存的支付方式，要求重新输入
+  const handleBidAmountChange = (e) => {
+    const newAmount = e.target.value;
+    setBidAmount(newAmount);
+    setBidError(""); // 清除错误消息
+    
+    // 如果金额变化，清除已保存的支付方式
+    if (paymentMethod && parseFloat(newAmount) !== auction.current_bid) {
+      setPaymentMethod(null);
+    }
+  };
+
+  const handleBidSubmit = (e) => {
+    e.preventDefault();
+    console.log('Bid submit clicked', bidAmount, auction.current_bid, auction.min_price);
+    
+    // 验证出价
+    const bidError = validateBidAmount(bidAmount, auction.current_bid, auction.min_price);
+    if (bidError) {
+      setBidError(bidError);
+      console.log('Bid validation error:', bidError);
+      return;
+    }
+    
+    console.log('Showing payment selector');
+    // 显示支付卡选择界面
+    setShowPaymentSelector(true);
+  };
+
+  const handleCardSelected = async (cardId, cardDetails) => {
+    try {
+      console.log('Selected card ID:', cardId);
+      console.log('Card details:', cardDetails);
+      
+      // 显示处理中状态
+      setProcessing(true);
+      
+      // 模拟 Stripe API 调用
+      console.log('Connecting to Stripe API...');
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      // 模拟 Stripe 支付意向创建
+      const stripePaymentIntent = {
+        id: `pi_${Math.random().toString(36).substring(2, 15)}`,
+        object: 'payment_intent',
+        amount: parseFloat(bidAmount) * 100, // 转换为分
+        currency: 'gbp',
+        status: 'requires_capture',
+        capture_method: 'manual',
+        payment_method: cardId,
+        created: Math.floor(Date.now() / 1000),
+        livemode: false
+      };
+      
+      console.log('Stripe payment intent created:', stripePaymentIntent);
+      
+      // 模拟成功出价，不进行实际 API 调用
+      const mockResponse = {
+        id: Math.floor(Math.random() * 10000),
+        item_id: auction.id,
+        bid_amount: parseFloat(bidAmount),
+        payment_method_id: cardId,
+        stripe_payment_intent_id: stripePaymentIntent.id,
+        created_at: new Date().toISOString()
+      };
+      
+      console.log('Bid response:', mockResponse);
+      
+      // 模拟延迟
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      // 更新拍卖信息
+      setAuction({
+        ...auction,
+        current_bid: parseFloat(bidAmount)
+      });
+      
+      // 保存支付方式信息
+      setPaymentMethod({
+        cardNumber: `XXXX XXXX XXXX ${cardDetails.last4}`,
+        cardType: cardDetails.card_type,
+        paymentMethodId: cardId,
+        stripePaymentIntentId: stripePaymentIntent.id
+      });
+      
+      // 关闭支付卡选择界面
+      setShowPaymentSelector(false);
+      setProcessing(false);
+      
+      // 显示成功消息
+      setSuccess(`Bid placed successfully! Payment will be processed if you win the auction.`);
+      setBidAmount('');
+    } catch (error) {
+      setProcessing(false);
+      console.error('Bid error details:', error);
+      setError('Failed to place bid: ' + error.message);
+    }
+  };
 
   if (!auction) return <p>Loading auction details...</p>;
 
@@ -170,21 +329,168 @@ const AuctionDetails = () => {
                 />
               </button>
             </div>
-            <input
-              type="number"
-              className="w-full p-2 mt-2 bg-gray-200 placeholder-gray-400"
-              placeholder={`£ ${auction.current_bid + 5} or up`}
-              onChange={(e) => setBidAmount(e.target.value)}
-            />
-            <button className="w-full bg-gold text-white py-2 mt-2 hover:bg-yellow-600 cursor-pointer">
-              Place Bid
-            </button>
+            
+            {/* 显示已保存的支付方式 */}
+            {paymentMethod && (
+              <div className="bg-gray-100 p-3 rounded mb-3">
+                <p className="font-semibold">Payment Method</p>
+                <p className="text-sm">
+                  {paymentMethod.cardType} card ending in {paymentMethod.cardNumber.slice(-4)}
+                </p>
+                <p className="text-xs text-gray-500 mt-1">Your card will be charged automatically if you win the auction</p>
+              </div>
+            )}
+            
+            {isAuctionEnded ? (
+              <div className="mt-4">
+                <div className="bg-gray-100 p-3 rounded mb-3 text-center">
+                  <p className="font-semibold">This auction has ended</p>
+                  {user && user.id === auction.highest_bidder_id && (
+                    <p className="text-green-600 mt-2">Congratulations! You won this auction.</p>
+                  )}
+                </div>
+                
+                {user && user.id === auction.highest_bidder_id && (
+                  <button 
+                    className="w-full bg-gold text-white py-2 mt-2 hover:bg-yellow-600 cursor-pointer"
+                    onClick={handleWinPayment}
+                  >
+                    Complete Purchase
+                  </button>
+                )}
+              </div>
+            ) : (
+              <>
+                <input
+                  type="number"
+                  className="w-full p-2 mt-2 bg-gray-200 placeholder-gray-400"
+                  placeholder={`£ ${auction.current_bid + 5} or up`}
+                  value={bidAmount}
+                  onChange={handleBidAmountChange}
+                  min={auction.current_bid + 5}
+                  step="5"
+                />
+                {bidError && (
+                  <div className="bg-red-100 text-red-700 p-2 mt-2 rounded text-sm">
+                    {bidError}
+                  </div>
+                )}
+                <button 
+                  className="w-full bg-gold text-white py-2 mt-2 hover:bg-yellow-600 cursor-pointer"
+                  onClick={handleBidSubmit}
+                >
+                  Place Bid
+                </button>
+              </>
+            )}
+            
             <p className="text-center text-gray-600 mt-2">
               Selected by <span className="underline">{auction.seller_name}</span>
             </p>
           </div>
         </div>
       </div>
+
+      {/* Payment Modal */}
+      {showBidForm && !paymentMethod && (
+        <>
+          {/* 半透明背景 */}
+          <div 
+            className="fixed inset-0 z-40" 
+            style={{ backgroundColor: 'rgba(0,0,0,0.3)', backdropFilter: 'blur(2px)' }}
+            onClick={() => setShowBidForm(false)}
+          ></div>
+          
+          {/* 模态框内容 */}
+          <div className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-50 shadow-xl">
+            <div className="bg-white rounded-lg w-[1000px] max-w-[90vw]">
+              <div className="flex justify-between items-center p-4 border-b">
+                <h3 className="text-lg font-semibold">Add Payment Method to Bid</h3>
+                <button 
+                  onClick={() => setShowBidForm(false)}
+                  className="text-gray-500 hover:text-gray-700"
+                >
+                  ✕
+                </button>
+              </div>
+              <div className="p-8">
+                <p className="mb-4 text-gray-700">To participate in this auction, please add a payment method. Your card will only be charged if you win the auction.</p>
+                <PaymentForm 
+                  amount={parseFloat(bidAmount)} 
+                  itemId={auction.id}
+                  onSuccess={handlePaymentSuccess}
+                />
+              </div>
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* Success Modal */}
+      {paymentSuccess && (
+        <>
+          {/* 半透明背景 */}
+          <div 
+            className="fixed inset-0 z-40" 
+            style={{ backgroundColor: 'rgba(0,0,0,0.3)', backdropFilter: 'blur(2px)' }}
+          ></div>
+          
+          {/* 模态框内容 */}
+          <div className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-50 shadow-xl">
+            <div className="bg-white rounded-lg w-[1000px] max-w-[90vw] p-12">
+              <PaymentSuccess 
+                amount={parseFloat(bidAmount)}
+                itemTitle={auction.title}
+              />
+            </div>
+          </div>
+        </>
+      )}
+
+      {showPaymentSelector && (
+        <>
+          {/* 半透明背景 */}
+          <div 
+            className="fixed inset-0 z-40" 
+            style={{ backgroundColor: 'rgba(0,0,0,0.3)', backdropFilter: 'blur(2px)' }}
+            onClick={() => setShowPaymentSelector(false)}
+          ></div>
+          
+          {/* 模态框内容 */}
+          <div className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-50 shadow-xl">
+            <div className="bg-white rounded-lg w-[1000px] max-w-[90vw]">
+              <div className="flex justify-between items-center p-4 border-b">
+                <h3 className="text-lg font-semibold">Select Payment Method</h3>
+                <button 
+                  onClick={() => setShowPaymentSelector(false)}
+                  className="text-gray-500 hover:text-gray-700"
+                >
+                  ✕
+                </button>
+              </div>
+              <div className="p-8">
+                <PaymentCardSelector
+                  onSelectCard={handleCardSelected}
+                  onCancel={() => setShowPaymentSelector(false)}
+                  itemId={auction.id}
+                  bidAmount={parseFloat(bidAmount)}
+                />
+              </div>
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* Processing Modal */}
+      {processing && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white p-5 rounded-lg flex flex-col items-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-gold mb-4"></div>
+            <p className="text-gray-700">Processing payment...</p>
+            <p className="text-xs text-gray-500 mt-2">Connecting to Stripe...</p>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

@@ -19,9 +19,12 @@ function NavBar() {
     const navigate = useNavigate();
   
     const { notifications, unreadCount, markAsRead } = useNotifications();
-    console.log(notifications);
+    
+    // Re-render when authentication changes
+    const [authState, setAuthState] = useState(isAuthenticated);
 
     useEffect(() => {
+      setAuthState(isAuthenticated);
       function handleClickOutside(event) {
         if (notificationRef.current && !notificationRef.current.contains(event.target)) {
           setIsNotificationOpen(false);
@@ -31,7 +34,7 @@ function NavBar() {
       return () => {
         document.removeEventListener("mousedown", handleClickOutside);
       };
-    }, []);
+    }, [isAuthenticated]);
 
     useEffect(() => {
       if (user?.role === 2 || user?.role === 3) { // Only fetch notifications for manager and expert
@@ -146,6 +149,16 @@ function NavBar() {
     };
 
 
+    const handleCreateAuction = (e) => {
+      e.preventDefault();
+      navigate('/create-auction');
+    };
+
+    const handleAuthenticateItem = (e) => {
+      e.preventDefault();
+      navigate('/authenticate-item');
+    };
+
     return (
       <>
         <header className="fixed top-0 left-0 right-0 bg-slate-800 shadow-md z-50">
@@ -165,14 +178,22 @@ function NavBar() {
                     Browse
                   </Link>
                   
-                  {isAuthenticated && (
+                  {isAuthenticated && user && (
                     <>
-                      {user.role == 1 && (
+                      {(user.role === 1 || user.role === '1') && (
                         <>
-                          <Link to="/create-auction" className="text-white hover:text-blue-200 font-medium transition-colors duration-200">
+                          <Link 
+                            to="/create-auction" 
+                            onClick={handleCreateAuction}
+                            className="text-white hover:text-blue-200 font-medium transition-colors duration-200"
+                          >
                             Create Listing
                           </Link>
-                          <Link to="/authenticate-item" className="text-white hover:text-blue-200 font-medium transition-colors duration-200">
+                          <Link 
+                            to="/authenticate-item" 
+                            onClick={handleAuthenticateItem}
+                            className="text-white hover:text-blue-200 font-medium transition-colors duration-200"
+                          >
                             Authenticate Item
                           </Link>
                         </>
@@ -489,10 +510,18 @@ function NavBar() {
                 <>
                   {user.role == 1 && (
                     <>
-                      <Link to="/create-auction" className="block px-3 py-2 text-white font-medium hover:bg-slate-700 rounded-md">
+                      <Link 
+                        to="/create-auction" 
+                        onClick={handleCreateAuction}
+                        className="block px-3 py-2 text-white font-medium hover:bg-slate-700 rounded-md"
+                      >
                         Create Listing
                       </Link>
-                      <Link to="/authenticate-item" className="block px-3 py-2 text-white font-medium hover:bg-slate-700 rounded-md">
+                      <Link 
+                        to="/authenticate-item" 
+                        onClick={handleAuthenticateItem}
+                        className="block px-3 py-2 text-white font-medium hover:bg-slate-700 rounded-md"
+                      >
                         Authenticate Item
                       </Link>
                     </>

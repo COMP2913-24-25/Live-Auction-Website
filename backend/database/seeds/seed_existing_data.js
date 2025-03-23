@@ -82,6 +82,32 @@ exports.seed = async function (knex) {
     { id: 1, user_id: 2, item_id: 1, amount: 55.0, status: "Completed" }
   ]);
 
+  // Insert Payments
+  await knex("user_payment_methods").insert([
+    { 
+      id: 1, 
+      user_id: 2, 
+      payment_provider: "Stripe", 
+      tokenized_card_id: "tok_visa_test1",
+      last4: "4242",
+      card_type: "Visa",
+      exp_month: 12,
+      exp_year: 2025,
+      cvv: "123"
+    },
+    { 
+      id: 2, 
+      user_id: 4, 
+      payment_provider: "Stripe", 
+      tokenized_card_id: "tok_mastercard_test1",
+      last4: "5678",
+      card_type: "MasterCard",
+      exp_month: 10,
+      exp_year: 2024,
+      cvv: "456"
+    }
+  ]);
+
   // Insert Watchlist
   await knex("watchlist").insert([
     { id: 1, user_id: 4, item_id: 2 }
