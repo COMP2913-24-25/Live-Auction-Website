@@ -150,11 +150,27 @@ router.put('/authentication-requests/reassign', async (req, res) => {
 
 // Fetch all users (ID, username, email, created_at, role)
 router.get('/users', async (req, res) => {
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const offset = (page - 1) * limit;
+
     try {
-        const users = await knex('users').select('id', 'username', 'email', 'created_at', 'role');
-        res.json(users);
+        // Fetch paginated users
+        const users = await knex("users")
+            .select("id", "username", "email", "created_at", "role")
+            .limit(limit)
+            .offset(offset);
+
+        // Get total user count for pagination
+        const totalUsers = await knex("users").count("id as count").first();
+
+        res.json({
+            users,
+            totalPages: Math.ceil(totalUsers.count / limit),
+            totalUsers: totalUsers.count,
+        });
     } catch (error) {
-        res.status(500).json({ error: 'Failed to fetch users' });
+        res.status(500).json({ error: "Failed to fetch users" });
     }
 });
 
