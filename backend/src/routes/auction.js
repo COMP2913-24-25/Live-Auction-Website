@@ -2,6 +2,7 @@ const express = require('express');
 const knex = require('../db'); 
 const router = express.Router();
 const cron = require('node-cron');
+const { calculatePostingFee } = require('../utils/feeCalculator');
 
 // Fetch all active auctions
 router.get('/active', async (req, res) => {
@@ -117,13 +118,66 @@ router.post('/:id/bid', async (req, res) => {
   }
 });
 
-// Runs every minute to check for expired auctions
+// Modify the cron job to include fee notification
 cron.schedule('* * * * *', async () => {
   try {
     console.log('Checking and updating expired auctions...');
 
     await knex.transaction(async (trx) => {
-      // Update auctions that have ended but have no bids
+      // Get the current fee structure
+      const feeStructure = await trx('posting_fees').first();
+
+      // Find auctions that just ended and have bids
+      const endedAuctions = await trx('items')
+        .select(
+          'items.id',
+          'items.user_id as seller_id',
+          'users.username as seller_name',
+          'item_current_bids.current_bid as final_price'
+        )
+        .join('users', 'items.user_id', 'users.id')
+        .join('item_current_bids', 'items.id', 'item_current_bids.item_id')
+        .where('items.end_time', '<=', knex.raw("datetime('now')"))
+        .where('items.auction_status', '=', 'Active')
+        .whereExists(function () {
+          this.select('*')
+            .from('bids')
+            .whereRaw('bids.item_id = items.id');
+        });
+
+      // Process each ended auction
+      for (const auction of endedAuctions) {
+        // Calculate posting fee
+        const postingFee = calculatePostingFee(auction.final_price, feeStructure);
+
+        // Update auction status and store fee
+        await trx('items')
+          .where('id', auction.id)
+          .update({ 
+            auction_status: 'Ended - Sold',
+            posting_fee: postingFee
+          });
+
+        // Send notifications
+        await trx('notifications').insert([
+          {
+            user_id: auction.seller_id,
+            type: 'auction_ended',
+            message: `Your auction has ended with a final price of £${auction.final_price.toFixed(2)}`,
+            auction_id: auction.id,
+            created_at: knex.fn.now()
+          },
+          {
+            user_id: auction.seller_id,
+            type: 'posting_fee',
+            message: `Your posting fee for this auction is £${postingFee.toFixed(2)}`,
+            auction_id: auction.id,
+            created_at: knex.fn.now()
+          }
+        ]);
+      }
+
+      // Update unsold auctions (no change needed here)
       await trx('items')
         .where('end_time', '<=', knex.raw("datetime('now')"))
         .where('auction_status', '=', 'Active')
@@ -133,22 +187,11 @@ cron.schedule('* * * * *', async () => {
             .whereRaw('bids.item_id = items.id');
         })
         .update({ auction_status: 'Ended - Unsold' });
-
-      // Update auctions that have ended and have at least one bid
-      await trx('items')
-        .where('end_time', '<=', knex.raw("datetime('now')"))
-        .where('auction_status', '=', 'Active')
-        .whereExists(function () {
-          this.select('*')
-            .from('bids')
-            .whereRaw('bids.item_id = items.id');
-        })
-        .update({ auction_status: 'Ended - Sold' });
     });
 
-    console.log('Expired auctions updated successfully.');
+    console.log('Expired auctions and notifications updated successfully.');
   } catch (error) {
-    console.error('Error updating auction statuses:', error);
+    console.error('Error updating auction statuses and sending notifications:', error);
   }
 });
 
