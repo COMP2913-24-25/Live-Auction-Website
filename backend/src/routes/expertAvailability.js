@@ -24,7 +24,7 @@ router.get('/available-experts', async (req, res) => {
         const availableExperts = await knex('expert_availability')
             .where('date', '>=', start)
             .andWhere('date', '<=', end)
-            .andWhere('is_available', true)
+            .andWhere('unavailable', false)
             .select('expert_id', 'date', 'start_time', 'end_time');
 
         if (!availableExperts.length) {
@@ -174,7 +174,7 @@ router.get('/soon-available-experts', async (req, res) => {
         const upcomingAvailability = await knex('expert_availability')
             .where('date', '>=', start)
             .andWhere('date', '<=', end)
-            .andWhere('is_available', true)
+            .andWhere('unavailable', false)
             .select('expert_id', 'date', 'start_time', 'end_time');
 
         if (!upcomingAvailability.length) {

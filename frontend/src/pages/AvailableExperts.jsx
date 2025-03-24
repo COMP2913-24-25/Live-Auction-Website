@@ -10,7 +10,7 @@ const AvailableExpertsTable = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    axios.get("/api/expertAvailability/available-experts")
+    axios.get("/api/expert-availability/available-experts")
       .then(response => {
         setExperts(response.data.experts);
         setLoading(false);
@@ -22,7 +22,7 @@ const AvailableExpertsTable = () => {
   }, []);
 
   useEffect(() => {
-    axios.get("/api/expertAvailability/soon-available-experts")
+    axios.get("/api/expert-availability/soon-available-experts")
       .then(response => {
         setSoonAvailableExperts(response.data.experts);
       })
