@@ -1,5 +1,25 @@
 import { useState, useEffect } from "react";
 import axios from "axios";
+import {
+  Chart as ChartJS,
+  CategoryScale,
+  LinearScale,
+  BarElement,
+  Title,
+  Tooltip,
+  Legend
+} from 'chart.js';
+import { Bar } from 'react-chartjs-2';
+
+// Register ChartJS components
+ChartJS.register(
+  CategoryScale,
+  LinearScale,
+  BarElement,
+  Title,
+  Tooltip,
+  Legend
+);
 
 export default function ManagerDashboard() {
     const [pendingRequests, setPendingRequests] = useState([]);
@@ -9,11 +29,31 @@ export default function ManagerDashboard() {
     const [selectedPendingRequests, setSelectedPendingRequests] = useState({});
     const [selectedAssignedRequests, setSelectedAssignedRequests] = useState({});
     const [loading, setLoading] = useState(true);
+    const [postingFees, setPostingFees] = useState({
+        fixedFee: 2,
+        tier1Percentage: 5,
+        tier2Percentage: 4,
+        tier3Percentage: 3,
+        tier1Max: 50,
+        tier2Max: 200,
+        tier3Max: 500
+    });
+    const [isEditingFees, setIsEditingFees] = useState(false);
+    const [feesLoading, setFeesLoading] = useState(true);
+    const [weeklyIncome, setWeeklyIncome] = useState({
+        total: 0,
+        breakdown: [],
+        startDate: '',
+        endDate: ''
+    });
+    const [incomeLoading, setIncomeLoading] = useState(true);
 
     useEffect(() => {
         fetchPendingRequests();
         fetchAssignedRequests();
         fetchCompletedRequests();
+        fetchPostingFees();
+        fetchWeeklyIncome();
     }, []);
 
     const fetchPendingRequests = async () => {
@@ -139,6 +179,115 @@ export default function ManagerDashboard() {
         } catch (error) {
             console.error("Error assigning experts", error);
         }
+    };
+
+    const fetchPostingFees = async () => {
+        try {
+            setFeesLoading(true);
+            const res = await axios.get("/api/manager/posting-fees");
+            if (res.data) {
+                setPostingFees({
+                    fixedFee: Number(res.data.fixedFee) || 2,
+                    tier1Percentage: Number(res.data.tier1Percentage) || 5,
+                    tier2Percentage: Number(res.data.tier2Percentage) || 4,
+                    tier3Percentage: Number(res.data.tier3Percentage) || 3,
+                    tier1Max: Number(res.data.tier1Max) || 50,
+                    tier2Max: Number(res.data.tier2Max) || 200,
+                    tier3Max: Number(res.data.tier3Max) || 500
+                });
+            }
+        } catch (error) {
+            console.error("Error fetching posting fees", error);
+            // Set default values if fetch fails
+            setPostingFees({
+                fixedFee: 2,
+                tier1Percentage: 5,
+                tier2Percentage: 4,
+                tier3Percentage: 3,
+                tier1Max: 50,
+                tier2Max: 200,
+                tier3Max: 500
+            });
+        } finally {
+            setFeesLoading(false);
+        }
+    };
+
+    const fetchWeeklyIncome = async () => {
+        try {
+            setIncomeLoading(true);
+            const res = await axios.get("/api/manager/weekly-income");
+            setWeeklyIncome(res.data);
+        } catch (error) {
+            console.error("Error fetching weekly income", error);
+        } finally {
+            setIncomeLoading(false);
+        }
+    };
+
+    const handleSavePostingFees = async () => {
+        try {
+            await axios.put("/api/manager/posting-fees", postingFees);
+            setIsEditingFees(false);
+            await fetchPostingFees(); // Refresh the data
+        } catch (error) {
+            console.error("Error updating posting fees", error);
+            alert("Failed to update posting fees");
+        }
+    };
+
+    const getChartData = () => {
+      return {
+        labels: weeklyIncome.breakdown.map(item => item.category),
+        datasets: [
+          {
+            label: 'Income by Category',
+            data: weeklyIncome.breakdown.map(item => item.amount),
+            backgroundColor: [
+              'rgba(54, 162, 235, 0.6)',
+              'rgba(75, 192, 192, 0.6)',
+              'rgba(153, 102, 255, 0.6)',
+              'rgba(255, 159, 64, 0.6)',
+              'rgba(255, 99, 132, 0.6)',
+            ],
+            borderColor: [
+              'rgba(54, 162, 235, 1)',
+              'rgba(75, 192, 192, 1)',
+              'rgba(153, 102, 255, 1)',
+              'rgba(255, 159, 64, 1)',
+              'rgba(255, 99, 132, 1)',
+            ],
+            borderWidth: 1,
+          },
+        ],
+      };
+    };
+
+    const chartOptions = {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: {
+          position: 'top',
+        },
+        title: {
+          display: true,
+          text: 'Weekly Income by Category',
+          font: {
+            size: 16,
+          },
+        },
+      },
+      scales: {
+        y: {
+          beginAtZero: true,
+          ticks: {
+            callback: function(value) {
+              return '£' + value;
+            }
+          }
+        }
+      }
     };
 
     return (
@@ -290,6 +439,221 @@ export default function ManagerDashboard() {
                         </tbody>
                     </table>
                 </div>
+            </div>
+
+            {/* Posting Fees Configuration */}
+            <div className="border border-gray-300 p-4 rounded-lg">
+                <div className="flex flex-col md:flex-row justify-between items-center mb-4">
+                    <h3 className="font-semibold text-xl md:text-2xl text-center md:text-left">Posting Fees Configuration</h3>
+                    <button
+                        className={`${
+                            isEditingFees ? 'bg-green-600' : 'bg-blue-600'
+                        } text-white px-4 py-2 rounded w-full md:w-auto mt-2 md:mt-0`}
+                        onClick={() => {
+                            if (isEditingFees) {
+                                handleSavePostingFees();
+                            } else {
+                                setIsEditingFees(true);
+                            }
+                        }}
+                    >
+                        {isEditingFees ? 'Save Changes' : 'Edit Fees'}
+                    </button>
+                </div>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-4">
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700">Fixed Fee (Up to £{postingFees.tier1Max})</label>
+                            <div className="mt-1 flex items-center">
+                                <span className="text-gray-500">£</span>
+                                <input
+                                    type="number"
+                                    step="0.01"
+                                    min="0"
+                                    value={postingFees.fixedFee}
+                                    onChange={(e) => setPostingFees(prev => ({
+                                        ...prev,
+                                        fixedFee: Number(e.target.value) || 0
+                                    }))}
+                                    disabled={!isEditingFees}
+                                    className="ml-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 disabled:bg-gray-100"
+                                />
+                            </div>
+                        </div>
+
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700">
+                                Tier 1 Percentage (£{postingFees.tier1Max + 1} - £{postingFees.tier2Max})
+                            </label>
+                            <div className="mt-1 flex items-center">
+                                <input
+                                    type="number"
+                                    value={postingFees.tier1Percentage}
+                                    onChange={(e) => setPostingFees(prev => ({
+                                        ...prev,
+                                        tier1Percentage: parseFloat(e.target.value)
+                                    }))}
+                                    disabled={!isEditingFees}
+                                    className="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 disabled:bg-gray-100"
+                                />
+                                <span className="ml-2">%</span>
+                            </div>
+                        </div>
+
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700">
+                                Tier 2 Percentage (£{postingFees.tier2Max + 1} - £{postingFees.tier3Max})
+                            </label>
+                            <div className="mt-1 flex items-center">
+                                <input
+                                    type="number"
+                                    value={postingFees.tier2Percentage}
+                                    onChange={(e) => setPostingFees(prev => ({
+                                        ...prev,
+                                        tier2Percentage: parseFloat(e.target.value)
+                                    }))}
+                                    disabled={!isEditingFees}
+                                    className="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 disabled:bg-gray-100"
+                                />
+                                <span className="ml-2">%</span>
+                            </div>
+                        </div>
+
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700">
+                                Tier 3 Percentage (Above £{postingFees.tier3Max})
+                            </label>
+                            <div className="mt-1 flex items-center">
+                                <input
+                                    type="number"
+                                    value={postingFees.tier3Percentage}
+                                    onChange={(e) => setPostingFees(prev => ({
+                                        ...prev,
+                                        tier3Percentage: parseFloat(e.target.value)
+                                    }))}
+                                    disabled={!isEditingFees}
+                                    className="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 disabled:bg-gray-100"
+                                />
+                                <span className="ml-2">%</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="bg-gray-50 p-4 rounded-lg">
+                        <h4 className="font-medium text-lg mb-4">Current Fee Structure:</h4>
+                        {feesLoading ? (
+                            <div className="text-gray-500">Loading fee structure...</div>
+                        ) : (
+                            <div className="overflow-x-auto">
+                                <table className="w-full border-collapse">
+                                    <thead>
+                                        <tr className="bg-gray-100">
+                                            <th className="border border-gray-300 px-4 py-2 text-left">Price Range</th>
+                                            <th className="border border-gray-300 px-4 py-2 text-left">Fee Structure</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr>
+                                            <td className="border border-gray-300 px-4 py-2">Up to £{postingFees.tier1Max}</td>
+                                            <td className="border border-gray-300 px-4 py-2">£{postingFees.fixedFee} fixed fee</td>
+                                        </tr>
+                                        <tr>
+                                            <td className="border border-gray-300 px-4 py-2">
+                                                £{postingFees.tier1Max + 1} - £{postingFees.tier2Max}
+                                            </td>
+                                            <td className="border border-gray-300 px-4 py-2">
+                                                {postingFees.tier1Percentage}% of sale price
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td className="border border-gray-300 px-4 py-2">
+                                                £{postingFees.tier2Max + 1} - £{postingFees.tier3Max}
+                                            </td>
+                                            <td className="border border-gray-300 px-4 py-2">
+                                                {postingFees.tier2Percentage}% of sale price
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td className="border border-gray-300 px-4 py-2">
+                                                Above £{postingFees.tier3Max}
+                                            </td>
+                                            <td className="border border-gray-300 px-4 py-2">
+                                                {postingFees.tier3Percentage}% of sale price
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            </div>
+
+            {/* Weekly Income Report */}
+            <div className="border border-gray-300 p-4 rounded-lg">
+                <div className="flex flex-col md:flex-row justify-between items-center mb-4">
+                    <h3 className="font-semibold text-xl md:text-2xl text-center md:text-left">Weekly Income Report</h3>
+                    <button
+                        onClick={fetchWeeklyIncome}
+                        className="bg-blue-600 text-white px-4 py-2 rounded w-full md:w-auto mt-2 md:mt-0"
+                    >
+                        Refresh Report
+                    </button>
+                </div>
+                
+                {incomeLoading ? (
+                    <div className="text-center text-gray-500 py-4">Loading weekly income data...</div>
+                ) : (
+                    <>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                            <div className="bg-white p-4 rounded-lg border border-gray-200">
+                                <div className="text-center mb-4">
+                                    <h4 className="text-lg font-medium text-gray-900">Total Weekly Income</h4>
+                                    <p className="text-3xl font-bold text-green-600">£{weeklyIncome.total.toFixed(2)}</p>
+                                    <p className="text-sm text-gray-500 mt-1">
+                                        {weeklyIncome.startDate} - {weeklyIncome.endDate}
+                                    </p>
+                                </div>
+                            </div>
+                            
+                            <div className="bg-white p-4 rounded-lg border border-gray-200">
+                                <h4 className="text-lg font-medium text-gray-900 mb-4">Income Breakdown</h4>
+                                <div className="overflow-x-auto">
+                                    <table className="w-full border-collapse">
+                                        <thead>
+                                            <tr className="bg-gray-50">
+                                                <th className="px-4 py-2 border border-gray-200 text-left">Category</th>
+                                                <th className="px-4 py-2 border border-gray-200 text-right">Amount</th>
+                                                <th className="px-4 py-2 border border-gray-200 text-right">Percentage</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {weeklyIncome.breakdown.map((item, index) => (
+                                                <tr key={index} className="hover:bg-gray-50">
+                                                    <td className="px-4 py-2 border border-gray-200">{item.category}</td>
+                                                    <td className="px-4 py-2 border border-gray-200 text-right">
+                                                        £{item.amount.toFixed(2)}
+                                                    </td>
+                                                    <td className="px-4 py-2 border border-gray-200 text-right">
+                                                        {((item.amount / weeklyIncome.total) * 100).toFixed(1)}%
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Income Chart */}
+                        <div className="bg-white p-4 rounded-lg border border-gray-200">
+                            <div style={{ height: '400px' }}>
+                                <Bar data={getChartData()} options={chartOptions} />
+                            </div>
+                        </div>
+                    </>
+                )}
             </div>
         </div>
     );

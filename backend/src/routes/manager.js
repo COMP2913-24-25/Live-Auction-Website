@@ -148,4 +148,57 @@ router.put('/authentication-requests/reassign', async (req, res) => {
     }
 });
 
+// Add these routes to your manager.js file
+
+router.get('/posting-fees', async (req, res) => {
+    try {
+        const fees = await knex('posting_fees').first();
+        res.json(fees);
+    } catch (error) {
+        console.error('Error fetching posting fees:', error);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
+router.put('/posting-fees', async (req, res) => {
+    try {
+        await knex('posting_fees').update(req.body);
+        res.json({ message: 'Posting fees updated successfully' });
+    } catch (error) {
+        console.error('Error updating posting fees:', error);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
+// Add this new route to your manager.js file
+router.get('/weekly-income', async (req, res) => {
+    try {
+        const startDate = new Date();
+        startDate.setDate(startDate.getDate() - 7);
+        
+        const income = await knex('auctions')
+            .select(
+                'categories.name as category',
+                knex.raw('SUM(final_price * fee_percentage / 100) as amount')
+            )
+            .join('items', 'auctions.item_id', 'items.id')
+            .join('categories', 'items.category_id', 'categories.id')
+            .where('auctions.end_time', '>=', startDate)
+            .where('auctions.status', 'completed')
+            .groupBy('categories.name');
+
+        const total = income.reduce((sum, item) => sum + Number(item.amount), 0);
+
+        res.json({
+            total,
+            breakdown: income,
+            startDate: startDate.toISOString().split('T')[0],
+            endDate: new Date().toISOString().split('T')[0]
+        });
+    } catch (error) {
+        console.error('Error fetching weekly income:', error);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
 module.exports = router;
