@@ -10,32 +10,32 @@ const ExpertListPage = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
 
-  // Fetch expert list
+  // Get the list of experts
   useEffect(() => {
     const fetchExperts = async () => {
       try {
-        // Try fetching data from API
+        // Try to get data from API
         const response = await axios.get('/api/users/experts');
-
+        
         if (response.data.success) {
           setExperts(response.data.experts);
         } else {
-          // If API fails, use mock data
+          // If the API fails, use mock data
           console.log('Using mock expert data');
           const mockExperts = [
-            { id: 1, username: 'Expert Zhang', email: 'zhang@example.com', role: 2, specialization: 'Antique Appraisal' },
-            { id: 2, username: 'Expert Li', email: 'li@example.com', role: 2, specialization: 'Art Appraisal' },
-            { id: 3, username: 'Expert Wang', email: 'wang@example.com', role: 2, specialization: 'Jewelry Appraisal' }
+            { id: 1, username: 'Zhang Expert', email: 'zhang@example.com', role: 2, specialization: 'Antique' },
+            { id: 2, username: 'Li Expert', email: 'li@example.com', role: 2, specialization: 'Art' },
+            { id: 3, username: 'Wang Expert', email: 'wang@example.com', role: 2, specialization: 'Jewelry' }
           ];
           setExperts(mockExperts);
         }
       } catch (err) {
-        console.error('Error fetching expert list:', err);
-        // Use mock data as fallback
+        console.error('Error getting expert list:', err);
+        // Use mock data as a backup
         const mockExperts = [
-          { id: 1, username: 'Expert Zhang', email: 'zhang@example.com', role: 2, specialization: 'Antique Appraisal' },
-          { id: 2, username: 'Expert Li', email: 'li@example.com', role: 2, specialization: 'Art Appraisal' },
-          { id: 3, username: 'Expert Wang', email: 'wang@example.com', role: 2, specialization: 'Jewelry Appraisal' }
+          { id: 1, username: 'Zhang Expert', email: 'zhang@example.com', role: 2, specialization: 'Antique' },
+          { id: 2, username: 'Li Expert', email: 'li@example.com', role: 2, specialization: 'Art' },
+          { id: 3, username: 'Wang Expert', email: 'wang@example.com', role: 2, specialization: 'Jewelry' }
         ];
         setExperts(mockExperts);
         setError('');
@@ -47,7 +47,7 @@ const ExpertListPage = () => {
     fetchExperts();
   }, []);
 
-  // Start new conversation
+  // Create a new conversation
   const handleStartConversation = async (expertId) => {
     if (!user) {
       navigate('/login');
@@ -55,24 +55,24 @@ const ExpertListPage = () => {
     }
 
     try {
-      // Try creating conversation via API
+      // Try to create a conversation through API
       const response = await axios.post('/api/messages', {
         receiver_id: expertId,
-        content: 'Hello, I would like to consult you about something.'
+        content: 'I want to consult some questions.'
       });
 
       if (response.data.success) {
         navigate(`/messages/${response.data.conversation_id}`);
       } else {
-        throw new Error(response.data.error || 'Failed to create conversation');
+        throw new Error(response.data.error || 'Failed to create a conversation');
       }
     } catch (err) {
-      console.error('Failed to create conversation via API, using mock fallback:', err);
-
-      // Use mock fallback to create conversation for demo
+      console.error('Failed to create a conversation through API, using mock data:', err);
+      
+      // Use mock data to create a conversation, only for demonstration
       const mockConversationId = Math.floor(Math.random() * 10000) + 1;
-
-      // You may choose to store some temporary conversation data to localStorage
+      
+      // You can choose to store some temporary conversation data in localStorage
       const mockConversation = {
         id: mockConversationId,
         expert_id: expertId,
@@ -81,21 +81,21 @@ const ExpertListPage = () => {
           id: 1,
           sender_id: user?.id || 1,
           receiver_id: expertId,
-          content: 'Hello, I would like to consult you about something.',
+          content: 'I want to consult some questions.',
           created_at: new Date().toISOString(),
           is_read: false
         }]
       };
-
-      // Store mock conversation data (demo only)
+      
+      // Store simulated session data (for demonstration only)
       try {
         const existingMockData = JSON.parse(localStorage.getItem('mockConversations')) || [];
         localStorage.setItem('mockConversations', JSON.stringify([...existingMockData, mockConversation]));
       } catch (e) {
         console.error('Failed to store mock conversation data:', e);
       }
-
-      // Navigate to conversation page
+      
+      // Navigate to the conversation page
       navigate(`/messages/${mockConversationId}?mock=true`);
     }
   };
@@ -106,9 +106,9 @@ const ExpertListPage = () => {
   return (
     <div className="container mx-auto px-4 py-8">
       <h1 className="text-2xl font-bold mb-6">Expert List</h1>
-
+      
       {experts.length === 0 ? (
-        <p className="text-center text-gray-500">No experts available</p>
+        <p className="text-center text-gray-500">No available experts</p>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {experts.map(expert => (
@@ -120,10 +120,10 @@ const ExpertListPage = () => {
                   </div>
                   <div>
                     <h3 className="font-bold text-lg">{expert.username}</h3>
-                    <p className="text-sm text-gray-600">{expert.specialization || 'Professional Appraiser'}</p>
+                    <p className="text-sm text-gray-600">{expert.specialization || 'Expert'}</p>
                   </div>
                 </div>
-
+                
                 <button
                   onClick={() => handleStartConversation(expert.id)}
                   className="w-full bg-blue-500 text-white py-2 rounded hover:bg-blue-600 transition-colors"
@@ -139,4 +139,4 @@ const ExpertListPage = () => {
   );
 };
 
-export default ExpertListPage;
+export default ExpertListPage; 

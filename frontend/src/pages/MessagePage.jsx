@@ -17,21 +17,21 @@ const MessagePage = () => {
   const [isMockMode, setIsMockMode] = useState(false);
   const [mockMessages, setMockMessages] = useState([]);
 
-  // Fetch conversation info and message history
+  // Get conversation information and message history
   useEffect(() => {
     const searchParams = new URLSearchParams(window.location.search);
     const mockMode = searchParams.get('mock') === 'true';
     setIsMockMode(mockMode);
-
+    
     if (mockMode) {
-      // Get mock conversation data from localStorage
+      // Gets mock session data from localStorage
       try {
         const mockConversations = JSON.parse(localStorage.getItem('mockConversations')) || [];
         const mockConversation = mockConversations.find(c => c.id === Number(conversationId));
-
+        
         if (mockConversation) {
           setMockMessages(mockConversation.messages || []);
-          // Set other necessary state...
+          // Set other necessary states...
           setLoading(false);
         }
       } catch (e) {
@@ -46,24 +46,24 @@ const MessagePage = () => {
               'Authorization': `Bearer ${localStorage.getItem('token')}`
             }
           });
-
+          
           if (response.data.success) {
             setMessages(response.data.messages);
             setConversation(response.data.conversation);
-
-            // Determine the other participant in the conversation
+            
+            // Determine the other party user in the conversation
             const otherUserId = user.id === response.data.conversation.user_id
               ? response.data.conversation.expert_id
               : response.data.conversation.user_id;
-
-            // Fetch the other user's info
+            
+            // Get the other party user information
             try {
               const userResponse = await axios.get(`/api/users/${otherUserId}`);
               if (userResponse.data.success) {
                 setOtherUser(userResponse.data.user);
               } else {
-                // Use default value if user info request fails
-                console.log('Using default user info');
+                // Use default values instead of failed user information request
+                console.log('Using default user information');
                 setOtherUser({
                   id: otherUserId,
                   username: otherUserId === response.data.conversation.expert_id ? 'Expert User' : 'Regular User',
@@ -71,7 +71,7 @@ const MessagePage = () => {
                 });
               }
             } catch (userErr) {
-              console.error('Failed to get user info, using default:', userErr);
+              console.error('Failed to get user information, using default values:', userErr);
               setOtherUser({
                 id: otherUserId,
                 username: otherUserId === response.data.conversation.expert_id ? 'Expert User' : 'Regular User',
@@ -79,10 +79,10 @@ const MessagePage = () => {
               });
             }
           } else {
-            setError(response.data.error || 'Failed to retrieve conversation info');
+            setError(response.data.error || 'Failed to get conversation information');
           }
         } catch (err) {
-          console.error('Error retrieving conversation info:', err);
+          console.error('Failed to get conversation information:', err);
           setError('Failed to load conversation content');
         } finally {
           setLoading(false);
@@ -95,7 +95,7 @@ const MessagePage = () => {
     }
   }, [conversationId, user]);
 
-  // Auto-scroll to latest message
+  // Automatically scroll to the latest message
   useEffect(() => {
     if (messagesEndRef.current) {
       messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
@@ -104,11 +104,11 @@ const MessagePage = () => {
 
   const handleSendMessage = async (e) => {
     e.preventDefault();
-
+    
     if (!newMessage.trim()) return;
-
+    
     if (isMockMode) {
-      // Handle mock message sending
+      // Handle simulated message sending
       const newMockMessage = {
         id: Date.now(),
         conversation_id: Number(conversationId),
@@ -118,12 +118,12 @@ const MessagePage = () => {
         created_at: new Date().toISOString(),
         is_read: false
       };
-
+      
       // Update local state
       setMockMessages([...mockMessages, newMockMessage]);
       setNewMessage('');
-
-      // Update localStorage mock data
+      
+      // Update mock data in localStorage
       try {
         const mockConversations = JSON.parse(localStorage.getItem('mockConversations')) || [];
         const updatedMockConversations = mockConversations.map(c => {
@@ -139,21 +139,21 @@ const MessagePage = () => {
       } catch (e) {
         console.error('Failed to update mock conversation data:', e);
       }
-
-      // Simulate auto-reply after delay
+      
+      // Simulate a delay and add an automatic reply
       setTimeout(() => {
         const autoReply = {
           id: Date.now() + 1,
           conversation_id: Number(conversationId),
           sender_id: otherUser?.id || 2,
           receiver_id: user?.id || 1,
-          content: 'Hello, I received your message. How can I help you?',
+          content: 'Hello, I have received your consultation. What can I help you with?',
           created_at: new Date().toISOString(),
           is_read: false
         };
-
+        
         setMockMessages(prev => [...prev, autoReply]);
-
+        
         // Also update localStorage
         try {
           const mockConversations = JSON.parse(localStorage.getItem('mockConversations')) || [];
@@ -171,21 +171,21 @@ const MessagePage = () => {
           console.error('Failed to update mock conversation data:', e);
         }
       }, 1000);
-
+      
       return;
     }
-
+    
     if (!newMessage.trim() || !user || !otherUser) return;
-
+    
     try {
       setSending(true);
-
+      
       const response = await axios.post('/api/messages', {
         conversation_id: conversationId,
         receiver_id: otherUser.id,
         content: newMessage
       });
-
+      
       if (response.data.success) {
         setMessages([...messages, response.data.message]);
         setNewMessage('');
@@ -193,7 +193,7 @@ const MessagePage = () => {
         setError(response.data.error || 'Failed to send message');
       }
     } catch (err) {
-      console.error('Error sending message:', err);
+      console.error('Failed to send message:', err);
       setError('Failed to send message');
     } finally {
       setSending(false);
@@ -203,7 +203,7 @@ const MessagePage = () => {
   if (!user) {
     return (
       <div className="max-w-2xl mx-auto my-8 p-6 bg-white rounded-lg shadow-md">
-        <p className="text-center text-gray-600 mb-4">Please log in to view messages</p>
+        <p className="text-center text-gray-600 mb-4">Please login to view messages</p>
         <div className="text-center">
           <Link to="/login" className="bg-blue-500 text-white px-4 py-2 rounded">
             Login
@@ -215,7 +215,7 @@ const MessagePage = () => {
 
   if (loading) return <div className="text-center p-8">Loading...</div>;
   if (error) return <div className="text-red-500 p-8 text-center">{error}</div>;
-  if (!conversation) return <div className="text-center p-8">Conversation not found or inaccessible</div>;
+  if (!conversation) return <div className="text-center p-8">Conversation does not exist or cannot be accessed</div>;
 
   const messagesToDisplay = isMockMode ? mockMessages : messages;
 
@@ -226,32 +226,32 @@ const MessagePage = () => {
         <Link to="/messages" className="mr-4 text-blue-500 hover:text-blue-700">
           &larr; Back
         </Link>
-
+        
         <div className="flex items-center flex-grow">
           <div className="w-10 h-10 rounded-full bg-blue-200 flex items-center justify-center mr-3">
             {otherUser?.username?.charAt(0).toUpperCase() || '?'}
           </div>
           <div>
-            <h2 className="font-medium">{otherUser?.username || 'Unknown User'}</h2>
+            <h2 className="font-medium">{otherUser?.username || 'Unknown user'}</h2>
             <p className="text-xs text-gray-500">
               {otherUser?.role === 2 ? 'Expert' : 'User'}
             </p>
           </div>
         </div>
       </div>
-
+      
       {/* Message list */}
       <div className="h-96 overflow-y-auto p-4 bg-gray-50">
         {messagesToDisplay.length === 0 ? (
           <div className="text-center text-gray-500 py-10">
-            No messages yet. Start the conversation!
+            No messages yet, start sending your first message
           </div>
         ) : (
           <div className="space-y-4">
             {messagesToDisplay.map(message => {
               const isOwnMessage = message.sender_id === user.id;
-              console.log('Message:', message, 'Current user:', user.id, 'Own message:', isOwnMessage);
-
+              console.log('Message:', message, 'Current user:', user.id, 'Is own message:', isOwnMessage);
+              
               return (
                 <div 
                   key={message.id} 
@@ -276,15 +276,15 @@ const MessagePage = () => {
           </div>
         )}
       </div>
-
-      {/* Message input */}
+      
+      {/* Message input box */}
       <div className="p-4 border-t">
         <form onSubmit={handleSendMessage} className="flex">
           <input
             type="text"
             value={newMessage}
             onChange={(e) => setNewMessage(e.target.value)}
-            placeholder="Type a message..."
+            placeholder="Enter message..."
             className="flex-grow border rounded-l-lg p-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
             disabled={sending}
           />
@@ -301,4 +301,4 @@ const MessagePage = () => {
   );
 };
 
-export default MessagePage;
+export default MessagePage; 

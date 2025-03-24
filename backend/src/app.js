@@ -38,12 +38,12 @@ app.use(async (req, res, next) => {
   try {
     console.log('🔍 AUTH Middleware - Request path:', req.path);
     console.log('🔍 AUTH Middleware - Authorization header:', req.headers.authorization);
-
-    // Get token in multiple ways
+    
+    // Multiple ways to obtain tokens
     const token = req.cookies.token || 
                  (req.headers.authorization && req.headers.authorization.split(' ')[1]) ||
                  req.query.token;
-
+                 
     console.log('🔍 AUTH Middleware - Extracted token:', token ? token.substring(0, 15) + '...' : 'None');
 
     if (token) {
@@ -53,13 +53,13 @@ app.use(async (req, res, next) => {
           process.env.SECRET_KEY || 'temporary_secret_key_for_testing'
         );
         console.log('Successfully decoded token:', decoded);
-
+        
         // Get the latest user information from the database
         const user = await knex('users')
           .where({ id: decoded.id })
           .select('id', 'email', 'role', 'username')
           .first();
-
+          
         if (user) {
           req.user = user;
           console.log('User attached to request:', req.user);
@@ -72,10 +72,10 @@ app.use(async (req, res, next) => {
     } else {
       console.log('No token found in request');
     }
-
+    
     next();
   } catch (error) {
-    console.error('💥 Authentication middleware error:', error);
+    console.error('💥 AUTH Middleware Error:', error);
     next();
   }
 });
@@ -86,7 +86,7 @@ app.use('/api/auctions', auctionRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api', categoriesRoutes);
 app.use('/api/authentication', authenticationRoutes);
-app.use('/api/bids', bidsRoutes);  // Temporarily commented out
+app.use('/api/bids', bidsRoutes);  
 app.use('/api/search', searchRoutes);
 app.use('/api/manager', managerRoutes);
 app.use('/api/notifications', notificationsRoutes);
@@ -100,17 +100,17 @@ app.get('/', (req, res) => {
 
 // Add test route
 app.get('/api/test', (req, res) => {
-  res.json({ message: 'Server is running properly' });
+  res.json({ message: 'The server is running properly' });
 });
 
 app.use((req, res) => {
-  console.log('Route not found:', req.method, req.path);
+  console.log('No route found:', req.method, req.path);
   res.status(404).json({ error: 'Route not found' });
 });
 
 app.use((err, req, res, next) => {
   console.error('Server error:', err);
-  res.status(500).json({ error: 'Internal server error' });
+  res.status(500).json({ error: 'Server internal error' });
 });
 
 module.exports = app;
