@@ -19,6 +19,8 @@ const managerRoutes = require('./routes/manager');
 const notificationsRoutes = require('./routes/notifications');
 const authenticationRoutes = require('./routes/authentication');
 const bidsRoutes = require('./routes/bids'); 
+const messagesRoutes = require('./routes/messages');
+const usersRoutes = require('./routes/users');
 
 // CORS configuration
 app.use(cors({
@@ -34,11 +36,15 @@ app.use(cookieParser());
 // Add authentication middleware
 app.use(async (req, res, next) => {
   try {
-    console.log('🔐 认证中间件 - 请求路径:', req.path);
-    console.log('🔐 认证中间件 - Headers:', req.headers);
-    
-    const token = req.cookies.token || (req.headers.authorization && req.headers.authorization.split(' ')[1]);
-    console.log('🔐 认证中间件 - 提取的token:', token ? '存在' : '不存在');
+    console.log('🔍 AUTH Middleware - Request path:', req.path);
+    console.log('🔍 AUTH Middleware - Authorization header:', req.headers.authorization);
+
+    // Get token in multiple ways
+    const token = req.cookies.token || 
+                 (req.headers.authorization && req.headers.authorization.split(' ')[1]) ||
+                 req.query.token;
+
+    console.log('🔍 AUTH Middleware - Extracted token:', token ? token.substring(0, 15) + '...' : 'None');
 
     if (token) {
       try {
@@ -47,13 +53,13 @@ app.use(async (req, res, next) => {
           process.env.SECRET_KEY || 'temporary_secret_key_for_testing'
         );
         console.log('Successfully decoded token:', decoded);
-        
+
         // Get the latest user information from the database
         const user = await knex('users')
           .where({ id: decoded.id })
           .select('id', 'email', 'role', 'username')
           .first();
-          
+
         if (user) {
           req.user = user;
           console.log('User attached to request:', req.user);
@@ -66,10 +72,10 @@ app.use(async (req, res, next) => {
     } else {
       console.log('No token found in request');
     }
-    
+
     next();
   } catch (error) {
-    console.error('💥 认证中间件错误:', error);
+    console.error('💥 Authentication middleware error:', error);
     next();
   }
 });
@@ -80,29 +86,31 @@ app.use('/api/auctions', auctionRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api', categoriesRoutes);
 app.use('/api/authentication', authenticationRoutes);
-app.use('/api/bids', bidsRoutes);  // 暂时注释掉
+app.use('/api/bids', bidsRoutes);  // Temporarily commented out
 app.use('/api/search', searchRoutes);
 app.use('/api/manager', managerRoutes);
 app.use('/api/notifications', notificationsRoutes);
+app.use('/api', messagesRoutes);
+app.use('/api/users', usersRoutes);
 
 // Example route
 app.get('/', (req, res) => {
   res.send('Hello from the backend!');
 });
 
-// 添加测试路由
+// Add test route
 app.get('/api/test', (req, res) => {
-  res.json({ message: '服务器正常运行' });
+  res.json({ message: 'Server is running properly' });
 });
 
 app.use((req, res) => {
-  console.log('未找到路由:', req.method, req.path);
-  res.status(404).json({ error: '路由未找到' });
+  console.log('Route not found:', req.method, req.path);
+  res.status(404).json({ error: 'Route not found' });
 });
 
 app.use((err, req, res, next) => {
-  console.error('服务器错误:', err);
-  res.status(500).json({ error: '服务器内部错误' });
+  console.error('Server error:', err);
+  res.status(500).json({ error: 'Internal server error' });
 });
 
 module.exports = app;

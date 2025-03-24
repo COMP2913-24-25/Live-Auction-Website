@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { Menu, Bell, Search, LogOut, AlertCircle, Check, Clock, ArrowRight } from "lucide-react";
+import { Menu, Bell, Search, LogOut, AlertCircle, Check, Clock, ArrowRight, MessageSquare, UserIcon } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import { useNotifications } from "../context/notificationContext";
 
@@ -14,7 +14,9 @@ function NavBar() {
     const navigate = useNavigate();
   
     const { notifications, unreadCount, markAsRead } = useNotifications();
-    console.log(notifications);
+    if (notifications && notifications.length > 0) {
+      console.log('There is a new notice:', notifications.length);
+    }
 
     useEffect(() => {
       function handleClickOutside(event) {
@@ -101,6 +103,26 @@ function NavBar() {
                             Users
                           </Link>
                         </>
+                      )}
+
+                      {isAuthenticated && (
+                        <Link 
+                          to="/messages" 
+                          className="text-white hover:text-blue-200 font-medium transition-colors duration-200 flex items-center"
+                        >
+                          <MessageSquare className="h-4 w-4 mr-1" />
+                          Message
+                        </Link>
+                      )}
+
+                      {isAuthenticated && (
+                        <Link 
+                          to="/experts" 
+                          className="text-white hover:text-blue-200 font-medium transition-colors duration-200 flex items-center"
+                        >
+                          <UserIcon className="h-4 w-4 mr-1" />
+                          Expert consultation
+                        </Link>
                       )}
                     </>
                   )}

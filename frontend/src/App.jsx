@@ -13,6 +13,10 @@ import AuctionDetails from './pages/AuctionDetails';
 import AuctionForm from './pages/AuctionForm';
 import ItemAuthenticationForm from './pages/ItemAuthenticationForm';
 import Notifications from './pages/Notifications';
+import BidForm from './Components/BidForm';
+import MessagesPage from './pages/MessagesPage';
+import MessagePage from './pages/MessagePage';
+import ExpertListPage from './pages/ExpertListPage';
 
 const DashboardRouter = () => {
   const { user } = useAuth();
@@ -67,6 +71,9 @@ function App() {
               <Notifications />
             </ProtectedRoute>
           } />
+          <Route path="/messages" element={<MessagesPage />} />
+          <Route path="/messages/:conversationId" element={<MessagePage />} />
+          <Route path="/experts" element={<ExpertListPage />} />
         </Routes>
       </NotificationProvider>
     </AuthProvider>

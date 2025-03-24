@@ -9,6 +9,7 @@ exports.seed = async function (knex) {
   await knex("items").del();
   await knex("users").del();
   await knex("categories").del();
+  await knex("expert_categories").del();
 
   // Insert Users
   await knex("users").insert([
