@@ -1,3 +1,5 @@
+require('dotenv').config({ path: require('path').resolve(__dirname, '../../../.env') });
+
 const express = require('express');
 const router = express.Router();
 let stripe;
@@ -136,13 +138,13 @@ const savePaymentMethod = async (req, res) => {
       const result = await db('user_payment_methods').insert({
         user_id: req.user.id,
         payment_provider: 'Stripe',
-        tokenized_card_id,
+        tokenized_card_id: tokenizedCardId,
         last4,
         card_type: cardType,
         exp_month: parseInt(expMonth, 10),
         exp_year: parseInt(expYear, 10) + 2000, // 假设 YY 格式，转换为完整年份
         cvv: cvv,
-        created_at: new Date()
+        created_at: db.fn.now() // 使用数据库的NOW()函数
       });
       
       // 在 SQLite 中，insert 返回的是最后插入的 ID
@@ -455,60 +457,128 @@ router.get('/payment/:paymentId', authenticateToken, getPaymentDetails);
 router.get('/item-payment-status/:itemId', getItemPaymentStatus);
 router.post('/webhook', express.raw({ type: 'application/json' }), handleWebhook);
 
-// 添加支付方式
+// 获取用户的支付方式
+router.get('/methods', authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    console.log(`Getting payment methods for user ${userId}`);
+    
+    // 查询用户的支付方式
+    const payments = await db('user_payment_methods')
+      .where({ user_id: userId })
+      .select('id', 'user_id', 'tokenized_card_id', 'last4', 'card_type', 'exp_month', 'exp_year', 'cvv', 'created_at');
+    
+    // 格式化响应，使其与前端代码兼容
+    const formattedPayments = payments.map(payment => ({
+      id: payment.id,
+      user_id: payment.user_id,
+      payment_method_id: payment.tokenized_card_id, // 为了保持向后兼容
+      tokenized_card_id: payment.tokenized_card_id,
+      last4: payment.last4,
+      brand: payment.card_type, // 前端代码可能在使用brand，所以这里提供
+      card_type: payment.card_type,
+      exp_month: payment.exp_month,
+      exp_year: payment.exp_year,
+      cvv: payment.cvv,
+      created_at: payment.created_at
+    }));
+    
+    console.log(`Got payment methods for user ${userId}:`, formattedPayments);
+    
+    return res.json(formattedPayments);
+  } catch (error) {
+    console.error('Error obtaining payment method:', error);
+    return res.status(500).json({ error: 'Error obtaining payment method' });
+  }
+});
+
+// 添加新的支付方式
 router.post('/methods', authenticateToken, async (req, res) => {
   try {
-    console.log('The request to add payment method was received:', new Date().toISOString());
-    console.log('Request body:', req.body);
-    console.log('User ID:', req.user.id);
+    const { tokenized_card_id, user_id, card_type, last4, exp_month, exp_year, cvv } = req.body;
     
-    const { payment_provider, tokenized_card_id, last4, card_type, exp_month, exp_year, cvv } = req.body;
+    console.log('Received payment method request:', req.body);
     
-    // 验证必要字段
-    if (!payment_provider || !tokenized_card_id || !last4 || !card_type || !exp_month || !exp_year) {
-      return res.status(400).json({ error: 'Missing required fields' });
+    // 验证用户ID是否与当前登录用户匹配
+    if (parseInt(user_id) !== req.user.id) {
+      return res.status(403).json({ error: 'You are not authorized to add payment methods for other users' });
     }
     
-    // 插入支付方式 - 添加 cvv 字段（如果数据库需要）
-    const [paymentMethodId] = await db('user_payment_methods').insert({
-      user_id: req.user.id,
-      payment_provider,
+    // 检查是否已存在相同的支付方式
+    const existingMethod = await db('user_payment_methods')
+      .where({ tokenized_card_id, user_id })
+      .first();
+    
+    if (existingMethod) {
+      return res.json({ message: 'Payment method already exists', id: existingMethod.id });
+    }
+    
+    // 准备插入数据 - 修复日期格式
+    const paymentData = {
+      user_id,
+      payment_provider: 'Stripe',
       tokenized_card_id,
       last4,
       card_type,
       exp_month,
       exp_year,
-      cvv: cvv || '000' // 提供默认值，实际应用中不应存储真实 CVV
-    });
+      cvv,
+      created_at: db.fn.now() // 使用数据库的NOW()函数
+    };
     
-    console.log('Payment method added successfully, ID:', paymentMethodId);
+    console.log('Preparing to insert data:', paymentData);
     
-    res.status(201).json({ 
-      id: paymentMethodId,
-      message: 'Payment method added successfully' 
+    // 插入新支付方式
+    const [id] = await db('user_payment_methods').insert(paymentData);
+    
+    console.log(`User ${user_id} added a new payment method:`, { id, tokenized_card_id, card_type, last4 });
+    
+    return res.status(201).json({ 
+      message: 'Payment method added successfully', 
+      id, 
+      tokenized_card_id,
+      card_type,
+      last4,
+      exp_month,
+      exp_year,
+      cvv
     });
   } catch (error) {
     console.error('Error adding payment method:', error);
+    
     // 详细记录错误信息
     if (error.code) console.error('Error code:', error.code);
     if (error.errno) console.error('Error number:', error.errno);
     if (error.sql) console.error('SQL:', error.sql);
     
-    res.status(500).json({ error: 'Internal server error', details: error.message });
+    return res.status(500).json({ error: 'Failed to add payment method', details: error.message });
   }
 });
 
-router.get('/methods', authenticateToken, async (req, res) => {
+// 删除支付方式
+router.delete('/methods/:id', authenticateToken, async (req, res) => {
   try {
-    // 修改查询，移除 is_default 字段
-    const paymentMethods = await db('user_payment_methods')
-      .where({ user_id: req.user.id })
-      .select('id', 'payment_provider', 'last4', 'card_type', 'exp_month', 'exp_year', 'created_at');
+    const methodId = req.params.id;
+    const userId = req.user.id;
     
-    res.json(paymentMethods);
+    // 查询支付方式是否属于当前用户
+    const method = await db('user_payment_methods')
+      .where({ id: methodId, user_id: userId })
+      .first();
+    
+    if (!method) {
+      return res.status(404).json({ error: 'Payment method does not exist or does not belong to the current user' });
+    }
+    
+    // 删除支付方式
+    await db('user_payment_methods')
+      .where({ id: methodId })
+      .delete();
+    
+    return res.json({ message: 'Payment method deleted' });
   } catch (error) {
-    console.error('Error fetching payment methods:', error);
-    res.status(500).json({ error: 'Server error' });
+    console.error('Error deleting payment method:', error);
+    return res.status(500).json({ error: 'Failed to delete payment method' });
   }
 });
 

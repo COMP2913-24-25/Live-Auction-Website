@@ -1,6 +1,5 @@
 import { Navigate, BrowserRouter as Router, Route, Routes } from 'react-router-dom';
-import { AuthProvider } from "./context/authContext";
-import { useAuth } from './context/authContext';
+import { AuthProvider, useAuth } from "./context/authContext";
 import { NotificationProvider } from './context/notificationContext';
 import Browse from "./pages/Browse";
 import Login from "./pages/Login";
@@ -13,6 +12,8 @@ import AuctionDetails from './pages/AuctionDetails';
 import AuctionForm from './pages/AuctionForm';
 import ItemAuthenticationForm from './pages/ItemAuthenticationForm';
 import Notifications from './pages/Notifications';
+import ExpertAvailability from './Components/ExpertAvailability';
+import AvailableExperts from './pages/AvailableExperts';
 
 const DashboardRouter = () => {
   const { user } = useAuth();
@@ -45,8 +46,13 @@ function App() {
             
             {/* Protected Routes */}
             <Route path="/dashboard" element={
-              <ProtectedRoute>
+              <ProtectedRoute allowedRoles={[2, 3]}>
                 <DashboardRouter />
+              </ProtectedRoute>
+            } />
+            <Route path="/experts" element={
+              <ProtectedRoute allowedRoles={[3]}>
+                <AvailableExperts />
               </ProtectedRoute>
             } />
             <Route path="/create-auction" 
@@ -61,15 +67,17 @@ function App() {
               <ProtectedRoute>
                 <Notifications />
               </ProtectedRoute>
+              } />
+            <Route path="/working-hours" element={
+              <ProtectedRoute allowedRoles={[2]}>
+                <ExpertAvailability />
+              </ProtectedRoute>
             } />
-            <Route 
-              path="/reviewed" 
-              element={
-                <ProtectedRoute allowedRoles={[2]}>
-                  <ExpertDashboard />
-                </ProtectedRoute>
-              } 
-            />
+            <Route path="/reviewed" element={
+              <ProtectedRoute allowedRoles={[2]}>
+                <ExpertDashboard />
+              </ProtectedRoute>
+            } />
           </Routes>
         </NotificationProvider>
       </AuthProvider>

@@ -6,8 +6,8 @@ import PropTypes from 'prop-types';
 const ProtectedRoute = ({ children, allowedRoles = [] }) => {
   const { isAuthenticated, user, loading } = useAuth();
 
-  console.log("ProtectedRoute - 用户:", user);
-  console.log("ProtectedRoute - 允许角色:", allowedRoles);
+  console.log("ProtectedRoute - User:", user);
+  console.log("ProtectedRoute - Allowed roles:", allowedRoles);
   console.log("ProtectedRoute - isAuthenticated:", isAuthenticated);
 
   // 如果正在加载，显示加载指示器

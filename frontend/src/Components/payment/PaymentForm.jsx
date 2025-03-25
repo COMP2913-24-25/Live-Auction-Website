@@ -1,196 +1,183 @@
-import React, { useState, useContext } from 'react';
+import React, { useState } from 'react';
 import axios from 'axios';
-import { AuthContext } from '../../context/authContext';
-import PropTypes from 'prop-types';
+import { useAuth } from '../../context/authContext';
 
-const PaymentForm = ({ amount, itemId, onSuccess, onSave, onCancel }) => {
+const PaymentForm = ({ onSubmitSuccess, amount }) => {
+  const [cardholderName, setCardholderName] = useState('');
   const [cardNumber, setCardNumber] = useState('');
-  const [expMonth, setExpMonth] = useState('');
-  const [expYear, setExpYear] = useState('');
+  const [expiryMonth, setExpiryMonth] = useState('');
+  const [expiryYear, setExpiryYear] = useState('');
   const [cvv, setCvv] = useState('');
-  const [name, setName] = useState('');
-  const [loading, setLoading] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
-  const { currentUser } = useContext(AuthContext);
+  const { user } = useAuth();
 
-  // Format card number input
-  const handleCardNumberChange = (e) => {
-    const value = e.target.value.replace(/\D/g, '');
-    const formattedValue = value.replace(/(\d{4})(?=\d)/g, '$1 ').trim();
-    setCardNumber(formattedValue);
-  };
-
-  // 修改月份输入处理函数，添加自动跳转功能
-  const handleExpMonthChange = (e) => {
-    const value = e.target.value.replace(/\D/g, '');
-    
-    // 只接受有效的月份值 (1-12)
-    if (value === '' || (parseInt(value) >= 1 && parseInt(value) <= 12)) {
-      setExpMonth(value);
-      
-      // 当输入了两位数字或输入了大于等于1的单个数字时自动跳转
-      if (value.length === 2 || (value.length === 1 && parseInt(value) > 1)) {
-        // 使用 setTimeout 确保状态更新后再跳转
-        setTimeout(() => {
-          // 获取年份输入框并聚焦
-          const yearInput = document.getElementById('exp-year-input');
-          if (yearInput) {
-            yearInput.focus();
-          }
-        }, 10);
-      }
-    }
-  };
-
-  // 处理年份输入，限制为两位数
-  const handleExpYearChange = (e) => {
-    const value = e.target.value.replace(/\D/g, '');
-    setExpYear(value.slice(0, 2));
-  };
-
-  // Format CVC input
-  const handleCvvChange = (e) => {
-    const value = e.target.value.replace(/\D/g, '');
-    setCvv(value.slice(0, 3));
-  };
-
-  // Submit form
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setLoading(true);
     setError('');
 
-    // Basic validation
-    if (!cardNumber || !expMonth || !expYear || !cvv || !name) {
-      setError('Please fill in all fields');
-      setLoading(false);
+    // 基本验证
+    if (!cardholderName.trim()) {
+      setError('Please enter the cardholder name');
+      return;
+    }
+
+    if (!cardNumber.trim() || cardNumber.replace(/\s/g, '').length !== 16) {
+      setError('Please enter a valid 16-digit card number');
+      return;
+    }
+
+    if (!expiryMonth || !expiryYear) {
+      setError('Please select the expiration date');
+      return;
+    }
+
+    if (!cvv.trim() || cvv.length < 3) {
+      setError('Please enter a valid security code');
       return;
     }
 
     try {
-      // 显示处理中状态
-      setLoading(true);
+      setIsSubmitting(true);
+
+      // 计算过期年份的完整格式 (例如: '26' -> '2026')
+      const fullYear = expiryYear.length === 2 ? `20${expiryYear}` : expiryYear;
       
-      // 模拟 API 延迟
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      // 生成一个模拟的tokenized_card_id (实际中应由支付处理器提供)
+      const tokenizedCardId = `tok_${Math.random().toString(36).substring(2, 10)}`;
       
-      // 模拟 Stripe API 响应
-      const stripeResponse = {
-        id: `tok_${Math.random().toString(36).substring(2, 15)}`,
-        object: 'token',
-        card: {
-          id: `card_${Math.random().toString(36).substring(2, 15)}`,
-          object: 'card',
-          brand: cardNumber.startsWith('4') ? 'Visa' : 
-                 cardNumber.startsWith('5') ? 'MasterCard' : 
-                 cardNumber.startsWith('3') ? 'American Express' : 'Unknown',
-          last4: cardNumber.replace(/\s/g, '').slice(-4),
-          exp_month: parseInt(expMonth),
-          exp_year: parseInt(expYear),
-          funding: 'credit',
-          country: 'US',
-          currency: 'usd'
-        },
-        created: Math.floor(Date.now() / 1000),
-        livemode: false
-      };
+      // 从卡号中提取最后4位数字
+      const last4 = cardNumber.replace(/\s/g, '').slice(-4);
+
+      // 确定卡类型 (简单版本)
+      let cardType;
+      const firstDigit = cardNumber.replace(/\s/g, '')[0];
+      if (firstDigit === '4') {
+        cardType = 'Visa';
+      } else if (firstDigit === '5') {
+        cardType = 'MasterCard';
+      } else if (firstDigit === '3') {
+        cardType = 'American Express';
+      } else if (firstDigit === '6') {
+        cardType = 'Discover';
+      } else {
+        cardType = 'Unknown';
+      }
+
+      // 获取用户ID
+      let userId;
       
-      console.log('Stripe API response:', stripeResponse);
-      
-      // 在请求前添加日志
-      console.log('Ready to send payment method save request...');
-      console.log('Request data:', {
-        payment_provider: 'Stripe',
-        tokenized_card_id: stripeResponse.id,
-        last4: stripeResponse.card.last4,
-        card_type: stripeResponse.card.brand,
-        exp_month: stripeResponse.card.exp_month,
-        exp_year: stripeResponse.card.exp_year
-      });
-      
-      // 向后端发送请求
-      const token = localStorage.getItem('token');
-      console.log('The authentication token used:', token);
-      
-      const response = await axios.post('/api/payment/methods', {
-        payment_provider: 'Stripe',
-        tokenized_card_id: stripeResponse.id,
-        last4: stripeResponse.card.last4,
-        card_type: stripeResponse.card.brand,
-        exp_month: stripeResponse.card.exp_month,
-        exp_year: stripeResponse.card.exp_year,
-        cvv: cvv
-      }, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
+      if (user && user.id) {
+        userId = user.id;
+        console.log('Get user ID from useAuth:', userId);
+      } else {
+        try {
+          const token = localStorage.getItem('token');
+          if (token) {
+            const base64Url = token.split('.')[1];
+            const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+            const payload = JSON.parse(window.atob(base64));
+            userId = payload.id;
+            console.log('Get user ID from JWT token:', userId);
+          } else {
+            throw new Error('User token not found');
+          }
+        } catch (error) {
+          console.error('Error getting user ID:', error);
+          setError('Unable to verify your identity, please log in again');
+          setIsSubmitting(false);
+          return;
         }
-      });
-      
-      console.log('The payment method is saved successfully:', response.data);
-      
-      // 生成随机 ID
-      const newCardId = Math.floor(Math.random() * 10000);
-      
-      // 模拟保存支付方式到服务器
-      console.log('Saving payment method to server...');
-      await new Promise(resolve => setTimeout(resolve, 500));
-      
-      // 模拟服务器响应
-      const mockResponse = {
-        id: newCardId,
-        last4: cardNumber.replace(/\s/g, '').slice(-4),
-        card_type: stripeResponse.card.brand,
-        exp_month: parseInt(expMonth),
-        exp_year: parseInt(expYear),
-        stripe_token_id: stripeResponse.id
+      }
+
+      if (!userId) {
+        setError('You need to log in to save your payment method');
+        setIsSubmitting(false);
+        return;
+      }
+
+      // 提交到服务器
+      const paymentMethodData = {
+        user_id: userId,
+        tokenized_card_id: tokenizedCardId,
+        card_type: cardType,
+        last4: last4,
+        exp_month: parseInt(expiryMonth),
+        exp_year: parseInt(fullYear),
+        cvv: cvv,
+        payment_provider: 'Stripe'
       };
-      
-      console.log('Payment method saved successfully:', mockResponse);
-      
-      setLoading(false);
-      
-      // 如果是从 PaymentCardSelector 调用，则返回新卡信息
-      if (onSave) {
-        onSave(mockResponse);
+
+      console.log('Submit payment method data:', paymentMethodData);
+
+      // 获取token
+      const token = localStorage.getItem('token');
+      if (!token) {
+        throw new Error('Token not found, please log in again');
       }
-      
-      // 如果是从 AuctionDetails 调用，则调用 onSuccess
-      if (onSuccess) {
-        onSuccess({
-          cardNumber: cardNumber.replace(/\s/g, ''),
-          expMonth,
-          expYear,
-          cvv,
-          name,
-          paymentMethodId: newCardId,
-          cardType: stripeResponse.card.brand
-        });
-      }
+
+      const response = await axios.post('/api/payment/methods', paymentMethodData, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+
+      console.log('Payment method saved successfully:', response.data);
+
+      // 回调父组件成功处理函数
+      onSubmitSuccess({ 
+        id: tokenizedCardId,
+        last4: last4,
+        brand: cardType,
+        exp_month: parseInt(expiryMonth),
+        exp_year: parseInt(fullYear)
+      });
+
     } catch (error) {
       console.error('Error saving payment method:', error);
-      if (error.response) {
-        console.error('Error response:', error.response.data);
-        console.error('Status code:', error.response.status);
-        console.error('Response header:', error.response.headers);
-      } else if (error.request) {
-        console.error('No response received:', error.request);
-      } else {
-        console.error('Request setting error:', error.message);
-      }
-      setError(`Failed to save payment method: ${error.response?.data?.error || error.message}`);
-      setLoading(false);
+      setError(error.response?.data?.message || error.message || 'Failed to save payment method, please try again');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
+  // 格式化卡号为每4位一组
+  const formatCardNumber = (value) => {
+    const v = value.replace(/\s+/g, '').replace(/[^0-9]/gi, '');
+    const matches = v.match(/\d{4,16}/g);
+    const match = matches && matches[0] || '';
+    const parts = [];
+
+    for (let i = 0, len = match.length; i < len; i += 4) {
+      parts.push(match.substring(i, i + 4));
+    }
+
+    if (parts.length) {
+      return parts.join(' ');
+    } else {
+      return value;
+    }
+  };
+
+  const handleCardNumberChange = (e) => {
+    const formattedValue = formatCardNumber(e.target.value);
+    setCardNumber(formattedValue);
+  };
+
+  // 生成月份选项
+  const monthOptions = Array.from({ length: 12 }, (_, i) => {
+    const month = i + 1;
+    return <option key={month} value={month}>{month.toString().padStart(2, '0')}</option>;
+  });
+
+  // 生成年份选项 (从当前年份到未来15年)
+  const currentYear = new Date().getFullYear();
+  const yearOptions = Array.from({ length: 15 }, (_, i) => {
+    const year = currentYear + i;
+    return <option key={year} value={year}>{year}</option>;
+  });
+
   return (
-    <div>
-      {error && (
-        <div className="bg-red-100 text-red-700 p-3 rounded mb-4">
-          {error}
-        </div>
-      )}
-      
+    <div className="bg-white rounded-lg">
+      {/* Stripe安全标识和支付图标 */}
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center">
           <div className="text-sm text-gray-600 mr-2">Secured by</div>
@@ -208,119 +195,116 @@ const PaymentForm = ({ amount, itemId, onSuccess, onSave, onCancel }) => {
           </div>
         </div>
       </div>
-      
-      <form onSubmit={handleSubmit}>
-        <div className="mb-4">
-          <label className="block text-gray-700 mb-2">Cardholder Name</label>
+
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Cardholder Name
+          </label>
           <input
             type="text"
-            className="w-full p-2 border border-gray-300 rounded"
-            placeholder="John Doe"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            required
+            value={cardholderName}
+            onChange={(e) => setCardholderName(e.target.value)}
+            placeholder="Cardholder Name"
+            className="w-full p-2 border border-gray-300 rounded focus:ring-gold focus:border-gold"
+            disabled={isSubmitting}
           />
         </div>
-        
-        <div className="mb-4">
-          <label className="block text-gray-700 mb-2">Card Number</label>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Card Number
+          </label>
           <input
             type="text"
-            className="w-full p-2 border border-gray-300 rounded"
-            placeholder="1234 5678 9012 3456"
             value={cardNumber}
             onChange={handleCardNumberChange}
-            maxLength={19}
-            required
+            placeholder="1234 1234 1234 1234"
+            className="w-full p-2 border border-gray-300 rounded focus:ring-gold focus:border-gold"
+            maxLength="19"
+            disabled={isSubmitting}
           />
         </div>
-        
-        <div className="flex gap-4">
-          <div className="mb-4 flex-1">
-            <label className="block text-gray-700 mb-2">Expiration Date</label>
-            <div className="flex gap-2">
-              <input
-                type="text"
-                className="w-full p-2 border border-gray-300 rounded"
-                placeholder="MM"
-                value={expMonth}
-                onChange={handleExpMonthChange}
-                maxLength={2}
-                required
-              />
-              <div className="flex items-center text-gray-500">/</div>
-              <input
-                id="exp-year-input"
-                type="text"
-                className="w-full p-2 border border-gray-300 rounded"
-                placeholder="YY"
-                value={expYear}
-                onChange={handleExpYearChange}
-                maxLength={2}
-                required
-              />
+
+        <div className="flex space-x-4">
+          <div className="w-1/2">
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Expiration Date
+            </label>
+            <div className="flex">
+              <select
+                value={expiryMonth}
+                onChange={(e) => setExpiryMonth(e.target.value)}
+                className="w-1/2 p-2 border border-gray-300 rounded-l focus:ring-gold focus:border-gold"
+                disabled={isSubmitting}
+              >
+                <option value="">MM</option>
+                {monthOptions}
+              </select>
+              <span className="flex items-center justify-center px-2 bg-gray-100 border-t border-b border-gray-300">
+                /
+              </span>
+              <select
+                value={expiryYear}
+                onChange={(e) => setExpiryYear(e.target.value)}
+                className="w-1/2 p-2 border border-gray-300 rounded-r focus:ring-gold focus:border-gold"
+                disabled={isSubmitting}
+              >
+                <option value="">YYYY</option>
+                {yearOptions}
+              </select>
             </div>
           </div>
-          
-          <div className="mb-4 flex-1">
-            <label className="block text-gray-700 mb-2">CVV</label>
+
+          <div className="w-1/2">
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              CVV
+            </label>
             <input
               type="text"
-              className="w-full p-2 border border-gray-300 rounded"
-              placeholder="123"
               value={cvv}
-              onChange={handleCvvChange}
-              maxLength={3}
-              required
+              onChange={(e) => setCvv(e.target.value.replace(/\D/g, '').slice(0, 3))}
+              placeholder="123"
+              className="w-full p-2 border border-gray-300 rounded focus:ring-gold focus:border-gold"
+              maxLength="3"
+              disabled={isSubmitting}
             />
           </div>
         </div>
-        
-        <div className="flex justify-between mt-6">
-          {onCancel && (
-            <button
-              type="button"
-              className="px-4 py-2 bg-gray-200 text-gray-700 rounded hover:bg-gray-300"
-              onClick={onCancel}
-            >
-              Cancel
-            </button>
-          )}
-          
+
+        {error && (
+          <div className="bg-red-100 text-red-700 p-3 rounded text-sm">
+            {error}
+          </div>
+        )}
+
+        <div className="flex justify-between pt-4">
+          <button
+            type="button"
+            onClick={() => onSubmitSuccess(null)}
+            className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
+            disabled={isSubmitting}
+          >
+            Cancel
+          </button>
           <button
             type="submit"
-            className="px-4 py-2 bg-gold text-white rounded hover:bg-yellow-600"
-            disabled={loading}
+            className={`px-4 py-2 bg-gold text-white rounded-md hover:bg-yellow-600 ${
+              isSubmitting ? 'opacity-50 cursor-not-allowed' : ''
+            }`}
+            disabled={isSubmitting}
           >
-            {loading ? 'Processing...' : 'Save'}
+            {isSubmitting ? 'Saving...' : 'Save'}
           </button>
         </div>
       </form>
       
-      <div className="mt-4 text-xs text-gray-500 flex items-center">
-        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-        </svg>
-        Your payment information is encrypted and secure
+      <div className="flex items-center mt-6 text-gray-500 text-sm">
+        <span className="mr-2">🔒</span>
+        <span>Your payment information is securely encrypted</span>
       </div>
     </div>
   );
-};
-
-PaymentForm.propTypes = {
-  amount: PropTypes.number,
-  itemId: PropTypes.number,
-  onSuccess: PropTypes.func,
-  onSave: PropTypes.func,
-  onCancel: PropTypes.func
-};
-
-PaymentForm.defaultProps = {
-  amount: 0,
-  itemId: 0,
-  onSuccess: () => {},
-  onSave: null,
-  onCancel: null
 };
 
 export default PaymentForm; 

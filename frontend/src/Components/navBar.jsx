@@ -15,7 +15,11 @@ function NavBar() {
   
     const { notifications, unreadCount, markAsRead } = useNotifications();
     
+    // Re-render when authentication changes
+    const [authState, setAuthState] = useState(isAuthenticated);
+
     useEffect(() => {
+      setAuthState(isAuthenticated);
       function handleClickOutside(event) {
         if (notificationRef.current && !notificationRef.current.contains(event.target)) {
           setIsNotificationOpen(false);
@@ -25,7 +29,7 @@ function NavBar() {
       return () => {
         document.removeEventListener("mousedown", handleClickOutside);
       };
-    }, []);
+    }, [isAuthenticated]);
 
     const handleSearch = (e) => {
       e.preventDefault();

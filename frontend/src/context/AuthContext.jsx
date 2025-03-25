@@ -39,6 +39,7 @@ export function AuthProvider({ children }) {
     setUser(userData);
     setIsAuthenticated(true);
     localStorage.setItem('user', JSON.stringify(userData)); // Persist user session
+    window.location.reload(); // Refresh the page after login
   };
 
   const logout = () => {

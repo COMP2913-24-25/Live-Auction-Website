@@ -1,12 +1,16 @@
 require('dotenv').config({ path: require('path').resolve(__dirname, '../../.env') });
+require('./routes/cleanupScheduler');
 
 const express = require('express');
 const bodyParser = require('body-parser');
 const cors = require('cors');
-const multer = require('multer');
 const path = require('path');
 
 const app = express();
+
+// 确保这些中间件在路由之前
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
 // Import routes
 const uploadRoutes = require('./routes/upload');
@@ -16,11 +20,11 @@ const categoriesRoutes = require('./routes/categories');
 const searchRoutes = require('./routes/search');
 const managerRoutes = require('./routes/manager');
 const paymentRoutes = require('./routes/payment');
-const notificationsRoutes = require('./routes/notifications'); 
+const notificationsRoutes = require('./routes/notifications');
 const expertRoutes = require('./routes/expert');
 const { router: emailRouter } = require('./routes/email');
-
-const upload = multer({ dest: 'uploads/' }); // 临时存储上传的文件
+const expertAvailabilityRoutes = require('./routes/expertAvailability');
+const bidRoutes = require('./routes/bid');
 
 // CORS configuration
 app.use(cors({
@@ -33,33 +37,33 @@ app.use((req, res, next) => {
   if (req.originalUrl === '/api/payments/webhook') {
     next();
   } else {
-    express.json()(req, res, next);
+    next();
   }
 });
 
-// Mount routes
-app.use('/api', uploadRoutes);
-app.use('/api/auctions', upload.array('images'), auctionRoutes);
+// Mount routes - 修正路径
+app.use('/api/upload', uploadRoutes);      // 修改为/api/upload，使路径与前端匹配
+app.use('/api/auctions', auctionRoutes);   // 保持不变，使用复数形式
 app.use('/api/auth', authRoutes);
-app.use('/api', categoriesRoutes);
+app.use('/api', categoriesRoutes);        // 保持不变
 app.use('/api/search', searchRoutes);
 app.use('/api/manager', managerRoutes);
 app.use('/api/payment', paymentRoutes);
-app.use('/api/notifications', notificationsRoutes); 
+app.use('/api/notifications', notificationsRoutes);
 app.use('/api/expert', expertRoutes);
 app.use('/api/email', emailRouter);
+app.use('/api/expert-availability', expertAvailabilityRoutes);
+app.use('/api/bids', bidRoutes);
+
+// 记录路由配置
+console.log('Routes configured:');
+console.log('- /api/upload/* -> uploadRoutes');
+console.log('- /api/auctions/* -> auctionRoutes');
 
 // Example route
 app.get('/', (req, res) => {
   res.json({ message: 'Server is running' });
 });
-
-// 确保这些中间件在路由之前
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
-
-// 添加静态文件服务
-app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 
 console.log('Email config:', {
   user: process.env.EMAIL_USER ? 'Set' : 'Not set',

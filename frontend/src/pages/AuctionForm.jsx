@@ -120,8 +120,7 @@ const handleSubmit = async (e) => {
   formDataToSend.append('description', formData.description);
   formDataToSend.append('min_price', formData.min_price);
   formDataToSend.append('category', formData.category);
-  formDataToSend.append('end_time', endTime.toISOString());
-  formDataToSend.append('auction_status', 'Active');
+  formDataToSend.append('duration', formData.duration); // 改为只传递duration，让后端计算end_time
   
   // 添加图片文件
   imageFiles.forEach(file => {
@@ -134,7 +133,8 @@ const handleSubmit = async (e) => {
       console.log(pair[0] + ': ' + pair[1]);
     }
     
-    const response = await axios.post(`${import.meta.env.VITE_API_URL}/api/auctions`, formDataToSend, {
+    // 修改请求URL为正确的端点
+    const response = await axios.post(`${import.meta.env.VITE_API_URL}/api/upload/create-listing`, formDataToSend, {
       headers: {
         'Content-Type': 'multipart/form-data'
       }

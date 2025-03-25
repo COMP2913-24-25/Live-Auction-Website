@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import Hero from "../components/Hero";
+import Hero from "../components/hero";
 import Categories from "../components/categories";
 import TrustIndicators from "../components/TrustIndicators";
 import AuctionList from "../components/AuctionList";

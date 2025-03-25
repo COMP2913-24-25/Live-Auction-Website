@@ -27,7 +27,6 @@ router.get('/active', async (req, res) => {
         'i.end_time',
         'i.authentication_status',
         'i.auction_status',
-        'i.min_price as current_bid',
         knex.raw('GROUP_CONCAT(ii.image_url) as image_urls'),
         'u.username as seller_name'
       )
@@ -70,7 +69,31 @@ router.get('/active', async (req, res) => {
       .groupBy('i.id')
       .orderBy('i.created_at', order.toLowerCase());
 
-    const auctions = await query;
+    let auctions = await query;
+
+    // 为每个拍卖获取最高出价
+    const auctionIds = auctions.map(auction => auction.id);
+    
+    // 获取所有拍卖项目的最高出价
+    const highestBids = await knex('bids')
+      .select('item_id')
+      .max('bid_amount as highest_bid')
+      .whereIn('item_id', auctionIds)
+      .groupBy('item_id');
+    
+    // 创建一个映射表，方便查找
+    const bidMap = {};
+    highestBids.forEach(bid => {
+      bidMap[bid.item_id] = bid.highest_bid;
+    });
+    
+    // 为每个拍卖添加当前出价
+    auctions = auctions.map(auction => {
+      return {
+        ...auction,
+        current_bid: bidMap[auction.id] || auction.min_price // 如果有出价使用最高出价，否则使用最低价
+      };
+    });
 
     res.json(auctions);
   } catch (err) {
@@ -81,47 +104,47 @@ router.get('/active', async (req, res) => {
 
 // Route to get a single auction item
 router.get('/:id', async (req, res) => {
-  const { id } = req.params;
-
   try {
-    const auction = await knex('items as i')
+    const auctionId = req.params.id;
+    
+    // 获取拍卖项目的基本信息
+    const query = knex('items as i')
       .select(
-        'i.id',
-        'i.title',
-        'i.description',
-        'i.min_price',
-        'i.authentication_status',
-        'i.auction_status',
-        'i.end_time',
-        'i.min_price as current_bid'
+        'i.*',
+        'u.username as seller_name',
+        'c.name as category_name'
       )
-      .where('i.id', id)
+      .leftJoin('users as u', 'i.user_id', 'u.id')
+      .leftJoin('categories as c', 'i.category_id', 'c.id')
+      .where('i.id', auctionId)
       .first();
-
+    
+    const auction = await query;
+    
     if (!auction) {
-      return res.status(404).json({ error: 'Auction item not found' });
+      return res.status(404).json({ error: 'The auction item does not exist' });
     }
-
-    const seller = await knex('items')
-      .select('users.id AS seller_id', 'users.username AS seller_name', 'items.created_at')
-      .join('users', 'items.user_id', 'users.id')
-      .where('items.id', id)
+    
+    // 获取当前最高出价
+    const highestBid = await knex('bids')
+      .where('item_id', auctionId)
+      .orderBy('bid_amount', 'desc')
       .first();
-
+    
+    // 设置当前出价，如果没有出价则使用最低价
+    auction.current_bid = highestBid ? highestBid.bid_amount : auction.min_price;
+    
+    // 获取拍卖项目的图片
     const images = await knex('item_images')
       .select('image_url')
-      .where({ item_id: id });
-
-    res.json({
-      ...auction,
-      seller_id: seller?.seller_id,
-      seller_name: seller?.seller_name || "Unknown",
-      posting_date: seller?.created_at || "Unknown",
-      images: images.map(img => img.image_url)
-    });
+      .where('item_id', auctionId);
+      
+    auction.images = images.map(img => img.image_url);
+    
+    return res.json(auction);
   } catch (error) {
-    console.error('Error fetching auction item:', error);
-    res.status(500).json({ error: 'Internal server error' });
+    console.error('Error obtaining auction item details:', error);
+    return res.status(500).json({ error: 'Server error, unable to obtain auction item details' });
   }
 });
 
@@ -147,7 +170,7 @@ cron.schedule('* * * * *', async () => {
           .select('bids.*', 'users.email')
           .join('users', 'bids.user_id', 'users.id')
           .where('item_id', auction.id)
-          .orderBy('amount', 'desc')
+          .orderBy('bid_amount', 'desc')
           .first();
 
         if (winningBid) {
@@ -160,7 +183,7 @@ cron.schedule('* * * * *', async () => {
           await sendWinningBidEmail(
             winningBid.email,
             auction.title,
-            winningBid.amount
+            winningBid.bid_amount
           );
         } else {
           // 如果没有出价，标记为流拍
@@ -177,79 +200,24 @@ cron.schedule('* * * * *', async () => {
   }
 });
 
-// 创建新的拍卖项目
-router.post('/', async (req, res) => {
-  try {
-    console.log('Received auction creation request body:', req.body);
-    console.log('Received files:', req.files);
-    
-    // 从请求中获取数据
-    const {
-      user_id,
-      title,
-      description,
-      min_price,
-      category,
-      end_time,
-      auction_status
-    } = req.body;
-
-    // 创建拍卖项目
-    const [itemId] = await knex('items').insert({
-      user_id,
-      title,
-      description,
-      min_price,
-      category_id: category,
-      end_time,
-      auction_status,
-      authentication_status: 'Not Requested',
-      created_at: knex.raw("datetime('now')")
+// 添加一个简单的POST路由来处理/api/auctions请求
+// 这个路由将转发请求到/api/upload/create-listing
+router.post('/', (req, res) => {
+  console.log('Received POST /api/auctions request, forwarding to /api/upload/create-listing');
+  
+  // 这个路由应该检查请求是否包含文件，如果包含，应该返回指导信息
+  if (req.files && req.files.length > 0) {
+    return res.status(400).json({
+      error: 'File upload should not be handled by this route, please use /api/upload/create-listing',
+      correctEndpoint: '/api/upload/create-listing'
     });
-    
-    console.log('Created item with ID:', itemId);
-    
-    // 处理图片上传
-    if (req.files && req.files.length > 0) {
-      console.log('Processing images:', req.files);
-      
-      // 保存图片 URLs
-      await Promise.all(req.files.map(file => {
-        // 构建可访问的 URL
-        const imageUrl = `${process.env.VITE_API_URL}/uploads/${file.filename}`;
-        return knex('item_images').insert({
-          item_id: itemId,
-          image_url: imageUrl
-        });
-      }));
-    }
-    
-    // 获取创建的项目数据
-    const createdItem = await knex('items as i')
-      .select(
-        'i.id',
-        'i.title',
-        'i.description',
-        'i.min_price',
-        'i.end_time',
-        'i.authentication_status',
-        'i.auction_status',
-        knex.raw('GROUP_CONCAT(ii.image_url) as image_urls'),
-        'u.username as seller_name'
-      )
-      .leftJoin('users as u', 'i.user_id', 'u.id')
-      .leftJoin('item_images as ii', 'i.id', 'ii.item_id')
-      .where('i.id', itemId)
-      .groupBy('i.id')
-      .first();
-      
-    console.log('Created item details:', createdItem);
-    
-    res.json({ message: 'Auction item created successfully', item: createdItem });
-  } catch (error) {
-    console.error('Error creating auction:', error);
-    res.status(500).json({ error: error.message });
   }
+  
+  // 如果前端代码尝试直接POST到/api/auctions，我们可以返回清晰的错误信息
+  res.status(400).json({
+    error: 'To create an auction item, you need to upload an image, please use /api/upload/create-listing interface',
+    correctEndpoint: '/api/upload/create-listing'
+  });
 });
 
 module.exports = router;
