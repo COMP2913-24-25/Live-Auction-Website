@@ -1,6 +1,6 @@
 import { createContext, useContext, useState, useEffect } from 'react';
-import axios from 'axios';
-import { useAuth } from './AuthContext';
+import axios from '../api/axios';  // Use the configured axios instance
+import { useAuth } from './authContext';
 
 const NotificationContext = createContext();
 
@@ -9,36 +9,40 @@ export function NotificationProvider({ children }) {
   const [unreadCount, setUnreadCount] = useState(0);
   const { user } = useAuth();
 
-  const fetchNotifications = async () => {
-    if (!user) {
-      setNotifications([]);
-      setUnreadCount(0);
-      return;
-    }
-    
-    try {
-      const { data } = await axios.get(`/api/notifications/${user.id}`, {
-        headers: {
-          'Cache-Control': 'no-cache',
-          'Pragma': 'no-cache'
-        }
-      });
-      
-      // Only accept notifications with valid types
-      const validNotifications = data.filter(n => 
-        n.type && ['outbid', 'won', 'ending_soon', 'ended'].includes(n.type)
-      );
-      
-      setNotifications(validNotifications);
-      setUnreadCount(validNotifications.filter(n => !n.read).length);
-    } catch (error) {
-      console.error('Error fetching notifications:', error);
-      setNotifications([]);
-      setUnreadCount(0);
+  const updateUnreadCount = (notifs) => {
+    const count = notifs.filter(n => !n.read).length;
+    setUnreadCount(count);
+    // Update favicon badge if needed
+    if (count > 0) {
+      document.title = `(${count}) Auction Site`;
+    } else {
+      document.title = 'Auction Site';
     }
   };
 
-  // Update markAsRead function
+  const fetchNotifications = async () => {
+    if (!user) return;
+
+    try {
+      const { data } = await axios.get(`/api/notifications/${user.id}`);
+      
+      const formattedNotifications = data.map(notification => ({
+        ...notification,
+        image_urls: notification.image_urls 
+          ? Array.isArray(notification.image_urls)
+            ? notification.image_urls
+            : notification.image_urls.split(',')
+          : [],
+        current_bid: parseFloat(notification.current_bid || notification.min_price)
+      }));
+
+      setNotifications(formattedNotifications);
+      setUnreadCount(formattedNotifications.filter(n => !n.read).length);
+    } catch (error) {
+      console.error('Error fetching notifications:', error);
+    }
+  };
+
   const markAsRead = async (notificationId) => {
     try {
       if (!user) return;
@@ -56,7 +60,6 @@ export function NotificationProvider({ children }) {
     }
   };
 
-  // Update deleteNotification function
   const deleteNotification = async (notificationId) => {
     try {
       if (!user) return;
@@ -73,7 +76,6 @@ export function NotificationProvider({ children }) {
     }
   };
 
-  // Force clear notifications
   const clearAllNotifications = async () => {
     try {
       await axios.delete('/api/notifications/all');
@@ -84,14 +86,43 @@ export function NotificationProvider({ children }) {
     }
   };
 
+  const formatNotificationMessage = (notification) => {
+    const { type, auction_title } = notification;
+    
+    // Expert-specific notifications
+    if (user?.role === 2) {
+      switch(type) {
+        case 'review_request':
+          return `New authentication request for "${auction_title}"`;
+        case 'review_reminder':
+          return `Reminder: Authentication pending for "${auction_title}"`;
+        case 'review_reassigned':
+          return `You have been assigned to review "${auction_title}"`;
+        case 'review_completed':
+          return `Review completed for "${auction_title}"`;
+        default:
+          break;
+      }
+    }
+
+    // Regular user notifications
+    switch(type) {
+      // ... existing notification types ...
+    }
+  };
+
   useEffect(() => {
     if (user) {
       fetchNotifications();
-    } else {
-      setNotifications([]);
-      setUnreadCount(0);
+      // Poll for new notifications every 30 seconds
+      const interval = setInterval(fetchNotifications, 30000);
+      return () => clearInterval(interval);
     }
   }, [user]);
+
+  useEffect(() => {
+    updateUnreadCount(notifications);
+  }, [notifications]);
 
   return (
     <NotificationContext.Provider value={{

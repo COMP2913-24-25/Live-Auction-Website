@@ -7,29 +7,71 @@ const { calculatePostingFee } = require('../utils/feeCalculator');
 // Fetch all active auctions
 router.get('/active', async (req, res) => {
   try {
-    const auctions = await knex('item_current_bids as icb')
+    const { 
+      sort = 'created_at', 
+      order = 'desc',
+      categories,
+      minPrice,
+      maxPrice,
+      search,
+      authenticatedOnly
+    } = req.query;
+
+    // 构建基础查询
+    let query = knex('items as i')
       .select(
-        'icb.item_id as id',
-        'icb.title',
-        'icb.description',
-        'icb.min_price',
-        'icb.end_time',
-        'icb.authentication_status',
-        'icb.auction_status',
-        'icb.current_bid',
+        'i.id',
+        'i.title',
+        'i.description',
+        'i.min_price',
+        'i.end_time',
+        'i.authentication_status',
+        'i.auction_status',
+        'i.min_price as current_bid',
         knex.raw('GROUP_CONCAT(ii.image_url) as image_urls'),
         'u.username as seller_name'
       )
-      .leftJoin('items as i', 'icb.item_id', 'i.id')
       .leftJoin('users as u', 'i.user_id', 'u.id')
-      .leftJoin('item_images as ii', 'icb.item_id', 'ii.item_id')
-      .where('icb.end_time', '>', knex.raw("datetime('now')"))
-      .where('icb.auction_status', '=', 'Active')
-      .groupBy('icb.item_id')
-      .orderBy('i.created_at', 'desc');
-    if (auctions.length === 0) {
-      return res.status(404).json({ error: 'No active auctions found' });
+      .leftJoin('item_images as ii', 'i.id', 'ii.item_id')
+      .where('i.end_time', '>', knex.raw("datetime('now')"))
+      .where('i.auction_status', '=', 'Active');
+
+    // 应用分类筛选
+    if (categories && categories.length > 0) {
+      const categoryIds = Array.isArray(categories) 
+        ? categories 
+        : categories.split(',').map(Number);
+      query = query.whereIn('i.category_id', categoryIds);
     }
+
+    // 应用价格范围筛选
+    if (minPrice) {
+      query = query.where('i.min_price', '>=', minPrice);
+    }
+    if (maxPrice) {
+      query = query.where('i.min_price', '<=', maxPrice);
+    }
+
+    // 应用搜索筛选
+    if (search) {
+      query = query.where(function() {
+        this.where('i.title', 'like', `%${search}%`)
+            .orWhere('i.description', 'like', `%${search}%`);
+      });
+    }
+
+    // 应用认证筛选
+    if (authenticatedOnly === 'true') {
+      query = query.where('i.authentication_status', '=', 'Approved');
+    }
+
+    // 应用分组和排序
+    query = query
+      .groupBy('i.id')
+      .orderBy('i.created_at', order.toLowerCase());
+
+    const auctions = await query;
+
     res.json(auctions);
   } catch (err) {
     console.error('Database error:', err.message);
@@ -39,45 +81,48 @@ router.get('/active', async (req, res) => {
 
 // Route to get a single auction item
 router.get('/:id', async (req, res) => {
-  const { id } = req.params;
   try {
-    // First, check if the item exists and get current bid in one query
-    const item = await knex('items')
+    const { id } = req.params;
+
+    // First fetch the auction details
+    const auction = await knex('items as i')
       .select(
-        'items.*',
-        'users.username as seller_name',
-        'item_current_bids.current_bid',
-        knex.raw('GROUP_CONCAT(DISTINCT item_images.image_url) as image_urls')
+        'i.*',
+        'u.username as seller_name',
+        knex.raw('GROUP_CONCAT(DISTINCT ii.image_url) as image_urls')
       )
-      .leftJoin('users', 'items.user_id', 'users.id')
-      .leftJoin('item_current_bids', 'items.id', 'item_current_bids.item_id')
-      .leftJoin('item_images', 'items.id', 'item_images.item_id')
-      .where('items.id', id)
-      .groupBy('items.id')
+      .leftJoin('users as u', 'i.user_id', 'u.id')
+      .leftJoin('item_images as ii', 'i.id', 'ii.item_id')
+      .where('i.id', id)
+      .groupBy('i.id')
       .first();
-    if (!item) {
-      return res.status(404).json({ error: 'Auction item not found' });
+
+    if (!auction) {
+      return res.status(404).json({ error: 'Auction not found' });
     }
+
+    // Get the highest bid
+    const highestBid = await knex('bids')
+      .where('item_id', id)
+      .orderBy('bid_amount', 'desc')
+      .first();
+
     // Format the response
     const response = {
-      id: item.id,
-      title: item.title,
-      description: item.description,
-      min_price: item.min_price,
-      current_bid: item.current_bid || item.min_price,
-      authentication_status: item.authentication_status,
-      auction_status: item.auction_status,
-      seller_name: item.seller_name || "Unknown",
-      posting_date: item.created_at,
-      end_time: item.end_time,
-      images: item.image_urls ? item.image_urls.split(',') : []
+      ...auction,
+      current_bid: highestBid ? highestBid.bid_amount : auction.min_price,
+      images: auction.image_urls ? auction.image_urls.split(',') : [],
+      seller_name: auction.seller_name || 'Unknown Seller'
     };
+
+    console.log('Sending auction details:', response);
     res.json(response);
+
   } catch (error) {
-    console.error('Error fetching auction item:', error);
-    res.status(500).json({ 
+    console.error('Error fetching auction:', error);
+    res.status(500).json({
       error: 'Failed to fetch auction details',
-      details: error.message 
+      details: error.message
     });
   }
 });
@@ -192,6 +237,156 @@ cron.schedule('* * * * *', async () => {
     console.log('Expired auctions and notifications updated successfully.');
   } catch (error) {
     console.error('Error updating auction statuses and sending notifications:', error);
+  }
+});
+
+// 创建新的拍卖项目
+router.post('/', async (req, res) => {
+  try {
+    console.log('Received auction creation request body:', req.body);
+    console.log('Received files:', req.files);
+    
+    // 从请求中获取数据
+    const {
+      user_id,
+      title,
+      description,
+      min_price,
+      category,
+      end_time,
+      auction_status
+    } = req.body;
+
+    // 创建拍卖项目
+    const [itemId] = await knex('items').insert({
+      user_id,
+      title,
+      description,
+      min_price,
+      category_id: category,
+      end_time,
+      auction_status,
+      authentication_status: 'Not Requested',
+      created_at: knex.raw("datetime('now')")
+    });
+    
+    console.log('Created item with ID:', itemId);
+    
+    // 处理图片上传
+    if (req.files && req.files.length > 0) {
+      console.log('Processing images:', req.files);
+      
+      // 保存图片 URLs
+      await Promise.all(req.files.map(file => {
+        // 构建可访问的 URL
+        const imageUrl = `${process.env.VITE_API_URL}/uploads/${file.filename}`;
+        return knex('item_images').insert({
+          item_id: itemId,
+          image_url: imageUrl
+        });
+      }));
+    }
+    
+    // 获取创建的项目数据
+    const createdItem = await knex('items as i')
+      .select(
+        'i.id',
+        'i.title',
+        'i.description',
+        'i.min_price',
+        'i.end_time',
+        'i.authentication_status',
+        'i.auction_status',
+        knex.raw('GROUP_CONCAT(ii.image_url) as image_urls'),
+        'u.username as seller_name'
+      )
+      .leftJoin('users as u', 'i.user_id', 'u.id')
+      .leftJoin('item_images as ii', 'i.id', 'ii.item_id')
+      .where('i.id', itemId)
+      .groupBy('i.id')
+      .first();
+      
+    console.log('Created item details:', createdItem);
+    
+    res.json({ message: 'Auction item created successfully', item: createdItem });
+  } catch (error) {
+    console.error('Error creating auction:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// 创建新的拍卖项目
+router.post('/', async (req, res) => {
+  try {
+    console.log('Received auction creation request body:', req.body);
+    console.log('Received files:', req.files);
+    
+    // 从请求中获取数据
+    const {
+      user_id,
+      title,
+      description,
+      min_price,
+      category,
+      end_time,
+      auction_status
+    } = req.body;
+
+    // 创建拍卖项目
+    const [itemId] = await knex('items').insert({
+      user_id,
+      title,
+      description,
+      min_price,
+      category_id: category,
+      end_time,
+      auction_status,
+      authentication_status: 'Not Requested',
+      created_at: knex.raw("datetime('now')")
+    });
+    
+    console.log('Created item with ID:', itemId);
+    
+    // 处理图片上传
+    if (req.files && req.files.length > 0) {
+      console.log('Processing images:', req.files);
+      
+      // 保存图片 URLs
+      await Promise.all(req.files.map(file => {
+        // 构建可访问的 URL
+        const imageUrl = `${process.env.VITE_API_URL}/uploads/${file.filename}`;
+        return knex('item_images').insert({
+          item_id: itemId,
+          image_url: imageUrl
+        });
+      }));
+    }
+    
+    // 获取创建的项目数据
+    const createdItem = await knex('items as i')
+      .select(
+        'i.id',
+        'i.title',
+        'i.description',
+        'i.min_price',
+        'i.end_time',
+        'i.authentication_status',
+        'i.auction_status',
+        knex.raw('GROUP_CONCAT(ii.image_url) as image_urls'),
+        'u.username as seller_name'
+      )
+      .leftJoin('users as u', 'i.user_id', 'u.id')
+      .leftJoin('item_images as ii', 'i.id', 'ii.item_id')
+      .where('i.id', itemId)
+      .groupBy('i.id')
+      .first();
+      
+    console.log('Created item details:', createdItem);
+    
+    res.json({ message: 'Auction item created successfully', item: createdItem });
+  } catch (error) {
+    console.error('Error creating auction:', error);
+    res.status(500).json({ error: error.message });
   }
 });
 

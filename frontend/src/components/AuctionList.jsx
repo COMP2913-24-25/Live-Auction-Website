@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
-import axios from 'axios';
+import axios from '../api/axios';  // Update this import
 import Carousel from 'react-multi-carousel';
 import 'react-multi-carousel/lib/styles.css';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import authenticatedIcon from '../assets/authenticatedIcon.png';
 
 const calculateTimeRemaining = (endTime, auctionStatus) => {
@@ -32,39 +32,51 @@ const AuctionList = ({ filters }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const navigate = useNavigate();
+  const location = useLocation();
+
+  const fetchAuctions = async (queryParams) => {
+    try {
+      const endpoint = Object.keys(filters || {}).length > 0 ? '/api/search' : '/api/auctions/active';
+      const response = await axios.get(`${endpoint}?${queryParams.toString()}`);
+      
+      if (!response.data) throw new Error('No data received');
+
+      const formattedAuctions = response.data.map(auction => ({
+        ...auction,
+        // Remove the split since image_urls is already an array from backend
+        imageUrls: auction.image_urls || [],
+        remainingTime: calculateTimeRemaining(auction.end_time, auction.auction_status)
+      }));
+
+      setAuctions(formattedAuctions);
+      setLoading(false);
+    } catch (error) {
+      console.error('Fetch error:', error.response?.data || error);
+      setError(error.message);
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    const fetchAuctions = async () => {
-      try {
-        const params = new URLSearchParams();
-        if (filters.search) params.append('query', filters.search);
-        if (filters.categories.length > 0) params.append('categories', filters.categories.join(','));
-        if (filters.minPrice) params.append('minPrice', filters.minPrice);
-        if (filters.maxPrice) params.append('maxPrice', filters.maxPrice);
-        if (filters.authenticatedOnly) params.append('authenticatedOnly', 'true');
-        if (filters.daysRemaining) params.append('daysRemaining', filters.daysRemaining);
+    const params = new URLSearchParams(location.search);
+    
+    // Add filters if they exist
+    if (filters) {
+      if (filters.search) params.append('query', filters.search);
+      if (filters.categories?.length > 0) params.append('categories', filters.categories.join(','));
+      if (filters.minPrice) params.append('minPrice', filters.minPrice);
+      if (filters.maxPrice) params.append('maxPrice', filters.maxPrice);
+      if (filters.authenticatedOnly) params.append('authenticatedOnly', 'true');
+      if (filters.daysRemaining) params.append('daysRemaining', filters.daysRemaining);
+    }
 
-        const response = await axios.get(`/api/search?${params.toString()}`);
-        
-        if (!response.data) throw new Error('No data received');
+    // Add sorting parameters
+    if (!params.has('sort')) params.append('sort', 'created_at');
+    if (!params.has('order')) params.append('order', 'desc');
+    params.append('_t', Date.now());
 
-        const formattedAuctions = response.data.map(auction => ({
-          ...auction,
-          imageUrls: auction.image_urls ? auction.image_urls.split(',') : [],
-          remainingTime: calculateTimeRemaining(auction.end_time, auction.auction_status)
-        }));
-
-        setAuctions(formattedAuctions);
-        setLoading(false);
-      } catch (error) {
-        console.error('Fetch error:', error);
-        setError(error.message);
-        setLoading(false);
-      }
-    };
-
-    fetchAuctions();
-  }, [filters]);
+    fetchAuctions(params);
+  }, [filters, location.search]);
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -101,10 +113,14 @@ const AuctionList = ({ filters }) => {
         {auctions.length === 0 ? (
           <div className="text-center text-gray-500 p-6 bg-gray-200 rounded-lg shadow-lg">
             <p className="text-2xl font-semibold text-gray-700">
-              There are no active auctions ongoing.
+              {filters && Object.keys(filters).length > 0 
+                ? "No items found matching your criteria"
+                : "There are no active auctions ongoing"}
             </p>
             <p className="text-sm text-gray-600">
-              Please check back later for new listings.
+              {filters && Object.keys(filters).length > 0 
+                ? "Try adjusting your search filters"
+                : "Please check back later for new listings"}
             </p>
           </div>
         ) : (
@@ -114,7 +130,8 @@ const AuctionList = ({ filters }) => {
                 key={auction.id} 
                 className="bg-white shadow-lg overflow-hidden cursor-pointer" 
                 onClick={(e) => {
-                  if (e.target.closest('object-cover') && !e.target.closest('.react-multi-carousel-arrow') && !e.target.closest('.react-multi-carousel-dot')) {
+                  if (!e.target.closest('.react-multi-carousel-arrow') && 
+                      !e.target.closest('.react-multi-carousel-dot')) {
                     navigate(`/auctions/${auction.id}`);
                   }
                 }}

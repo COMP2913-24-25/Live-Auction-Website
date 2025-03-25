@@ -83,29 +83,62 @@ router.post("/authenticate/:requestId", async (req, res) => {
             return res.status(400).json({ error: "Request has already been processed" });
         }
 
+        // Get item details for notification
+        const item = await knex('items')
+            .where('id', request.item_id)
+            .first();
+
         const update = {
             status: action,
             comments: comment,
             decision_timestamp: knex.fn.now()
         };
 
-        if (action === "Approved") {
-            update.expert_id = request.new_expert_id || request.expert_id;
-        } else if (action === "Rejected") {
-            update.expert_id = null;
-        }
+        await knex.transaction(async (trx) => {
+            // Update authentication request
+            await trx("authentication_requests")
+                .where("id", requestId)
+                .update(update);
 
-        await knex("authentication_requests")
-            .where("id", requestId)
-            .update(update);
+            // Update item status
+            await trx("items")
+                .where("id", request.item_id)
+                .update({ authentication_status: action });
 
-        await knex("items")
-            .where("id", request.item_id)
-            .update("authentication_status", update.status);
+            // Create notification for the seller
+            await createNotification(item.user_id, item.id, `authentication_${action.toLowerCase()}`, {
+                itemTitle: item.title
+            });
 
-        res.json({ message: "Request updated successfully" });
+            // Create notification for the expert
+            await createExpertNotification(request.expert_id, item.id, 'review_completed', {
+                itemTitle: item.title,
+                status: action
+            });
+        });
+
+        res.json({ message: "Authentication status updated successfully" });
     } catch (error) {
-        console.error("Error updating request status:", error);
+        console.error("Error updating authentication status:", error);
+        res.status(500).json({ error: "Internal server error" });
+    }
+});
+
+// Add this to handle expert assignment notifications
+router.post("/assign/:expertId/:itemId", async (req, res) => {
+    const { expertId, itemId } = req.params;
+    try {
+        const item = await knex('items')
+            .where('id', itemId)
+            .first();
+
+        await createExpertNotification(expertId, itemId, 'review_request', {
+            itemTitle: item.title
+        });
+
+        res.json({ message: "Expert notified successfully" });
+    } catch (error) {
+        console.error("Error notifying expert:", error);
         res.status(500).json({ error: "Internal server error" });
     }
 });
@@ -135,6 +168,49 @@ router.post("/request-reallocation/:requestId", async (req, res) => {
         console.error("Error requesting second opinion:", error);
         res.status(500).json({ error: "Internal server error" });
     }
+});
+
+// 获取专家已审核的项目
+router.get('/reviewed/:expertId', async (req, res) => {
+  try {
+    const { expertId } = req.params;
+    console.log('Received request for reviewed items with expertId:', expertId);
+    
+    // 查询已审核的项目
+    const reviewedItems = await knex("authentication_requests as ar")
+      .select(
+        "ar.id",
+        "ar.request_time",
+        "ar.decision_timestamp",
+        "ar.comments",
+        "i.title as item_title",
+        "i.description as item_description",
+        "c.name as category",
+        knex.raw("GROUP_CONCAT(ii.image_url) as image_urls"),
+        "ar.status as authentication_status",
+        "i.user_id as seller_id"
+      )
+      .leftJoin("items as i", "ar.item_id", "i.id")
+      .leftJoin("categories as c", "i.category_id", "c.id")
+      .leftJoin("item_images as ii", "i.id", "ii.item_id")
+      .where(function () {
+        this.where("ar.expert_id", expertId).andWhere("ar.second_opinion_requested", false)
+          .orWhere("ar.new_expert_id", expertId).andWhere("ar.second_opinion_requested", true);
+      })
+      .whereIn("ar.status", ["Approved", "Rejected"])
+      .groupBy("ar.id")
+      .orderBy("ar.decision_timestamp", "desc");
+    
+    res.json(reviewedItems);
+  } catch (error) {
+    console.error('Error fetching reviewed items:', error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// 添加一个测试路由
+router.get('/test', (req, res) => {
+  res.json({ message: 'Test route works!' });
 });
 
 module.exports = router;

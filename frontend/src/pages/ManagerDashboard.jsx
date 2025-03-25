@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import axios from "axios";
+import axios from "../api/axios";
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -40,13 +40,15 @@ export default function ManagerDashboard() {
     });
     const [isEditingFees, setIsEditingFees] = useState(false);
     const [feesLoading, setFeesLoading] = useState(true);
-    const [weeklyIncome, setWeeklyIncome] = useState({
+    const [incomeData, setIncomeData] = useState({
+        weekly: [],
         total: 0,
-        breakdown: [],
         startDate: '',
-        endDate: ''
+        endDate: '',
+        breakdown: []
     });
     const [incomeLoading, setIncomeLoading] = useState(true);
+    const [error, setError] = useState(null);
 
     useEffect(() => {
         fetchPendingRequests();
@@ -216,10 +218,23 @@ export default function ManagerDashboard() {
     const fetchWeeklyIncome = async () => {
         try {
             setIncomeLoading(true);
-            const res = await axios.get("/api/manager/weekly-income");
-            setWeeklyIncome(res.data);
+            const response = await axios.get('/api/manager/weekly-income');
+            
+            if (!response.data) {
+                throw new Error('No data received');
+            }
+
+            setIncomeData({
+                weekly: Array.isArray(response.data.weekly) ? response.data.weekly : [],
+                total: Number(response.data.total || 0),
+                startDate: response.data.startDate || '',
+                endDate: response.data.endDate || '',
+                breakdown: Array.isArray(response.data.breakdown) ? response.data.breakdown : []
+            });
+            setError(null);
         } catch (error) {
-            console.error("Error fetching weekly income", error);
+            console.error('Error fetching weekly income:', error);
+            setError('Failed to load income data');
         } finally {
             setIncomeLoading(false);
         }
@@ -237,57 +252,128 @@ export default function ManagerDashboard() {
     };
 
     const getChartData = () => {
-      return {
-        labels: weeklyIncome.breakdown.map(item => item.category),
-        datasets: [
-          {
-            label: 'Income by Category',
-            data: weeklyIncome.breakdown.map(item => item.amount),
-            backgroundColor: [
-              'rgba(54, 162, 235, 0.6)',
-              'rgba(75, 192, 192, 0.6)',
-              'rgba(153, 102, 255, 0.6)',
-              'rgba(255, 159, 64, 0.6)',
-              'rgba(255, 99, 132, 0.6)',
-            ],
-            borderColor: [
-              'rgba(54, 162, 235, 1)',
-              'rgba(75, 192, 192, 1)',
-              'rgba(153, 102, 255, 1)',
-              'rgba(255, 159, 64, 1)',
-              'rgba(255, 99, 132, 1)',
-            ],
-            borderWidth: 1,
-          },
-        ],
-      };
+        if (!Array.isArray(incomeData.weekly) || incomeData.weekly.length === 0) {
+            return {
+                labels: [],
+                datasets: [{
+                    label: 'Weekly Income',
+                    data: [],
+                    backgroundColor: 'rgba(53, 162, 235, 0.5)',
+                    borderColor: 'rgb(53, 162, 235)',
+                    borderWidth: 1
+                }]
+            };
+        }
+
+        return {
+            labels: incomeData.weekly.map(week => `Week ${week.week?.split('-')[1] || '0'}`),
+            datasets: [{
+                label: 'Weekly Income (£)',
+                data: incomeData.weekly.map(week => Number(week.total || 0)),
+                backgroundColor: 'rgba(53, 162, 235, 0.5)',
+                borderColor: 'rgb(53, 162, 235)',
+                borderWidth: 1
+            }]
+        };
     };
 
     const chartOptions = {
-      responsive: true,
-      maintainAspectRatio: false,
-      plugins: {
-        legend: {
-          position: 'top',
-        },
-        title: {
-          display: true,
-          text: 'Weekly Income by Category',
-          font: {
-            size: 16,
-          },
-        },
-      },
-      scales: {
-        y: {
-          beginAtZero: true,
-          ticks: {
-            callback: function(value) {
-              return '£' + value;
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+            legend: {
+                position: 'top',
+            },
+            title: {
+                display: true,
+                text: 'Weekly Income'
             }
-          }
+        },
+        scales: {
+            y: {
+                beginAtZero: true,
+                ticks: {
+                    callback: (value) => {
+                        if (value === null || value === undefined) return '£0.00';
+                        return `£${Number(value).toFixed(2)}`;
+                    }
+                }
+            }
         }
-      }
+    };
+
+    const renderWeeklyIncome = () => {
+        if (incomeLoading) {
+            return (
+                <div className="flex justify-center items-center h-64">
+                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500" />
+                </div>
+            );
+        }
+
+        if (error) {
+            return (
+                <div className="text-center text-red-500 py-4">
+                    {error}
+                </div>
+            );
+        }
+
+        return (
+            <>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                    <div className="bg-white p-4 rounded-lg border border-gray-200">
+                        <div className="text-center mb-4">
+                            <h4 className="text-lg font-medium text-gray-900">Total Income</h4>
+                            <p className="text-3xl font-bold text-green-600">
+                                £{Number(incomeData.total || 0).toFixed(2)}
+                            </p>
+                            <p className="text-sm text-gray-500 mt-1">
+                                {incomeData.startDate || 'N/A'} - {incomeData.endDate || 'N/A'}
+                            </p>
+                        </div>
+                    </div>
+
+                    <div className="bg-white p-4 rounded-lg border border-gray-200">
+                        <h4 className="text-lg font-medium text-gray-900 mb-4">Breakdown</h4>
+                        <div className="overflow-x-auto">
+                            <table className="w-full border-collapse">
+                                <thead>
+                                    <tr className="bg-gray-50">
+                                        <th className="px-4 py-2 border border-gray-200 text-left">Category</th>
+                                        <th className="px-4 py-2 border border-gray-200 text-right">Amount</th>
+                                        <th className="px-4 py-2 border border-gray-200 text-right">%</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {incomeData.breakdown.map((item, index) => (
+                                        <tr key={index} className="hover:bg-gray-50">
+                                            <td className="px-4 py-2 border border-gray-200">
+                                                {item.category || 'N/A'}
+                                            </td>
+                                            <td className="px-4 py-2 border border-gray-200 text-right">
+                                                £{Number(item.amount || 0).toFixed(2)}
+                                            </td>
+                                            <td className="px-4 py-2 border border-gray-200 text-right">
+                                                {incomeData.total > 0 
+                                                    ? ((item.amount || 0) / incomeData.total * 100).toFixed(1)
+                                                    : '0.0'}%
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <div className="bg-white p-4 rounded-lg border border-gray-200">
+                    <div style={{ height: '400px' }}>
+                        <Bar data={getChartData()} options={chartOptions} />
+                    </div>
+                </div>
+            </>
+        );
     };
 
     return (
@@ -602,58 +688,7 @@ export default function ManagerDashboard() {
                     </button>
                 </div>
                 
-                {incomeLoading ? (
-                    <div className="text-center text-gray-500 py-4">Loading weekly income data...</div>
-                ) : (
-                    <>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-                            <div className="bg-white p-4 rounded-lg border border-gray-200">
-                                <div className="text-center mb-4">
-                                    <h4 className="text-lg font-medium text-gray-900">Total Weekly Income</h4>
-                                    <p className="text-3xl font-bold text-green-600">£{weeklyIncome.total.toFixed(2)}</p>
-                                    <p className="text-sm text-gray-500 mt-1">
-                                        {weeklyIncome.startDate} - {weeklyIncome.endDate}
-                                    </p>
-                                </div>
-                            </div>
-                            
-                            <div className="bg-white p-4 rounded-lg border border-gray-200">
-                                <h4 className="text-lg font-medium text-gray-900 mb-4">Income Breakdown</h4>
-                                <div className="overflow-x-auto">
-                                    <table className="w-full border-collapse">
-                                        <thead>
-                                            <tr className="bg-gray-50">
-                                                <th className="px-4 py-2 border border-gray-200 text-left">Category</th>
-                                                <th className="px-4 py-2 border border-gray-200 text-right">Amount</th>
-                                                <th className="px-4 py-2 border border-gray-200 text-right">Percentage</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            {weeklyIncome.breakdown.map((item, index) => (
-                                                <tr key={index} className="hover:bg-gray-50">
-                                                    <td className="px-4 py-2 border border-gray-200">{item.category}</td>
-                                                    <td className="px-4 py-2 border border-gray-200 text-right">
-                                                        £{item.amount.toFixed(2)}
-                                                    </td>
-                                                    <td className="px-4 py-2 border border-gray-200 text-right">
-                                                        {((item.amount / weeklyIncome.total) * 100).toFixed(1)}%
-                                                    </td>
-                                                </tr>
-                                            ))}
-                                        </tbody>
-                                    </table>
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* Income Chart */}
-                        <div className="bg-white p-4 rounded-lg border border-gray-200">
-                            <div style={{ height: '400px' }}>
-                                <Bar data={getChartData()} options={chartOptions} />
-                            </div>
-                        </div>
-                    </>
-                )}
+                {renderWeeklyIncome()}
             </div>
         </div>
     );
