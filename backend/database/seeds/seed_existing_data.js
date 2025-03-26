@@ -3,10 +3,10 @@ exports.seed = async function (knex) {
   await knex("item_images").del();
   await knex("notifications").del();
   await knex("watchlist").del();
-  await knex("user_payment_methods").del(); 
+  await knex("user_payment_methods").del();
   await knex("payments").del();
   await knex("authentication_requests").del();
-  await knex("expert_categories").del(); 
+  await knex("expert_categories").del();
   await knex("bids").del();
   await knex("items").del();
   await knex("users").del();
@@ -86,10 +86,10 @@ exports.seed = async function (knex) {
 
   // Insert Payments
   await knex("user_payment_methods").insert([
-    { 
-      id: 1, 
-      user_id: 2, 
-      payment_provider: "Stripe", 
+    {
+      id: 1,
+      user_id: 2,
+      payment_provider: "Stripe",
       tokenized_card_id: "tok_visa_test1",
       last4: "4242",
       card_type: "Visa",
@@ -97,10 +97,10 @@ exports.seed = async function (knex) {
       exp_year: 2025,
       cvv: "123"
     },
-    { 
-      id: 2, 
-      user_id: 4, 
-      payment_provider: "Stripe", 
+    {
+      id: 2,
+      user_id: 4,
+      payment_provider: "Stripe",
       tokenized_card_id: "tok_mastercard_test1",
       last4: "5678",
       card_type: "MasterCard",
@@ -118,8 +118,8 @@ exports.seed = async function (knex) {
   // Update notifications with correct types for both users and experts
   await knex("notifications").insert([
     // User notifications
-    { 
-      id: 1, 
+    {
+      id: 1,
       user_id: 6,
       auction_id: 1,
       type: 'outbid',
@@ -192,5 +192,15 @@ exports.seed = async function (knex) {
     { id: 13, item_id: 7, image_url: "https://i.imgur.com/3gBPkYp.jpeg" },
     { id: 14, item_id: 7, image_url: "https://i.imgur.com/r9IRuHY.jpeg" },
     { id: 15, item_id: 7, image_url: "https://i.imgur.com/CUEk71d.jpeg" }
+  ]);
+
+  // Insert Expert Availability
+  await knex("expert_availability").insert([
+    { expert_id: 2, date: "2025-03-26", start_time: "09:00", end_time: "20:00", unavailable: false },
+    { expert_id: 2, date: "2025-03-27", start_time: "09:00", end_time: "20:00", unavailable: false },
+    { expert_id: 2, date: "2025-03-28", start_time: "09:00", end_time: "20:00", unavailable: false },
+    { expert_id: 3, date: "2025-03-26", start_time: "09:00", end_time: "20:00", unavailable: false },
+    { expert_id: 3, date: "2025-03-27", start_time: "09:00", end_time: "20:00", unavailable: false },
+    { expert_id: 3, date: "2025-03-28", start_time: "09:00", end_time: "20:00", unavailable: false }
   ]);
 };
