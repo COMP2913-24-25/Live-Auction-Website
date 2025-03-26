@@ -148,6 +148,78 @@ router.put('/authentication-requests/reassign', async (req, res) => {
     }
 });
 
+router.get('/posting-fees', async (req, res) => {
+    try {
+        const fees = await knex('posting_fees').first();
+        res.json(fees);
+    } catch (error) {
+        console.error('Error fetching posting fees:', error);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
+router.put('/posting-fees', async (req, res) => {
+    try {
+        await knex('posting_fees').update(req.body);
+        res.json({ message: 'Posting fees updated successfully' });
+    } catch (error) {
+        console.error('Error updating posting fees:', error);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
+router.get('/weekly-income', async (req, res) => {
+    try {
+        const sixMonthsAgo = new Date();
+        sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
+
+        // Get weekly data
+        const weeklyData = await knex('payments')
+            .select(
+                knex.raw('strftime("%Y-%W", created_at) as week'),
+                knex.raw('COALESCE(SUM(amount), 0) as total')
+            )
+            .where('created_at', '>=', sixMonthsAgo.toISOString())
+            .groupBy('week')
+            .orderBy('week', 'desc');
+
+        // Get total
+        const total = await knex('payments')
+            .sum('amount as total')
+            .where('created_at', '>=', sixMonthsAgo)
+            .first();
+
+        // Get breakdown by category
+        const breakdown = await knex('payments as p')
+            .join('items as i', 'p.item_id', 'i.id')
+            .join('categories as c', 'i.category_id', 'c.id')
+            .select('c.name as category')
+            .sum('p.amount as amount')
+            .where('p.created_at', '>=', sixMonthsAgo)
+            .groupBy('c.name');
+
+        res.json({
+            weekly: weeklyData.map(week => ({
+                week: week.week,
+                total: parseFloat(week.total || 0)
+            })),
+            total: parseFloat(total?.total || 0),
+            startDate: sixMonthsAgo.toISOString().split('T')[0],
+            endDate: new Date().toISOString().split('T')[0],
+            breakdown: breakdown.map(item => ({
+                category: item.category,
+                amount: parseFloat(item.amount || 0)
+            }))
+        });
+    } catch (error) {
+        console.error('Error fetching weekly income:', error);
+        res.status(500).json({ 
+            error: 'Failed to fetch weekly income',
+            details: error.message 
+        });
+    }
+});
+
 // Fetch all users (ID, username, email, created_at, role)
 router.get('/users', async (req, res) => {
     const page = parseInt(req.query.page) || 1;
@@ -190,6 +262,31 @@ router.patch('/users/:id/role', async (req, res) => {
     } catch (error) {
         res.status(500).json({ error: 'Failed to update user role' });
     }
+});
+
+// Add middleware to check manager role
+const checkManagerRole = async (req, res, next) => {
+    try {
+        const user = req.user;
+        if (!user || user.role !== 1) { // role 1 is manager
+            return res.status(403).json({ error: 'Unauthorized access' });
+        }
+        next();
+    } catch (error) {
+        res.status(500).json({ error: 'Authorization check failed' });
+    }
+};
+
+// Apply middleware to all routes
+router.use(checkManagerRole);
+
+// Add error handling middleware
+router.use((err, req, res, next) => {
+    console.error('Manager route error:', err);
+    res.status(500).json({ 
+        error: 'Internal server error', 
+        message: process.env.NODE_ENV === 'development' ? err.message : undefined 
+    });
 });
 
 module.exports = router;

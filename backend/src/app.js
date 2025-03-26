@@ -9,7 +9,6 @@ const path = require('path');
 
 const app = express();
 
-// Import routes
 const uploadRoutes = require('./routes/upload');
 const auctionRoutes = require('./routes/auction');
 const authRoutes = require('./routes/auth');
@@ -20,8 +19,9 @@ const paymentRoutes = require('./routes/payment');
 const notificationsRoutes = require('./routes/notifications');
 const expertRoutes = require('./routes/expert');
 const expertAvailabilityRoutes = require('./routes/expertAvailability');
+const categoriesRouter = require('./routes/categories');
 
-const upload = multer({ dest: 'uploads/' }); // 临时存储上传的文件
+const upload = multer({ dest: 'uploads/' }); 
 
 // CORS configuration
 app.use(cors({
@@ -29,7 +29,7 @@ app.use(cors({
   credentials: true,
 }));
 
-// 为 Stripe webhook 特殊处理
+// Stripe webhook 
 app.use((req, res, next) => {
   if (req.originalUrl === '/api/payments/webhook') {
     next();
@@ -42,24 +42,32 @@ app.use((req, res, next) => {
 app.use('/api', uploadRoutes);
 app.use('/api/auctions', upload.array('images'), auctionRoutes);
 app.use('/api/auth', authRoutes);
-app.use('/api', categoriesRoutes);
 app.use('/api/search', searchRoutes);
 app.use('/api/manager', managerRoutes);
 app.use('/api/payment', paymentRoutes);
 app.use('/api/notifications', notificationsRoutes);
 app.use('/api/expert', expertRoutes);
 app.use('/api/expert-availability', expertAvailabilityRoutes);
+app.use('/api/categories', categoriesRouter);
 
 // Example route
 app.get('/', (req, res) => {
   res.json({ message: 'Server is running' });
 });
 
-// 确保这些中间件在路由之前
+// Middleware
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// 添加静态文件服务
+// Serve static files
 app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
+
+app.use((err, req, res, next) => {
+  console.error('Error:', err);
+  res.status(500).json({
+    error: 'Internal Server Error',
+    details: process.env.NODE_ENV === 'development' ? err.message : undefined
+  });
+});
 
 module.exports = app;

@@ -25,11 +25,12 @@ function AuctionForm() {
   useEffect(() => {
     const fetchCategories = async () => {
       try {
-        const response = await fetch(`${import.meta.env.VITE_API_URL}/api/categories`);
-        const data = await response.json();
-        setCategories(data); // Assuming API returns an array of { id, name }
+        const response = await axios.get('/api/categories');
+        console.log('Fetched categories:', response.data); // Add this for debugging
+        setCategories(response.data);
       } catch (error) {
-        console.error("Error fetching categories:", error);
+        console.error('Error fetching categories:', error);
+        alert('Failed to load categories. Please try again later.');
       }
     };
 

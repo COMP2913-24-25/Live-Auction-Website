@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef, useContext } from "react";
 import { useAuth } from "../context/authContext";
-import axios from "axios";
+import axios from "../api/axios";
 import Carousel from "react-multi-carousel";
 import "react-multi-carousel/lib/styles.css";
 import { Star } from "lucide-react";
@@ -63,15 +63,25 @@ const AuctionDetails = () => {
   const section2Ref = useRef(null);
 
   useEffect(() => {
-    axios
-      .get(`/api/auctions/${id}`)
-      .then((response) => {
-        setAuction(response.data);
-        setBidAmount(response.data.current_bid + 5);
-      })
-      .catch((error) =>
-        console.error("Error fetching auction details:", error)
-      );
+    const fetchAuctionDetails = async () => {
+      try {
+        const response = await axios.get(`/api/auctions/${id}`);
+        console.log('Received auction details:', response.data);
+        
+        if (response.data) {
+          setAuction(response.data);
+          setBidAmount(response.data.current_bid + 5);
+          setRemainingTime(calculateTimeRemaining(response.data.end_time, response.data.auction_status));
+        }
+      } catch (error) {
+        console.error('Error fetching auction details:', error);
+        setError(error.response?.data?.error || 'Failed to load auction details');
+      }
+    };
+
+    if (id) {
+      fetchAuctionDetails();
+    }
   }, [id]);
 
   useEffect(() => {
@@ -247,6 +257,10 @@ const AuctionDetails = () => {
       setError('Failed to place bid: ' + error.message);
     }
   };
+
+  if (error) {
+    return <div className="error">{error}</div>;
+  }
 
   if (!auction) return <p>Loading auction details...</p>;
 
