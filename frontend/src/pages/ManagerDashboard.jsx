@@ -482,7 +482,7 @@ export default function ManagerDashboard() {
                                             className="border p-1 w-full md:w-auto"
                                         >
                                             <option value="">Select New Expert</option>
-                                            {experts[req.category_id]?.map((exp) => (
+                                            {experts[`${req.category_id}-${req.assigned_expert_id}`]?.map((exp) => (
                                                 <option key={exp.id} value={exp.id}>{exp.username}</option>
                                             ))}
                                         </select>

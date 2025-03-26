@@ -52,15 +52,21 @@ router.get('/authentication-requests/pending-assigned', async (req, res) => {
     }
 });
 
-// Fetch experts available for a specific category
+// Fetch experts available within working hours for a specific category
 router.get('/experts/:category_id', async (req, res) => {
     const { category_id } = req.params;
+    const now = new Date();
+    const twoDaysLater = new Date(now.getTime() + 48 * 60 * 60 * 1000);
 
     try {
         const experts = await knex('expert_categories')
             .select('users.id', 'users.username')
             .join('users', 'expert_categories.expert_id', 'users.id')
-            .where('expert_categories.category_id', category_id);
+            .join('expert_availability', 'users.id', 'expert_availability.expert_id')
+            .where('expert_categories.category_id', category_id)
+            .where('expert_availability.unavailable', 0)
+            .whereBetween('expert_availability.date', [now.toISOString().split('T')[0], twoDaysLater.toISOString().split('T')[0]])
+            .groupBy('users.id', 'users.username');
 
         res.json(experts);
     } catch (error) {
@@ -69,16 +75,22 @@ router.get('/experts/:category_id', async (req, res) => {
     }
 });
 
-// Fetch experts available for reassignment but not the current expert
+// Fetch experts available within working hours for reassignment but not the current expert
 router.get('/experts/:category_id/:current_expert_id', async (req, res) => {
     const { category_id, current_expert_id } = req.params;
+    const now = new Date();
+    const twoDaysLater = new Date(now.getTime() + 48 * 60 * 60 * 1000);
 
     try {
         const experts = await knex('expert_categories')
             .select('users.id', 'users.username')
             .join('users', 'expert_categories.expert_id', 'users.id')
+            .join('expert_availability', 'users.id', 'expert_availability.expert_id')
             .where('expert_categories.category_id', category_id)
-            .whereNot('expert_categories.expert_id', current_expert_id);
+            .where('expert_availability.unavailable', 0)
+            .whereBetween('expert_availability.date', [now.toISOString().split('T')[0], twoDaysLater.toISOString().split('T')[0]])
+            .whereNot('expert_categories.expert_id', current_expert_id)
+            .groupBy('users.id', 'users.username');
 
         res.json(experts);
     } catch (error) {
@@ -213,9 +225,9 @@ router.get('/weekly-income', async (req, res) => {
         });
     } catch (error) {
         console.error('Error fetching weekly income:', error);
-        res.status(500).json({ 
+        res.status(500).json({
             error: 'Failed to fetch weekly income',
-            details: error.message 
+            details: error.message
         });
     }
 });
@@ -283,9 +295,9 @@ router.use(checkManagerRole);
 // Add error handling middleware
 router.use((err, req, res, next) => {
     console.error('Manager route error:', err);
-    res.status(500).json({ 
-        error: 'Internal server error', 
-        message: process.env.NODE_ENV === 'development' ? err.message : undefined 
+    res.status(500).json({
+        error: 'Internal server error',
+        message: process.env.NODE_ENV === 'development' ? err.message : undefined
     });
 });
 
