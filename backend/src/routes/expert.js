@@ -170,13 +170,13 @@ router.post("/request-reallocation/:requestId", async (req, res) => {
     }
 });
 
-// 获取专家已审核的项目
+// Received itemas authenticated by expert
 router.get('/reviewed/:expertId', async (req, res) => {
   try {
     const { expertId } = req.params;
     console.log('Received request for reviewed items with expertId:', expertId);
     
-    // 查询已审核的项目
+    // Check authenticated items
     const reviewedItems = await knex("authentication_requests as ar")
       .select(
         "ar.id",
@@ -208,9 +208,34 @@ router.get('/reviewed/:expertId', async (req, res) => {
   }
 });
 
-// 添加一个测试路由
 router.get('/test', (req, res) => {
   res.json({ message: 'Test route works!' });
+});
+
+router.get('/requests/:requestId', async (req, res) => {
+  try {
+    const { requestId } = req.params;
+    const request = await knex('items as i')
+      .select(
+        'i.*',
+        'u.username as seller_name',
+        knex.raw('GROUP_CONCAT(DISTINCT ii.image_url) as image_urls')
+      )
+      .leftJoin('users as u', 'i.user_id', 'u.id')
+      .leftJoin('item_images as ii', 'i.id', 'ii.item_id')
+      .where('i.id', requestId)
+      .groupBy('i.id')
+      .first();
+
+    if (!request) {
+      return res.status(404).json({ error: 'Request not found' });
+    }
+
+    res.json(request);
+  } catch (error) {
+    console.error('Error fetching request:', error);
+    res.status(500).json({ error: 'Failed to fetch request' });
+  }
 });
 
 module.exports = router;

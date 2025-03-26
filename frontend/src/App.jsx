@@ -38,10 +38,20 @@ function App() {
           {/* Public Routes */}
           <Route path="/" element={<Navigate to="/browse" />} />
           <Route path="/browse" element={<Browse />} />
-          <Route path="/auctions/:id" element={<AuctionDetails />} />
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
-          
+          <Route path="/auctions/:id" element={<AuctionDetails />} />
+
+          {/* Expert Dashboard Routes */}
+          <Route path="/expert-dashboard/*" element={
+            <ProtectedRoute allowedRoles={[2]}>
+              <Routes>
+                <Route index element={<ExpertDashboard />} />
+                <Route path="pending/:requestId" element={<ExpertDashboard />} />
+              </Routes>
+            </ProtectedRoute>
+          } />
+
           {/* Protected Routes */}
           <Route path="/dashboard" element={
             <ProtectedRoute allowedRoles={[2, 3]}>

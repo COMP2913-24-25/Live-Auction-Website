@@ -116,9 +116,6 @@ router.get('/:id', async (req, res) => {
         case 'bid_placed':
           message = `Your bid has been placed on "${notification.auction_title}"`;
           break;
-        case 'posting_fee':
-          message = `Posting fee required for "${notification.auction_title}"`;
-          break;
         case 'authentication_requested':
           message = `Authentication requested for "${notification.auction_title}"`;
           break;

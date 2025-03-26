@@ -3,23 +3,23 @@ export const validateBidAmount = (amount, currentBid, minPrice) => {
   const numCurrentBid = parseFloat(currentBid);
   const numMinPrice = parseFloat(minPrice);
   
-  // 检查是否为有效数字
+  // check if amount is a valid number
   if (isNaN(numAmount)) {
     return "Please enter a valid amount";
   }
   
-  // 检查是否为第一次出价（当前出价等于起拍价）
+  // check if amount is a positive number
   if (numCurrentBid === numMinPrice) {
-    // 第一次出价需要比起拍价至少高 5 元
+    // first bid must be at least minPrice + 5
     if (numAmount < numMinPrice + 5) {
       return `First bid must be at least £${numMinPrice + 5}`;
     }
   } else {
-    // 后续出价只需要比当前最高价高
+    // subsequent bids must be higher than current bid
     if (numAmount <= numCurrentBid) {
       return `Bid must be higher than current bid (£${numCurrentBid})`;
     }
   }
   
-  return null; // 验证通过
+  return null; 
 }; 

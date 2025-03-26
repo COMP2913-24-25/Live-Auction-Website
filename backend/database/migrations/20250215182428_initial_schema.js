@@ -54,11 +54,16 @@ exports.up = function (knex) {
             table.integer('user_id').notNullable().references('id').inTable('users').onDelete('CASCADE');
             table.integer('auction_id').references('id').inTable('items').onDelete('CASCADE');
             table.enum('type', [
-                // User notifications only
+                // User notifications
                 'outbid',
                 'won',
                 'ending_soon',
-                'ended'
+                'ended',
+                'bid_placed',
+                // Expert notifications
+                'review_request',
+                'review_reminder',
+                'review_completed'
             ]).notNullable();
             table.text('message').nullable();
             table.boolean('read').defaultTo(false);
