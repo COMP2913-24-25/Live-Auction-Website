@@ -31,8 +31,8 @@ const sendWinningBidEmail = async (userEmail, auctionTitle, finalPrice) => {
       html: `
         <h1>Congratulations!</h1>
         <p>You have won the auction for "${auctionTitle}"</p>
-        <p>Final price: $${finalPrice}</p>
-        <p>Please proceed with the payment to complete the transaction.</p>
+        <p>Final price: £${finalPrice}</p>
+        <p>Automatically paid from the account you selected.</p>
       `
     };
 

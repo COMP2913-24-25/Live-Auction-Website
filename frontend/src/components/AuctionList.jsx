@@ -28,16 +28,44 @@ const calculateTimeRemaining = (endTime, auctionStatus) => {
   return `${hours}h ${minutes}m ${seconds}s`;
 };
 
-const AuctionList = () => {
+const AuctionList = ({ filters }) => {
   const [auctions, setAuctions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const navigate = useNavigate();
   const location = useLocation();
 
-  const fetchAuctions = async (queryParams) => {
+  const fetchAuctions = async () => {
     try {
-      const response = await axios.get(`/api/auctions/active?${queryParams.toString()}`);
+      setLoading(true);
+      const queryParams = new URLSearchParams();
+      
+      if (filters.search) queryParams.set('query', filters.search);
+      if (filters.categories && filters.categories.length > 0) 
+        queryParams.set('categories', filters.categories.join(','));
+      if (filters.authenticatedOnly) queryParams.set('authenticatedOnly', 'true');
+      
+      if (filters.daysRemaining !== 5) {
+        queryParams.set('daysRemaining', filters.daysRemaining.toString());
+        console.log('Setting daysRemaining:', filters.daysRemaining);
+      }
+      
+      console.log('Filters received:', filters);
+      
+      if (filters.minPrice) {
+        const minPrice = filters.minPrice.toString();
+        queryParams.set('minPrice', minPrice);
+        console.log('Setting minPrice:', minPrice, 'Type:', typeof minPrice);
+      }
+      if (filters.maxPrice) {
+        const maxPrice = filters.maxPrice.toString();
+        queryParams.set('maxPrice', maxPrice);
+        console.log('Setting maxPrice:', maxPrice, 'Type:', typeof maxPrice);
+      }
+      
+      console.log('Fetching with params:', queryParams.toString());
+      
+      const response = await axios.get(`/api/search?${queryParams.toString()}`);
       
       if (!response.data) throw new Error('No data received');
 
@@ -57,18 +85,9 @@ const AuctionList = () => {
   };
 
   useEffect(() => {
-    const queryParams = new URLSearchParams(location.search);
-    if (!queryParams.has('_t')) {
-      queryParams.append('_t', Date.now());
-    }
-    if (!queryParams.has('sort')) {
-      queryParams.append('sort', 'created_at');
-    }
-    if (!queryParams.has('order')) {
-      queryParams.append('order', 'desc');
-    }
-    fetchAuctions(queryParams);
-  }, [location.search]);
+    console.log('Filters changed:', filters);
+    fetchAuctions();
+  }, [filters]);
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -85,25 +104,19 @@ const AuctionList = () => {
     console.log('Setting up socket connection for auction list');
     const socket = getSocket();
     
-    // 添加出价更新监听事件
     const onBidUpdated = (data) => {
-      console.log('接收到bid_updated事件:', data);
+      console.log('Received bid_updated event:', data);
       
-      // 确保类型一致，将item_id转为数字类型
       const updatedItemId = parseInt(data.item_id);
       
-      // 直接使用函数式更新，不依赖auctions的闭包值
       setAuctions(prevAuctions => {
-        // 记录调试信息
-        console.log('更新前的拍卖列表:', prevAuctions.map(a => ({ id: a.id, current_bid: a.current_bid })));
+        console.log('Update the previous auction list:', prevAuctions.map(a => ({ id: a.id, current_bid: a.current_bid })));
         
         const updatedAuctions = prevAuctions.map(auction => {
-          // 将auction.id转为数字进行比较
           const auctionId = parseInt(auction.id);
           
-          // 如果是被更新的拍卖项，更新价格
           if (auctionId === updatedItemId) {
-            console.log(`找到匹配的拍卖项 ID:${auctionId}，更新价格从 ${auction.current_bid} 到 ${data.bid_amount}`);
+            console.log(`Found matching auction ID:${auctionId}, updating price from ${auction.current_bid} to ${data.bid_amount}`);
             return {
               ...auction,
               current_bid: parseFloat(data.bid_amount)
@@ -112,52 +125,44 @@ const AuctionList = () => {
           return auction;
         });
         
-        console.log('更新后的拍卖列表:', updatedAuctions.map(a => ({ id: a.id, current_bid: a.current_bid })));
+        console.log('Updated auction list:', updatedAuctions.map(a => ({ id: a.id, current_bid: a.current_bid })));
         return updatedAuctions;
       });
     };
     
-    // 监听连接状态
     const onConnect = () => {
       console.log('AuctionList socket connected successfully');
     };
     
-    // 监听新拍卖创建事件
     const onNewAuction = (auctionData) => {
       console.log('Received new_auction event:', auctionData);
       
-      // 处理收到的拍卖数据
       const formattedAuction = {
         ...auctionData,
         imageUrls: auctionData.imageUrls || [],
         remainingTime: auctionData.remainingTime || calculateTimeRemaining(auctionData.end_time, auctionData.auction_status)
       };
       
-      // 将新拍卖添加到列表中
       setAuctions(prevAuctions => {
-        // 如果拍卖已经存在，则不添加
         if (prevAuctions.some(a => a.id === formattedAuction.id)) {
           return prevAuctions;
         }
         
-        // 将新拍卖添加到列表最前面
         return [formattedAuction, ...prevAuctions];
       });
     };
     
-    // 添加事件监听
     socket.on('connect', onConnect);
     socket.on('new_auction', onNewAuction);
     socket.on('bid_updated', onBidUpdated);
     
-    // 清理函数
     return () => {
       console.log('Cleaning up socket connection for auction list');
       socket.off('connect', onConnect);
       socket.off('new_auction', onNewAuction);
       socket.off('bid_updated', onBidUpdated);
     };
-  }, []); // 保持空依赖数组，但确保函数内部不依赖闭包中的状态
+  }, []);
 
   const responsive = {
     desktop: { breakpoint: { max: 3000, min: 1024 }, items: 1 },

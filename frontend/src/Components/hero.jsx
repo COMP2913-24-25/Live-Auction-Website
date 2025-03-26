@@ -197,7 +197,7 @@ function Hero() {
     
     // Convert hours to days for API
     const timeInDays = timeFilter.unit === 'hours' 
-      ? timeFilter.value / 24 
+      ? (timeFilter.value === 24 ? 1 : timeFilter.value / 24)
       : timeFilter.value;
     searchParams.set("daysRemaining", timeInDays.toString());
     
@@ -501,16 +501,17 @@ function Hero() {
                         value={`${timeFilter.value}-${timeFilter.unit}`}
                         onChange={(e) => {
                           const [value, unit] = e.target.value.split('-');
+                          console.log('Time filter changed:', { value, unit });
                           setTimeFilter({ value: parseInt(value), unit });
                         }}
                         className="w-full px-3 py-2 bg-gray-50 border border-gray-300 rounded-md text-sm focus:ring-blue-500 focus:border-blue-500 text-gray-900"
                       >
                         <option value="5-days">Default (5 days)</option>
                         <option value="24-hours">Less than 24 hours</option>
-                        <option value="1-days">1 day</option>
-                        <option value="2-days">2 days</option>
-                        <option value="3-days">3 days</option>
-                        <option value="4-days">4 days</option>
+                        <option value="1-days">1 day or less</option>
+                        <option value="2-days">2 days or less</option>
+                        <option value="3-days">3 days or less</option>
+                        <option value="4-days">4 days or less</option>
                       </select>
                     </div>
                   </div>

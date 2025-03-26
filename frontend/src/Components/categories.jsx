@@ -1,10 +1,21 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { Book, Clock, Diamond, ShoppingBag, Smartphone, Bookmark, Car, Home, Palette, Gamepad2, Dumbbell, Package } from "lucide-react";
+import { 
+  Book, 
+  Clock, 
+  Diamond, 
+  ShoppingBag, 
+  Smartphone, 
+  Bookmark, 
+  Car, 
+  Home, 
+  Palette, 
+  Gamepad2, 
+  Dumbbell, 
+  Package 
+} from "lucide-react";
 
-function Categories() {
+function Categories({ onCategorySelect, selectedCategory, allSelectedCategories }) {
   const [showMore, setShowMore] = useState(false);
-  const navigate = useNavigate();
 
   const categories = [
     { id: 1, name: "Art", icon: <Palette className="h-6 w-6" /> },
@@ -24,7 +35,7 @@ function Categories() {
   const displayedCategories = showMore ? categories : categories.slice(0, 4);
 
   const handleCategoryClick = (categoryId) => {
-    navigate(`/browse?categories=${categoryId}`);
+    onCategorySelect(categoryId === selectedCategory ? null : categoryId);
   };
 
   return (
@@ -44,12 +55,24 @@ function Categories() {
           <div 
             key={category.id}
             onClick={() => handleCategoryClick(category.id)}
-            className="cursor-pointer rounded-lg border p-4 text-center transition-all hover:shadow-md border-gray-200 bg-white hover:border-blue-200"
+            className={`cursor-pointer rounded-lg border p-4 text-center transition-all hover:shadow-md ${
+              selectedCategory === category.id || allSelectedCategories?.includes(category.id)
+                ? 'border-blue-500 bg-blue-50'
+                : 'border-gray-200 bg-white hover:border-blue-200'
+            }`}
           >
-            <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-gray-100 text-gray-600">
+            <div className={`mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full ${
+              selectedCategory === category.id || allSelectedCategories?.includes(category.id)
+                ? 'bg-blue-100 text-blue-600'
+                : 'bg-gray-100 text-gray-600'
+            }`}>
               {category.icon}
             </div>
-            <h3 className="text-sm font-medium text-gray-700">
+            <h3 className={`text-sm font-medium ${
+              selectedCategory === category.id || allSelectedCategories?.includes(category.id)
+                ? 'text-blue-700'
+                : 'text-gray-700'
+            }`}>
               {category.name}
             </h3>
             <p className="mt-1 text-xs text-gray-500">Browse items →</p>

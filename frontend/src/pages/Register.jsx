@@ -10,11 +10,11 @@ const registerUser = async (userData) => {
             userData, 
             { withCredentials: true }
         );
-        console.log('注册响应:', response.data);
+        console.log('Register response:', response.data);
         return response.data;
     } catch (error) {
-        console.error('注册错误:', error);
-        throw new Error(error.response?.data?.error || error.response?.data?.message || '注册失败');
+        console.error('Register error:', error);
+        throw new Error(error.response?.data?.error || error.response?.data?.message || 'Registration failed');
     }
 };
 
@@ -52,7 +52,7 @@ const Register = () => {
             const result = await registerUser(form);
             
             // 保存一个成功消息到sessionStorage
-            sessionStorage.setItem('registrationSuccess', '注册成功！请登录您的账户。');
+            sessionStorage.setItem('registrationSuccess', 'Registration successful! Please login to your account.');
             
             // 跳转到登录页面
             navigate('/login');

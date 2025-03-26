@@ -138,9 +138,9 @@ if (global.io) {
     timestamp: new Date().toISOString()
   };
   
-  console.log('准备发送bid_updated事件，数据:', eventData);
-  console.log('发送到房间:', `auction_${item_id}`);
-  console.log('当前连接的客户端数量:', Object.keys(global.io.sockets.sockets).length);
+  console.log('Preparing to send bid_updated event, data:', eventData);
+  console.log('Send to room:', `auction_${item_id}`);
+  console.log('Number of currently connected clients:', Object.keys(global.io.sockets.sockets).length);
   
   // 向拍卖房间广播新出价
   global.io.to(`auction_${item_id}`).emit('bid_updated', eventData);
@@ -148,7 +148,7 @@ if (global.io) {
   // 同时向所有客户端广播，确保主页也能收到更新
   global.io.emit('bid_updated', eventData);
   
-  console.log(`已发送'bid_updated'事件到auction_${item_id}和所有客户端`);
+  console.log(`Sent 'bid_updated' event to auction_${item_id} and all clients`);
 }
     
     // 返回成功响应

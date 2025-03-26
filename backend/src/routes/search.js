@@ -39,10 +39,14 @@ router.get('/', async (req, res) => {
 
     // Price range filter
     if (minPrice) {
-      queryBuilder.where('icb.current_bid', '>=', minPrice);
+      const minPriceNum = parseFloat(minPrice);
+      console.log('Filtering by minPrice:', minPriceNum);
+      queryBuilder.where('icb.current_bid', '>=', minPriceNum);
     }
     if (maxPrice) {
-      queryBuilder.where('icb.current_bid', '<=', maxPrice);
+      const maxPriceNum = parseFloat(maxPrice);
+      console.log('Filtering by maxPrice:', maxPriceNum);
+      queryBuilder.where('icb.current_bid', '<=', maxPriceNum);
     }
 
     // Authenticated only
@@ -53,18 +57,43 @@ router.get('/', async (req, res) => {
     // Time remaining filter
     if (daysRemaining) {
       const timeValue = parseFloat(daysRemaining);
-      const secondsRemaining = timeValue * 24 * 60 * 60;
       
-      queryBuilder.whereRaw(`
-        ROUND(
-          (JULIANDAY(icb.end_time) - JULIANDAY(datetime('now'))) * 86400
-        ) <= ?
-      `, [secondsRemaining]);
+      if (timeValue === 1 && req.query.unit === 'hours') {
+        // 特殊处理24小时选项
+        const secondsRemaining = 24 * 60 * 60;
+        queryBuilder.whereRaw(`
+          ROUND(
+            (JULIANDAY(icb.end_time) - JULIANDAY(datetime('now'))) * 86400
+          ) <= ?
+        `, [secondsRemaining]);
+      } else {
+        // 正常处理天数选项
+        const secondsRemaining = timeValue * 24 * 60 * 60;
+        queryBuilder.whereRaw(`
+          ROUND(
+            (JULIANDAY(icb.end_time) - JULIANDAY(datetime('now'))) * 86400
+          ) BETWEEN 0 AND ?
+        `, [secondsRemaining]);
+      }
     }
 
     queryBuilder.groupBy('icb.item_id').orderBy('i.created_at', 'desc');
 
+    // 在查询执行前添加调试信息
+    const rawQuery = queryBuilder.toString();
+    console.log('Executing SQL:', rawQuery);
+
     const results = await queryBuilder;
+
+    // 添加调试信息
+    console.log(`Found ${results.length} auctions with price filter, first few items:`, 
+      results.slice(0, 3).map(item => ({ 
+        id: item.id, 
+        title: item.title, 
+        current_bid: item.current_bid
+      }))
+    );
+
     res.json(results);
   } catch (error) {
     console.error('Search error:', error);

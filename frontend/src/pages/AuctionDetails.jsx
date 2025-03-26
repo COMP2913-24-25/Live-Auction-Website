@@ -586,7 +586,7 @@ const AuctionDetails = () => {
           <div className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-50 shadow-xl">
             <div className="bg-white rounded-lg w-full max-w-md">
               <div className="flex justify-between items-center p-4 border-b">
-                <h3 className="text-lg font-semibold">选择支付方式</h3>
+                <h3 className="text-lg font-semibold">Select Payment Method</h3>
                 <button 
                   onClick={() => {
                     console.log('[Debug] Clicked X to close payment selector');

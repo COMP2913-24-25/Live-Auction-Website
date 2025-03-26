@@ -30,7 +30,7 @@ function Browse() {
       maxPrice: searchParams.get("maxPrice") || "",
       authenticatedOnly: searchParams.get("authenticatedOnly") === "true",
       daysRemaining: searchParams.get("daysRemaining") ? 
-        parseInt(searchParams.get("daysRemaining")) : 5
+        parseFloat(searchParams.get("daysRemaining")) : 5
     };
     
     setFilters(newFilters);
