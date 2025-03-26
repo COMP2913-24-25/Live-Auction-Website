@@ -28,7 +28,7 @@ const bidRoutes = require('./routes/bid');
 
 // CORS configuration
 app.use(cors({
-  origin: process.env.VITE_FRONTEND_URL || 'http://localhost:5173',
+  origin: process.env.VITE_FRONTEND_URL,
   credentials: true,
 }));
 

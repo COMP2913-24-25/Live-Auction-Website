@@ -43,8 +43,11 @@ function AuctionForm() {
       alert("You can only upload up to 6 images.");
       return;
     }
+
+    // Allowed file types
+    const allowedTypes = ["image/jpeg", "image/png", "image/webp", "image/jpg"];
   
-    const validFiles = files.filter(file => file.type.match('image.*') && file.size <= 5 * 1024 * 1024);
+    const validFiles = files.filter(file => allowedTypes.includes(file.type) && file.size <= 5 * 1024 * 1024);
   
     if (validFiles.length !== files.length) {
       alert("Some files were invalid (wrong format or size > 5MB). Only valid images were selected.");
@@ -228,7 +231,7 @@ const handleSubmit = async (e) => {
             <div className="border-2 border-dashed border-teal/30 rounded-lg p-6 bg-white">
               <input
                 type="file"
-                accept="image/*"
+                accept="image/jpeg, image/jpg, image/png, image/webp"
                 multiple
                 onChange={handleImageChange}
                 className="hidden"
