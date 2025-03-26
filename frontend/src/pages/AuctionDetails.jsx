@@ -8,6 +8,7 @@ import { useParams, Link } from "react-router-dom";
 import PaymentCardSelector from '../components/payment/PaymentCardSelector';
 import authenticatedIcon from "../assets/authenticatedIcon.png";
 import { submitBid, fetchAuctionById } from '../api/bid';
+import { getSocket, joinAuctionRoom, leaveAuctionRoom } from '../socket';
 
 const responsive = {
   desktop: { breakpoint: { max: 3000, min: 1024 }, items: 1 },
@@ -144,6 +145,47 @@ const AuctionDetails = () => {
     window.addEventListener("resize", adjustHeight);
     return () => window.removeEventListener("resize", adjustHeight);
   }, [auction]);
+
+  useEffect(() => {
+    console.log('[Debug] Setting up socket connection for auction:', id);
+    const socket = getSocket();
+    
+    // 加入特定拍卖的房间
+    joinAuctionRoom(id);
+    
+    // 监听出价更新事件
+    socket.on('bid_updated', (data) => {
+      console.log('[Debug] Received bid_updated event:', data);
+      if (data.item_id === parseInt(id)) {
+        // 更新当前出价
+        setAuction(prev => {
+          if (!prev) return null;
+          
+          return {
+            ...prev,
+            current_bid: parseFloat(data.bid_amount),
+            highest_bidder_id: data.bidder_id
+          };
+        });
+        
+        // 更新建议的出价金额
+        setBidAmount(parseFloat(data.bid_amount) + 5);
+        
+        // 根据需要可以显示通知
+        if (user?.id !== data.bidder_id) {
+          setSuccess(`New bid of £${data.bid_amount} by ${data.bidder_name}`);
+          setTimeout(() => setSuccess(""), 3000);
+        }
+      }
+    });
+    
+    // 清理函数
+    return () => {
+      console.log('[Debug] Cleaning up socket connection for auction:', id);
+      socket.off('bid_updated');
+      leaveAuctionRoom(id);
+    };
+  }, [id, user]);
 
   const handlePlaceBid = () => {
     setBidError("");

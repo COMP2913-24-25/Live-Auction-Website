@@ -124,6 +124,33 @@ router.post('/', authenticateUser, async (req, res) => {
       bid_time: knex.raw('CURRENT_TIMESTAMP')
     });
     
+    // 在发送Socket.io事件时添加更多日志
+if (global.io) {
+  // 获取用户名
+  const bidder = await knex('users').where('id', bidder_id).select('username').first();
+  
+  const eventData = {
+    item_id,
+    bid_amount,
+    bidder_id,
+    bidder_name: bidder?.username || 'Anonymous',
+    bid_id,
+    timestamp: new Date().toISOString()
+  };
+  
+  console.log('准备发送bid_updated事件，数据:', eventData);
+  console.log('发送到房间:', `auction_${item_id}`);
+  console.log('当前连接的客户端数量:', Object.keys(global.io.sockets.sockets).length);
+  
+  // 向拍卖房间广播新出价
+  global.io.to(`auction_${item_id}`).emit('bid_updated', eventData);
+  
+  // 同时向所有客户端广播，确保主页也能收到更新
+  global.io.emit('bid_updated', eventData);
+  
+  console.log(`已发送'bid_updated'事件到auction_${item_id}和所有客户端`);
+}
+    
     // 返回成功响应
     console.log(`Bid saved successfully: ID=${bid_id}, amount=${bid_amount}, user=${bidder_id}`);
     return res.status(201).json({

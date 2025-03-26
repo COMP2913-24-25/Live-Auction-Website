@@ -4,6 +4,7 @@ import Carousel from 'react-multi-carousel';
 import 'react-multi-carousel/lib/styles.css';
 import { useNavigate, useLocation } from 'react-router-dom';
 import authenticatedIcon from '../assets/authenticatedIcon.png';
+import { getSocket } from '../socket';
 
 const calculateTimeRemaining = (endTime, auctionStatus) => {
   if (!endTime) return "Auction Ended";
@@ -79,6 +80,84 @@ const AuctionList = () => {
 
     return () => clearInterval(interval);
   }, []);
+
+  useEffect(() => {
+    console.log('Setting up socket connection for auction list');
+    const socket = getSocket();
+    
+    // 添加出价更新监听事件
+    const onBidUpdated = (data) => {
+      console.log('接收到bid_updated事件:', data);
+      
+      // 确保类型一致，将item_id转为数字类型
+      const updatedItemId = parseInt(data.item_id);
+      
+      // 直接使用函数式更新，不依赖auctions的闭包值
+      setAuctions(prevAuctions => {
+        // 记录调试信息
+        console.log('更新前的拍卖列表:', prevAuctions.map(a => ({ id: a.id, current_bid: a.current_bid })));
+        
+        const updatedAuctions = prevAuctions.map(auction => {
+          // 将auction.id转为数字进行比较
+          const auctionId = parseInt(auction.id);
+          
+          // 如果是被更新的拍卖项，更新价格
+          if (auctionId === updatedItemId) {
+            console.log(`找到匹配的拍卖项 ID:${auctionId}，更新价格从 ${auction.current_bid} 到 ${data.bid_amount}`);
+            return {
+              ...auction,
+              current_bid: parseFloat(data.bid_amount)
+            };
+          }
+          return auction;
+        });
+        
+        console.log('更新后的拍卖列表:', updatedAuctions.map(a => ({ id: a.id, current_bid: a.current_bid })));
+        return updatedAuctions;
+      });
+    };
+    
+    // 监听连接状态
+    const onConnect = () => {
+      console.log('AuctionList socket connected successfully');
+    };
+    
+    // 监听新拍卖创建事件
+    const onNewAuction = (auctionData) => {
+      console.log('Received new_auction event:', auctionData);
+      
+      // 处理收到的拍卖数据
+      const formattedAuction = {
+        ...auctionData,
+        imageUrls: auctionData.imageUrls || [],
+        remainingTime: auctionData.remainingTime || calculateTimeRemaining(auctionData.end_time, auctionData.auction_status)
+      };
+      
+      // 将新拍卖添加到列表中
+      setAuctions(prevAuctions => {
+        // 如果拍卖已经存在，则不添加
+        if (prevAuctions.some(a => a.id === formattedAuction.id)) {
+          return prevAuctions;
+        }
+        
+        // 将新拍卖添加到列表最前面
+        return [formattedAuction, ...prevAuctions];
+      });
+    };
+    
+    // 添加事件监听
+    socket.on('connect', onConnect);
+    socket.on('new_auction', onNewAuction);
+    socket.on('bid_updated', onBidUpdated);
+    
+    // 清理函数
+    return () => {
+      console.log('Cleaning up socket connection for auction list');
+      socket.off('connect', onConnect);
+      socket.off('new_auction', onNewAuction);
+      socket.off('bid_updated', onBidUpdated);
+    };
+  }, []); // 保持空依赖数组，但确保函数内部不依赖闭包中的状态
 
   const responsive = {
     desktop: { breakpoint: { max: 3000, min: 1024 }, items: 1 },

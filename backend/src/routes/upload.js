@@ -77,6 +77,37 @@ router.post('/create-listing', upload.array('images', 6), async (req, res) => {
     // Insert images into item_images table
     const imageRecords = imageUrls.map(url => ({ item_id: auctionId, image_url: url }));
     await knex('item_images').insert(imageRecords);
+    
+    // 添加Socket.io实时通知
+    if (global.io) {
+      // 获取完整的拍卖信息
+      const auctionItem = await knex('items').where('id', auctionId).first();
+      
+      // 获取图片URLs
+      const images = await knex('item_images')
+        .where('item_id', auctionId)
+        .select('image_url');
+      
+      // 获取卖家信息
+      const seller = await knex('users')
+        .where('id', user_id)
+        .select('username')
+        .first();
+      
+      // 构建要发送的拍卖对象
+      const auctionData = {
+        ...auctionItem,
+        image_urls: images.map(img => img.image_url).join(','),
+        seller_name: seller?.username || 'Anonymous',
+        current_bid: auctionItem.min_price,
+        imageUrls: images.map(img => img.image_url),
+        remainingTime: calculateTimeRemaining(auctionItem.end_time, auctionItem.auction_status),
+      };
+      
+      // 广播新拍卖
+      global.io.emit('new_auction', auctionData);
+      console.log('Emitted new_auction event');
+    }
 
     res.status(201).json({ message: 'Auction item created successfully', auctionId });
   } catch (error) {
@@ -127,5 +158,28 @@ router.post('/authenticate-item', upload.array('images', 6), async (req, res) =>
     res.status(500).json({ error: 'Internal server error' });
   }
 });
+
+// 在upload.js文件末尾添加辅助函数用于计算剩余时间
+const calculateTimeRemaining = (endTime, auctionStatus) => {
+  if (!endTime) return "Auction Ended";
+
+  const now = new Date().getTime();
+  const end = new Date(endTime).getTime();
+  const difference = end - now;
+
+  if (difference <= 0) return auctionStatus;
+
+  const days = Math.floor(difference / (1000 * 60 * 60 * 24));
+
+  if (days >= 1) {
+    return `${days} day${days > 1 ? "s" : ""} left`;
+  }
+
+  const hours = Math.floor((difference / (1000 * 60 * 60)) % 24);
+  const minutes = Math.floor((difference / (1000 * 60)) % 60);
+  const seconds = Math.floor((difference / 1000) % 60);
+
+  return `${hours}h ${minutes}m ${seconds}s`;
+};
 
 module.exports = router;

@@ -5,14 +5,16 @@ import axios from 'axios';
 
 const registerUser = async (userData) => {
     try {
-        const { data } = await axios.post(
-            `api/auth/register`, 
+        const response = await axios.post(
+            `/api/auth/register`, 
             userData, 
-            { withCredentials: true } // Ensures cookies are included
+            { withCredentials: true }
         );
-        return data;
+        console.log('注册响应:', response.data);
+        return response.data;
     } catch (error) {
-        throw new Error(error.response?.data?.message || 'Registration failed');
+        console.error('注册错误:', error);
+        throw new Error(error.response?.data?.error || error.response?.data?.message || '注册失败');
     }
 };
 
@@ -44,11 +46,17 @@ const Register = () => {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
+        setError('');
+        
         try {
-            const data = await registerUser(form);
-            if (data.message === 'User registered successfully') {
-                navigate('/login');
-            }
+            const result = await registerUser(form);
+            
+            // 保存一个成功消息到sessionStorage
+            sessionStorage.setItem('registrationSuccess', '注册成功！请登录您的账户。');
+            
+            // 跳转到登录页面
+            navigate('/login');
+            
         } catch (err) {
             setError(err.message);
         }
