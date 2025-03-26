@@ -4,13 +4,14 @@ import axios from "axios";
 import Carousel from "react-multi-carousel";
 import "react-multi-carousel/lib/styles.css";
 import { Star } from "lucide-react";
-import { useParams } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import authenticatedIcon from "../assets/authenticatedIcon.png";
 import AuthRequestForm from '../Components/authentication/AuthRequestForm';
 import PlaceBidModal from '../Components/PlaceBidModal';
 import BidForm from '../Components/BidForm';
 import { AuthContext } from '../context/AuthContext';
 import AuctionSuccessModal from '../Components/AuctionSuccessModal';
+import { toast } from "react-hot-toast";
 
 const responsive = {
   desktop: { breakpoint: { max: 3000, min: 1024 }, items: 1 },
@@ -60,6 +61,8 @@ const AuctionDetails = () => {
 
   const section1Ref = useRef(null);
   const section2Ref = useRef(null);
+
+  const navigate = useNavigate();
 
   console.log("当前用户状态:", user);
   console.log("localStorage中的数据:", localStorage.getItem('user'));
@@ -142,7 +145,7 @@ const AuctionDetails = () => {
   }, [user]);
 
   const handleAuthRequest = () => {
-    setShowAuthForm(true);
+    navigate(`/authenticate-item?itemId=${auction.id}&title=${encodeURIComponent(auction.title)}&description=${encodeURIComponent(auction.description)}&category=${auction.category_id || ''}`);
   };
 
   const openBidModal = () => {
@@ -358,17 +361,6 @@ const AuctionDetails = () => {
           </p>
         </div>
       </div>
-
-      {showAuthForm && (
-        <AuthRequestForm
-          itemId={auction.id}
-          onClose={() => setShowAuthForm(false)}
-          onSuccess={() => {
-            setShowAuthSuccess(true);
-            setShowAuthForm(false);
-          }}
-        />
-      )}
 
       {auction && (
         <PlaceBidModal

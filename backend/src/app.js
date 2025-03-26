@@ -21,6 +21,7 @@ const authenticationRoutes = require('./routes/authentication');
 const bidsRoutes = require('./routes/bids'); 
 const messagesRoutes = require('./routes/messages');
 const usersRoutes = require('./routes/users');
+const expertRoutes = require('./routes/experts');
 
 // CORS configuration
 app.use(cors({
@@ -84,7 +85,7 @@ app.use(async (req, res, next) => {
 app.use('/api/upload', uploadRoutes);
 app.use('/api/auctions', auctionRoutes);
 app.use('/api/auth', authRoutes);
-app.use('/api', categoriesRoutes);
+app.use('/api/categories', categoriesRoutes);
 app.use('/api/authentication', authenticationRoutes);
 app.use('/api/bids', bidsRoutes);  
 app.use('/api/search', searchRoutes);
@@ -92,6 +93,7 @@ app.use('/api/manager', managerRoutes);
 app.use('/api/notifications', notificationsRoutes);
 app.use('/api', messagesRoutes);
 app.use('/api/users', usersRoutes);
+app.use('/api/experts', expertRoutes);
 
 // Example route
 app.get('/', (req, res) => {

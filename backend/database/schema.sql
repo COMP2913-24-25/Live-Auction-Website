@@ -53,14 +53,19 @@ CREATE TABLE
     authentication_requests (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         user_id INTEGER NOT NULL,
-        item_id INTEGER NOT NULL,
-        status TEXT CHECK (status IN ('Pending', 'Approved', 'Rejected')) DEFAULT 'Pending',
+        item_id INTEGER,
+        title TEXT NOT NULL,
+        description TEXT,
+        category_id INTEGER,
         expert_id INTEGER,
+        status TEXT CHECK (status IN ('Pending', 'Approved', 'Rejected')) DEFAULT 'Pending',
         request_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (user_id) REFERENCES users (id),
-        FOREIGN KEY (item_id) REFERENCES items (id),
+        FOREIGN KEY (user_id) REFERENCES users(id),
+        FOREIGN KEY (item_id) REFERENCES items(id),
+        FOREIGN KEY (category_id) REFERENCES categories(id),
         FOREIGN KEY (expert_id) REFERENCES users (id)
     );
+
 
 CREATE TABLE
     payments (
@@ -145,4 +150,34 @@ CREATE TABLE messages (
   FOREIGN KEY (sender_id) REFERENCES users(id),
   FOREIGN KEY (receiver_id) REFERENCES users(id),
   FOREIGN KEY (conversation_id) REFERENCES conversations(id)
+);
+
+
+
+-- 创建认证请求图片表
+CREATE TABLE IF NOT EXISTS authentication_request_images (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  authentication_request_id INTEGER NOT NULL,
+  image_path TEXT NOT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (authentication_request_id) REFERENCES authentication_requests(id)
+);
+
+CREATE TABLE expert_specializations (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id INTEGER NOT NULL,
+  category_id INTEGER NOT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (user_id) REFERENCES users(id),
+  FOREIGN KEY (category_id) REFERENCES categories(id),
+  UNIQUE(user_id, category_id)
+);
+
+CREATE TABLE expert_status (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id INTEGER NOT NULL,
+  status TEXT CHECK (status IN ('Available', 'Busy', 'Away')) DEFAULT 'Available',
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (user_id) REFERENCES users(id),
+  UNIQUE(user_id)
 );

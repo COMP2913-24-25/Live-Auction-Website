@@ -120,4 +120,54 @@ exports.seed = async function (knex) {
     { id: 14, item_id: 7, image_url: "https://i.imgur.com/r9IRuHY.jpeg" },
     { id: 15, item_id: 7, image_url: "https://i.imgur.com/CUEk71d.jpeg" }
   ]);
+
+  // 在插入专家状态数据之前先清空现有数据
+  await knex('expert_status').delete();
+  
+  // 添加专家状态数据
+  await knex("expert_status").insert([
+    { user_id: 2, status: "Available" },
+    { user_id: 3, status: "Busy" },
+  ]);
+  
+  // 添加专家详细数据 - 使用实际的专家用户名
+  await knex('expert_data').delete();
+  
+  // 直接插入具体的专家数据记录
+  await knex('expert_data').insert([
+    {
+      user_id: 2,
+      display_name: "expert1",
+      bio: "资深艺术品和收藏品鉴定专家，拥有超过10年行业经验。",
+      avatar_url: "https://i.imgur.com/avatar1.jpg"
+    },
+    {
+      user_id: 3,
+      display_name: "expert2",
+      bio: "专注于古董、珠宝和家居用品的鉴定专家，曾任职于多家拍卖行。",
+      avatar_url: "https://i.imgur.com/avatar2.jpg" 
+    }
+  ]);
+  
+  // 修改专家专业领域数据以匹配UI中显示的专业
+  await knex('expert_specializations').delete();
+  
+  // 定义每个专家的专业领域
+  const specializations = [
+    // Expert A (user_id: 2) 的专业领域
+    { user_id: 2, categories: [1, 5, 9] }, // Art, Collectibles, Toys & Games
+    
+    // Expert B (user_id: 3) 的专业领域
+    { user_id: 3, categories: [2, 3, 7] }  // Antiques, Jewelry, Home & Garden
+  ];
+  
+  // 为每个专家插入专业领域
+  for (const expert of specializations) {
+    for (const categoryId of expert.categories) {
+      await knex('expert_specializations').insert({
+        user_id: expert.user_id,
+        category_id: categoryId
+      });
+    }
+  }
 };
