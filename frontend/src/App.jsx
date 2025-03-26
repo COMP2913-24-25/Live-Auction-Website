@@ -52,25 +52,10 @@ function App() {
           
           <Route path="/profile-settings" element={<Profile />} />
           <Route path="/my-auctions" element={<Profile />} />
-          <Route path="/watchlist" element={<Profile />} />
+          <Route path="/wishlist" element={<Profile />} />
           <Route path="/purchase-history" element={<Profile />} />
-
-
           
           {/* Protected Routes */}
-
-          {/* <Route 
-            path={["/profile-settings", "/my-auctions", "/watchlist", "/purchase-history"]}  
-            element={<Profile />} 
-          /> */}
-          {/* <Route 
-            path={["/profile-settings", "/my-auctions", "/watchlist", "/purchase-history"]}  
-            element={
-              <ProtectedRoute allowedRoles={[1]}>
-                <Profile />
-              </ProtectedRoute>
-            }
-          />        */}
 
           <Route 
             path="/notification-bell" 

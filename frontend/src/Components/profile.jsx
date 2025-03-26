@@ -4,6 +4,7 @@ import { useAuth } from "../context/AuthContext";
 import { useState, useEffect } from "react";
 import axios from 'axios';
 import Carousel from 'react-multi-carousel';
+import { calculateTimeRemaining } from '../components/AuctionList';
 
 function Profile() {
   const location = useLocation();
@@ -12,7 +13,7 @@ function Profile() {
   const categories = [
     { name: 'Profile Settings', path: '/profile-settings' },
     { name: 'Auctions', path: '/my-auctions' },
-    { name: 'Watchlist', path: '/watchlist' },
+    { name: 'Wishlist', path: '/wishlist' },
     { name: 'Purchase History', path: '/purchase-history' }
   ];
 
@@ -58,7 +59,7 @@ function Profile() {
       <div className="w-4/5 p-8 overflow-auto">
        {location.pathname === '/profile-settings' && <ProfileSettings user={user} />}
        {location.pathname === '/my-auctions' && <MyAuctions />}
-       {location.pathname === '/watchlist' && <Watchlist user={user} />} 
+       {location.pathname === '/wishlist' && <Wishlist user={user} />} 
        {location.pathname === '/purchase-history' && <PurchaseHistory />} 
       </div>
     </div>
@@ -68,29 +69,26 @@ function Profile() {
 const ProfileSettings = ({ user }) => {
   const [editPageOpen, setEditPageOpen] = useState(false);
 
-  const [formData, setFormData] = useState({
-    username: '',
-    email: '',
-    phone: '',
-    gender: '',
-    expertise: ''
-  });
+  const [formData, setFormData] = useState(null);
 
   useEffect(() => {
     if (user) {
-      setFormData({
-        username: user.username || '',
-        email: user.email || '',
-        phone: user.phone || '',
-        gender: user.gender || '',
-        expertise: user.expertise || ''
-      });
+      const fetchProfile = async () => {
+        try {
+          const response = await axios.get(`/api/profile/${user.id}`);
+          setFormData(response.data);
+          console.log(response.data); // Debugging
+        } catch (err) {
+          console.error('Failed to fetch profile:', err);
+        }
+      };
+      fetchProfile();
     }
   }, [user]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({
+    setFormData(prev => ({
       ...prev,
       [name]: value
     }));
@@ -98,7 +96,7 @@ const ProfileSettings = ({ user }) => {
 
   const handleSubmit = async () => {
     try {
-      await axios.put(`/users/${user?.id}`, { formData, user });
+      await axios.put(`/api/profile/${user.id}`, { formData : formData, user : user });
       setEditPageOpen(false);
     } catch (error) {
       console.error('Failed to update profile:', error);
@@ -106,20 +104,39 @@ const ProfileSettings = ({ user }) => {
   };
 
   const Input = ({ key_name, isEmail = false }) => {
-    return !editPageOpen && isEmail ? (
-      <a href={`mailto:${formData[key_name]}`} className="text-blue-600 hover:underline">
-        {formData[key_name]}
-      </a>
-    ) : (
-      <input
-        name={key_name}
-        value={formData[key_name]}
-        onChange={handleChange}
+  
+    // Show a mailto: link only when it's an email field and in read-only mode
+    if (!editPageOpen && isEmail) {
+      return (
+        <a href={`mailto:${formData[key_name]  || '' }`} className="text-blue-600 hover:underline">
+          {formData[key_name]  || ''}
+        </a>
+      );
+    }
+
+    return (
+        <input
+          name={key_name}
+          defaultValue={formData[key_name] || ''}
+          onBlur={handleChange}
+          readOnly={!editPageOpen}
+          className={`border rounded p-2 ${!editPageOpen ? 'bg-gray-100' : ''}`}
+        />
+    );
+  };
+
+  const InputExpertise = () => {
+    return (
+      <textarea
+        name="expertise"
+        defaultValue={formData.expertise  || ''}
+        onBlur={handleChange}
         readOnly={!editPageOpen}
         className={`border rounded p-2 ${!editPageOpen ? 'bg-gray-100' : ''}`}
       />
     );
   };
+      
 
   if (!user) return null; // Prevent render until user is loaded
 
@@ -169,13 +186,13 @@ const ProfileSettings = ({ user }) => {
       <div className="border rounded-lg p-4">
         <h3 className="font-semibold mb-4">Expertise Category</h3>
         <div className="text-center text-gray-500">
-          <Input key_name="expertise" />
+          <InputExpertise />
         </div>
       </div>
 
       {editPageOpen && (
         <button
-          onClick={() => {handleSubmit(); setEditPageOpen(false);}}
+          onClick={handleSubmit}
           className="bg-blue-500 text-white px-6 py-2 rounded hover:bg-blue-600 mt-4"
         >
           Save Changes
@@ -196,22 +213,18 @@ const MyAuctions = () => {
   );
 }
 
-const Watchlist = ({user}) => {
-  const [auctions, setAuctions] = useState([]);
+const Wishlist = ({user}) => {
 
+  const [auctions, setAuctions] = useState(null);
 
   useEffect(() => {
     const fetchFavoriteAuctions = async () => {
       try {
-        const favorites = await axios.get(`/users/${user?.id}/favorites`);
-        let id_list = []; 
-        for (let favorite of favorites.data.favorite) {
-          id_list = favorite[0];
-        }
-        const result = id_list.join(',');
-        const response = await axios.get(`/auctions/${result}/favorite-bids`);
-        const formattedFavoriteAuctions = response.data.map(auction => ({
-          ...auction,
+        const favoriteAuctions = await axios.get(`/api/favorites/${user.id}`);
+        console.log(favoriteAuctions.data); // Debugging
+
+        const formattedFavoriteAuctions = favoriteAuctions.data.map(auction => ({
+          ...auction, 
           imageUrls: auction.image_urls ? auction.image_urls.split(',') : [],
           remainingTime: calculateTimeRemaining(auction.end_time, auction.auction_status)
         }));
@@ -223,9 +236,14 @@ const Watchlist = ({user}) => {
     fetchFavoriteAuctions();
     const interval = setInterval(fetchFavoriteAuctions, 10000);
     return () => clearInterval(interval);
-  }, []);
+  }, [user]);
+
+  if (auctions === null) {
+    return <div>Loading...</div>;
+  }
 
   return (
+
     <div>
       <h2 className="text-2xl font-semibold mb-8">Watchlist</h2>
       {auctions.map(auction => (

@@ -30,7 +30,8 @@ exports.down = async function(knex) {
     await knex.schema.raw('DROP VIEW IF EXISTS item_current_bids');
 
     await knex.schema.alterTable('items', function(table) {
-      table.integer('duration').notNullable().checkBetween([1, 5]); // Restore duration if needed
+        table.integer('duration').notNullable().defaultTo(1).checkBetween([1, 5]);
+        // Restore duration if needed
     });
 
     // Recreate the original view without the category_id dependency

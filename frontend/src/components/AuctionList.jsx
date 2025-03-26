@@ -5,7 +5,7 @@ import 'react-multi-carousel/lib/styles.css';
 import { useNavigate, useLocation } from 'react-router-dom';
 import authenticatedIcon from '../assets/authenticatedIcon.png';
 
-const calculateTimeRemaining = (endTime, auctionStatus) => {
+export const calculateTimeRemaining = (endTime, auctionStatus) => {
   if (!endTime) return "Auction Ended";
 
   const now = new Date().getTime();
@@ -55,7 +55,7 @@ const AuctionList = () => {
     }
   };
 
-  useEffect(() => {
+  useEffect(() => { 
     const queryParams = new URLSearchParams(location.search);
     if (!queryParams.has('_t')) {
       queryParams.append('_t', Date.now());

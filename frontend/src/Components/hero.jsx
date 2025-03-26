@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { Search, Filter, X, ChevronDown, Check, ChevronUp } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { useAuth } from "../context/authContext";
+import { useAuth } from "../context/AuthContext";
 
 function Hero() {
   const { isAuthenticated } = useAuth();

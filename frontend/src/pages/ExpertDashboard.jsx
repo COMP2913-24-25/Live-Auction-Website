@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useAuth } from "../context/authContext";
+import { useAuth } from "../context/AuthContext";
 import { useLocation } from "react-router-dom";
 import axios from "axios";
 import Carousel from 'react-multi-carousel';

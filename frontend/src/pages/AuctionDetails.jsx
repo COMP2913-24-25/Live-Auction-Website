@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef, useContext } from "react";
-import { useAuth } from "../context/authContext";
+import { useAuth } from "../context/AuthContext";
 import axios from "axios";
 import Carousel from "react-multi-carousel";
 import "react-multi-carousel/lib/styles.css";
@@ -76,7 +76,7 @@ const AuctionDetails = () => {
 
   useEffect(() => {
     axios
-      .put(`/api/users/${user.id}/favorites`, 
+      .put(`api/profile/favorites/${user.id}`, 
            {auction_id : id, favorite : isFavorite})
 
   }, [isFavorite]);
@@ -262,7 +262,7 @@ const AuctionDetails = () => {
       <div className="flex flex-col md:flex-row items-stretch gap-6 p-4 max-w-5xl w-full mx-auto mt-16">
         {/* Section 1 - Carousel */}
         <div
-          ref={section1Ref}
+          ref={section1Ref} 
           className="relative flex justify-center items-center w-full md:w-1/2 border border-black p-2"
           style={{ minHeight: maxHeight }}
         >

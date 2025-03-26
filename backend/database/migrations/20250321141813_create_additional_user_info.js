@@ -1,20 +1,39 @@
-exports.up = function(knex) {
- return knex.schema.alterTable('users', function(table) {
-   table.string('phone').nullable();        // New phone column
-   table.string('gender').nullable();      // New gender column
-   table.string('expertise').nullable();     // New expertise column
-   table.array('favorites').nullable();     // New favorites column
- });
+exports.up = async function (knex) {
+  await knex.schema.createTable('profiles', (table) => {
+    table.increments('id').primary();
+    table
+      .integer('user_id')
+      .unsigned()
+      .references('id')
+      .inTable('users')
+      .onDelete('CASCADE')
+      .notNullable();
+    table.string('username').notNullable();
+    table.string('email').notNullable();
+    table.string('phone').nullable();
+    table.string('gender').nullable();
+    table.string('expertise').nullable();
+    table.text('favorites').nullable(); // Will store JSON.stringify([...])
+  });
 
+  // Insert profiles for existing users
+  const users = await knex('users').select('id', 'username', 'email');
+  const profiles = users.map((user) => ({
+    user_id: user.id,
+    username: user.username,
+    email: user.email,
+    phone: null,
+    gender: null,
+    expertise: null,
+    favorites: null,
+  }));
 
+  if (profiles.length > 0) {
+    await knex('profiles').insert(profiles);
+  }
 };
 
-exports.down = function(knex) {
- return knex.schema.alterTable('users', function(table) {
-   table.dropColumn('phone');
-   table.dropColumn('gender');
-   table.dropColumn('expertise');
-   table.dropColumn('favorites');
- });
+exports.down = async function (knex) {
+  await knex.schema.dropTableIfExists('profiles');
 };
 

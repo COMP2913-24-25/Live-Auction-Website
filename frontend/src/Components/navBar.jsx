@@ -40,7 +40,7 @@ function NavBar() {
       if (user?.role === 2 || user?.role === 3) { // Only fetch notifications for manager and expert
           const fetchNotifications = async () => {
               try {
-                const response = await axios.get('/api/auctions/active');
+                const response = await axios.get('/api/auction/active');
                 const data = await response.json();
         
                 // Check if new auctions were added
