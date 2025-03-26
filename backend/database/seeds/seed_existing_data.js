@@ -48,6 +48,7 @@ exports.seed = async function (knex) {
     { expert_id: 2, category_id: 6 },
     { expert_id: 3, category_id: 2 },
     { expert_id: 3, category_id: 5 },
+    { expert_id: 3, category_id: 6 },
     { expert_id: 3, category_id: 11 }
   ]);
 
