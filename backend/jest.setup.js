@@ -22,4 +22,15 @@ afterEach(async () => {
   await db.destroy(); // Close connection after each test
 });
 
+// Suppress unwanted console logs
+const suppressLogs = (method) => {
+  const original = console[method];
+  beforeAll(() => (console[method] = jest.fn()));
+  afterAll(() => (console[method] = original));
+};
+
+suppressLogs('log'); // Suppress console.log
+suppressLogs('warn'); // Suppress console.warn
+suppressLogs('error'); // Suppress console.error
+
 module.exports = db;
