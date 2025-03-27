@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
-    "start": "cross-env NODE_ENV=production node src/server.js",
+    "start": "cross-env NODE_ENV=development node src/server.js",
     "dev": "cross-env NODE_ENV=development nodemon src/server.js",
     "test": "cross-env NODE_ENV=test jest",
     "db:reset": "npx rimraf ./database/db.sqlite && npx knex migrate:latest && npx knex seed:run"
@@ -36,6 +36,9 @@
     "supertest": "^7.0.0"
   },
   "jest": {
-    "testEnvironment": "node"
+    "testEnvironment": "node",
+    "setupFilesAfterEnv": [
+      "./jest.setup.js"
+    ]
   }
 }

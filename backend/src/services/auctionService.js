@@ -5,7 +5,6 @@ const updateExpiredAuctions = async () => {
       .where('end_time', '<=', knex.fn.now());
 
     for (const auction of expiredAuctions) {
-      // Get highest bid if exists
       const highestBid = await knex('bids')
         .where('item_id', auction.id)
         .orderBy('bid_amount', 'desc')
@@ -18,23 +17,15 @@ const updateExpiredAuctions = async () => {
           auction_status: highestBid ? 'Ended - Sold' : 'Ended - Unsold'
         });
 
-      // Create notifications
-      await knex('notifications').insert([
-        {
-          user_id: auction.user_id,
-          auction_id: auction.id,
-          type: 'ended', // Changed from 'auction_ended' to 'ended'
-          message: `Your auction has ended with a final price of ${formatCurrency(highestBid?.bid_amount || auction.min_price)}`
-        },
-        {
-          user_id: auction.user_id,
-          auction_id: auction.id,
-          type: 'posting_fee',
-          message: `Your posting fee for this auction is ${formatCurrency(auction.posting_fee)}`
-        }
-      ]);
+      // Create auction end notification only
+      await knex('notifications').insert({
+        auction_id: auction.id,
+        user_id: auction.user_id,
+        type: 'ended',
+        message: `Your auction has ended with a final price of ${formatCurrency(highestBid?.bid_amount || auction.min_price)}`
+      });
 
-      // If there's a winner, notify them
+      // If auction sold, create winner notification only
       if (highestBid) {
         await knex('notifications').insert({
           user_id: highestBid.user_id,

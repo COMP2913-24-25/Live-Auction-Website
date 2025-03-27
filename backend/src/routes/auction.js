@@ -17,7 +17,7 @@ router.get('/active', async (req, res) => {
       authenticatedOnly
     } = req.query;
 
-    // 构建基础查询
+    // Construct the basic query
     let query = knex('items as i')
       .select(
         'i.id',
@@ -36,7 +36,7 @@ router.get('/active', async (req, res) => {
       .where('i.end_time', '>', knex.raw("datetime('now')"))
       .where('i.auction_status', '=', 'Active');
 
-    // 应用分类筛选
+    // Filter categories
     if (categories && categories.length > 0) {
       const categoryIds = Array.isArray(categories) 
         ? categories 
@@ -44,7 +44,7 @@ router.get('/active', async (req, res) => {
       query = query.whereIn('i.category_id', categoryIds);
     }
 
-    // 应用价格范围筛选
+    // Filter price range
     if (minPrice) {
       query = query.where('i.min_price', '>=', minPrice);
     }
@@ -52,7 +52,7 @@ router.get('/active', async (req, res) => {
       query = query.where('i.min_price', '<=', maxPrice);
     }
 
-    // 应用搜索筛选
+    // Filter search term
     if (search) {
       query = query.where(function() {
         this.where('i.title', 'like', `%${search}%`)
@@ -60,12 +60,12 @@ router.get('/active', async (req, res) => {
       });
     }
 
-    // 应用认证筛选
+    // Filter authenticated items
     if (authenticatedOnly === 'true') {
       query = query.where('i.authentication_status', '=', 'Approved');
     }
 
-    // 应用分组和排序
+    // Group and order the results
     query = query
       .groupBy('i.id')
       .orderBy('i.created_at', order.toLowerCase());
@@ -163,69 +163,55 @@ router.post('/:id/bid', async (req, res) => {
   }
 });
 
-// Modify the cron job to include fee notification
+// Remove the second cron job and fix the first one
 cron.schedule('* * * * *', async () => {
   try {
     console.log('Checking and updating expired auctions...');
 
     await knex.transaction(async (trx) => {
-      // Get the current fee structure
-      const feeStructure = await trx('posting_fees').first();
+      // Find expired auctions
+      const expiredAuctions = await trx('items')
+        .where('auction_status', 'Active')
+        .where('end_time', '<=', knex.fn.now());
 
-      // Find auctions that just ended and have bids
-      const endedAuctions = await trx('items')
-        .select(
-          'items.id',
-          'items.user_id as seller_id',
-          'users.username as seller_name',
-          'item_current_bids.current_bid as final_price'
-        )
-        .join('users', 'items.user_id', 'users.id')
-        .join('item_current_bids', 'items.id', 'item_current_bids.item_id')
-        .where('items.end_time', '<=', knex.raw("datetime('now')"))
-        .where('items.auction_status', '=', 'Active')
-        .whereExists(function () {
-          this.select('*')
-            .from('bids')
-            .whereRaw('bids.item_id = items.id');
-        });
+      for (const auction of expiredAuctions) {
+        // Get highest bid
+        const highestBid = await trx('bids')
+          .where('item_id', auction.id)
+          .orderBy('bid_amount', 'desc')
+          .first();
 
-      // Process each ended auction
-      for (const auction of endedAuctions) {
-        // Calculate posting fee
-        const postingFee = calculatePostingFee(auction.final_price, feeStructure);
-
-        // Update auction status and store fee
+        // Update auction status
         await trx('items')
           .where('id', auction.id)
           .update({ 
-            auction_status: 'Ended - Sold',
-            posting_fee: postingFee
+            auction_status: highestBid ? 'Ended - Sold' : 'Ended - Unsold'
           });
 
-        // Send notifications
-        await trx('notifications').insert([
-          {
-            user_id: auction.seller_id,
-            type: 'auction_ended',
-            message: `Your auction has ended with a final price of £${auction.final_price.toFixed(2)}`,
+        // Create end notification
+        await trx('notifications').insert({
+          user_id: auction.user_id,
+          type: 'ended', 
+          message: `Your auction has ended with a final price of £${highestBid?.bid_amount || auction.min_price}`,
+          auction_id: auction.id,
+          created_at: knex.fn.now()
+        });
+
+        // If sold, create winner notification
+        if (highestBid) {
+          await trx('notifications').insert({
+            user_id: highestBid.user_id,
             auction_id: auction.id,
-            created_at: knex.fn.now()
-          },
-          {
-            user_id: auction.seller_id,
-            type: 'posting_fee',
-            message: `Your posting fee for this auction is £${postingFee.toFixed(2)}`,
-            auction_id: auction.id,
-            created_at: knex.fn.now()
-          }
-        ]);
+            type: 'won',
+            message: `You won the auction for "${auction.title}"`
+          });
+        }
       }
 
-      // Update unsold auctions (no change needed here)
+      // Update any remaining unsold auctions
       await trx('items')
-        .where('end_time', '<=', knex.raw("datetime('now')"))
-        .where('auction_status', '=', 'Active')
+        .where('end_time', '<=', knex.fn.now())
+        .where('auction_status', 'Active')
         .whereNotExists(function () {
           this.select('*')
             .from('bids')
@@ -234,19 +220,19 @@ cron.schedule('* * * * *', async () => {
         .update({ auction_status: 'Ended - Unsold' });
     });
 
-    console.log('Expired auctions and notifications updated successfully.');
+    console.log('Auction updates completed successfully');
   } catch (error) {
-    console.error('Error updating auction statuses and sending notifications:', error);
+    console.error('Error updating expired auctions:', error);
   }
 });
 
-// 创建新的拍卖项目
+// Create a new auction item
 router.post('/', async (req, res) => {
   try {
     console.log('Received auction creation request body:', req.body);
     console.log('Received files:', req.files);
     
-    // 从请求中获取数据
+    // Get data from the request
     const {
       user_id,
       title,
@@ -257,7 +243,7 @@ router.post('/', async (req, res) => {
       auction_status
     } = req.body;
 
-    // 创建拍卖项目
+    // Create the auction item
     const [itemId] = await knex('items').insert({
       user_id,
       title,
@@ -272,13 +258,13 @@ router.post('/', async (req, res) => {
     
     console.log('Created item with ID:', itemId);
     
-    // 处理图片上传
+    // Handle image uploads
     if (req.files && req.files.length > 0) {
       console.log('Processing images:', req.files);
       
-      // 保存图片 URLs
+      // Save image URLs
       await Promise.all(req.files.map(file => {
-        // 构建可访问的 URL
+        // Construct basic image URL
         const imageUrl = `${process.env.VITE_API_URL}/uploads/${file.filename}`;
         return knex('item_images').insert({
           item_id: itemId,
@@ -287,7 +273,7 @@ router.post('/', async (req, res) => {
       }));
     }
     
-    // 获取创建的项目数据
+    // Get the created item data
     const createdItem = await knex('items as i')
       .select(
         'i.id',
@@ -315,13 +301,13 @@ router.post('/', async (req, res) => {
   }
 });
 
-// 创建新的拍卖项目
+// Update an existing auction item
 router.post('/', async (req, res) => {
   try {
     console.log('Received auction creation request body:', req.body);
     console.log('Received files:', req.files);
     
-    // 从请求中获取数据
+    // Get data from the request
     const {
       user_id,
       title,
@@ -332,7 +318,7 @@ router.post('/', async (req, res) => {
       auction_status
     } = req.body;
 
-    // 创建拍卖项目
+    // Create the auction item
     const [itemId] = await knex('items').insert({
       user_id,
       title,
@@ -347,13 +333,13 @@ router.post('/', async (req, res) => {
     
     console.log('Created item with ID:', itemId);
     
-    // 处理图片上传
+    // Handle image uploads
     if (req.files && req.files.length > 0) {
       console.log('Processing images:', req.files);
       
-      // 保存图片 URLs
+      // Save image URLs
       await Promise.all(req.files.map(file => {
-        // 构建可访问的 URL
+        // Construct basic image URL
         const imageUrl = `${process.env.VITE_API_URL}/uploads/${file.filename}`;
         return knex('item_images').insert({
           item_id: itemId,
@@ -362,7 +348,7 @@ router.post('/', async (req, res) => {
       }));
     }
     
-    // 获取创建的项目数据
+    // Get the created item data
     const createdItem = await knex('items as i')
       .select(
         'i.id',

@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import { useNotifications } from '../context/notificationContext';
 import { useNavigate } from 'react-router-dom';
-import { Trash2, Bell, Check, Clock, ArrowRight, AlertCircle } from 'lucide-react';
+import { Trash2, Bell, Check, Clock, ArrowRight, AlertCircle, DollarSign } from 'lucide-react';
 
 export default function Notifications() {
   const { notifications, markAsRead, deleteNotification, fetchNotifications } = useNotifications();

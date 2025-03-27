@@ -111,6 +111,27 @@ export function NotificationProvider({ children }) {
     }
   };
 
+  const handleNotificationClick = async (notification) => {
+    try {
+      if (!notification.read) {
+        await markAsRead(notification.id);
+      }
+  
+      // Handle expert notifications
+      if (notification.type.startsWith('review_')) {
+        navigate(`/expert-dashboard/pending/${notification.auction_id}`);
+        return;
+      }
+  
+      // Handle regular auction notifications
+      if (notification.auction_id) {
+        navigate(`/auctions/${notification.auction_id}`);
+      }
+    } catch (error) {
+      console.error('Error handling notification:', error);
+    }
+  };
+
   useEffect(() => {
     if (user) {
       fetchNotifications();
