@@ -1,27 +1,18 @@
-const { beforeEach } = require('@jest/globals');
-const sqlite3 = require('sqlite3').verbose();
+const knex = require('knex');
+const knexConfig = require('../knexfile').development;
 
-// 在每次测试之前清理数据库
-// Clean the database before each test
+const db = knex({
+  ...knexConfig,
+  connection: { filename: ':memory:' }, // Use in-memory DB for testing
+});
+
 beforeEach(async () => {
-  const db = new sqlite3.Database(':memory:'); // 使用内存数据库进行测试 // Use an in-memory database for testing
-  
-  await new Promise((resolve, reject) => {
-    db.run(`
-      CREATE TABLE IF NOT EXISTS auctions (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        title TEXT NOT NULL,
-        description TEXT,
-        image_url TEXT,
-        starting_price DECIMAL(10,2) NOT NULL,
-        min_increment DECIMAL(10,2) NOT NULL,
-        start_time DATETIME NOT NULL,
-        end_time DATETIME NOT NULL,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-      )
-    `, (err) => {
-      if (err) reject(err);
-      else resolve();
-    });
-  });
-}); 
+  await db.migrate.latest(); // Run migrations before each test
+  await db.seed.run(); // Optionally run seeds
+});
+
+afterEach(async () => {
+  await db.destroy(); // Close connection after each test
+});
+
+module.exports = db;
