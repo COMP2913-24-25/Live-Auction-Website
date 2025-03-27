@@ -1,5 +1,5 @@
 const knex = require('knex');
-const knexConfig = require('../backend/knexfile').test;
+const knexConfig = require('./knexfile').test;
 
 const db = knex({
   ...knexConfig,
