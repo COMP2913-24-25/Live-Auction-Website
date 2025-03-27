@@ -19,9 +19,8 @@ const paymentRoutes = require('./routes/payment');
 const notificationsRoutes = require('./routes/notifications');
 const expertRoutes = require('./routes/expert');
 const expertAvailabilityRoutes = require('./routes/expertAvailability');
-const categoriesRouter = require('./routes/categories');
 
-const upload = multer({ dest: 'uploads/' }); 
+const upload = multer({ dest: 'uploads/' });
 
 // CORS configuration
 app.use(cors({
@@ -48,7 +47,7 @@ app.use('/api/payment', paymentRoutes);
 app.use('/api/notifications', notificationsRoutes);
 app.use('/api/expert', expertRoutes);
 app.use('/api/expert-availability', expertAvailabilityRoutes);
-app.use('/api/categories', categoriesRouter);
+app.use('/api/categories', categoriesRoutes);
 
 // Example route
 app.get('/', (req, res) => {
