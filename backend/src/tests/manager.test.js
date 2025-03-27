@@ -248,3 +248,81 @@ describe('GET /api/manager/experts/:category_id', () => {
         expect(res.body).toEqual(mockExperts);
     });
 });
+
+describe('GET /api/manager/experts/:category_id/:current_expert_id', () => {
+    afterEach(() => {
+        jest.clearAllMocks();
+    });
+
+    test('should fetch available experts excluding current expert', async () => {
+        const mockExperts = [
+            { id: 8, username: 'alternate_expert' },
+            { id: 12, username: 'backup_specialist' }
+        ];
+
+        knex.mockImplementation(() => ({
+            select: jest.fn().mockReturnThis(),
+            join: jest.fn().mockReturnThis(),
+            where: jest.fn().mockReturnThis(),
+            whereBetween: jest.fn().mockReturnThis(),
+            whereNot: jest.fn().mockReturnThis(),
+            groupBy: jest.fn().mockResolvedValue(mockExperts)
+        }));
+
+        const res = await request(app).get('/api/manager/experts/3/5');
+        expect(res.status).toBe(200);
+        expect(res.body).toEqual(mockExperts);
+    });
+
+    test('should return empty array when no alternate experts available', async () => {
+        knex.mockImplementation(() => ({
+            select: jest.fn().mockReturnThis(),
+            join: jest.fn().mockReturnThis(),
+            where: jest.fn().mockReturnThis(),
+            whereBetween: jest.fn().mockReturnThis(),
+            whereNot: jest.fn().mockReturnThis(),
+            groupBy: jest.fn().mockResolvedValue([])
+        }));
+
+        const res = await request(app).get('/api/manager/experts/3/5');
+        expect(res.status).toBe(200);
+        expect(res.body).toEqual([]);
+    });
+
+    test('should return 500 on database error', async () => {
+        knex.mockImplementation(() => ({
+            select: jest.fn().mockReturnThis(),
+            join: jest.fn().mockReturnThis(),
+            where: jest.fn().mockReturnThis(),
+            whereBetween: jest.fn().mockReturnThis(),
+            whereNot: jest.fn().mockReturnThis(),
+            groupBy: jest.fn().mockRejectedValue(new Error('DB connection failed'))
+        }));
+
+        const res = await request(app).get('/api/manager/experts/3/5');
+        expect(res.status).toBe(500);
+        expect(res.body.message).toBe('Failed to fetch available experts besides the current assigned');
+    });
+
+    test('should exclude current expert from results', async () => {
+        const mockExperts = [{ id: 8, username: 'alternate_expert' }];
+        const mockWhereNot = jest.fn().mockReturnThis();
+
+        knex.mockImplementation(() => ({
+            select: jest.fn().mockReturnThis(),
+            join: jest.fn().mockReturnThis(),
+            where: jest.fn().mockReturnThis(),
+            whereBetween: jest.fn().mockReturnThis(),
+            whereNot: mockWhereNot, // Use the shared mock function
+            groupBy: jest.fn().mockResolvedValue(mockExperts)
+        }));
+
+        const res = await request(app).get('/api/manager/experts/3/5');
+
+        expect(res.status).toBe(200);
+        expect(res.body).toEqual(mockExperts);
+        expect(mockWhereNot).toHaveBeenCalledWith(
+            'expert_categories.expert_id', '5'
+        );
+    });
+});
