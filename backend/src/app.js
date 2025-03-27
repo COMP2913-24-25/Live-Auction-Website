@@ -2,7 +2,6 @@ require('dotenv').config({ path: require('path').resolve(__dirname, '../../.env'
 require('./routes/cleanupScheduler');
 
 const express = require('express');
-const bodyParser = require('body-parser');
 const cors = require('cors');
 const multer = require('multer');
 const path = require('path');
@@ -19,15 +18,19 @@ const paymentRoutes = require('./routes/payment');
 const notificationsRoutes = require('./routes/notifications');
 const expertRoutes = require('./routes/expert');
 const expertAvailabilityRoutes = require('./routes/expertAvailability');
-const categoriesRouter = require('./routes/categories');
 
-const upload = multer({ dest: 'uploads/' }); 
+const upload = multer({ dest: 'uploads/' });
 
 // CORS configuration
+const allowedOrigins = [process.env.VITE_FRONTEND_URL, 'http://localhost:5173'];
 app.use(cors({
-  origin: process.env.VITE_FRONTEND_URL,
+  origin: allowedOrigins,
   credentials: true,
 }));
+
+// Middleware
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
 // Stripe webhook 
 app.use((req, res, next) => {
@@ -48,16 +51,12 @@ app.use('/api/payment', paymentRoutes);
 app.use('/api/notifications', notificationsRoutes);
 app.use('/api/expert', expertRoutes);
 app.use('/api/expert-availability', expertAvailabilityRoutes);
-app.use('/api/categories', categoriesRouter);
+app.use('/api/categories', categoriesRoutes);
 
 // Example route
 app.get('/', (req, res) => {
   res.json({ message: 'Server is running' });
 });
-
-// Middleware
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
 
 // Serve static files
 app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
