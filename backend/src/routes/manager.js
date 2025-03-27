@@ -21,7 +21,7 @@ router.get('/authentication-requests/pending-unassigned', async (req, res) => {
         res.json(pendingRequests);
     } catch (error) {
         console.error('Error fetching pending authentication requests:', error);
-        res.status(500).json({ message: 'Server error' });
+        res.status(500).json({ message: 'Failed to fetch pending unassigned authentication requests' });
     }
 });
 
@@ -48,7 +48,7 @@ router.get('/authentication-requests/pending-assigned', async (req, res) => {
         res.json(pendingRequests);
     } catch (error) {
         console.error('Error fetching pending authentication requests with experts:', error);
-        res.status(500).json({ success: false, message: 'Internal server error' });
+        res.status(500).json({ success: false, message: 'Failed to fetch pending rellacation authentication requests' });
     }
 });
 
@@ -71,7 +71,7 @@ router.get('/experts/:category_id', async (req, res) => {
         res.json(experts);
     } catch (error) {
         console.error('Error fetching experts:', error);
-        res.status(500).json({ message: 'Server error' });
+        res.status(500).json({ message: 'Failed to fetch available experts in a category' });
     }
 });
 
@@ -95,7 +95,7 @@ router.get('/experts/:category_id/:current_expert_id', async (req, res) => {
         res.json(experts);
     } catch (error) {
         console.error('Error fetching experts:', error);
-        res.status(500).json({ message: 'Server error' });
+        res.status(500).json({ message: 'Failed to fetch available experts besides the current assigned' });
     }
 });
 
@@ -124,7 +124,7 @@ router.get('/authentication-requests/completed', async (req, res) => {
         res.json(completedRequests);
     } catch (error) {
         console.error('Error fetching completed authentication requests:', error);
-        res.status(500).json({ message: 'Server error' });
+        res.status(500).json({ message: 'Failed to fetch completed authentication requests' });
     }
 });
 
@@ -140,7 +140,7 @@ router.put('/authentication-requests/assign', async (req, res) => {
         res.json({ message: 'Expert assigned successfully' });
     } catch (error) {
         console.error('Error assigning expert:', error);
-        res.status(500).json({ message: 'Server error' });
+        res.status(500).json({ message: 'Failed to assign expert' });
     }
 });
 
@@ -156,7 +156,7 @@ router.put('/authentication-requests/reassign', async (req, res) => {
         res.json({ message: 'Expert reassigned successfully' });
     } catch (error) {
         console.error('Error reassigning expert:', error);
-        res.status(500).json({ message: 'Server error' });
+        res.status(500).json({ message: 'Failed to reassign expert' });
     }
 });
 
@@ -166,7 +166,7 @@ router.get('/posting-fees', async (req, res) => {
         res.json(fees);
     } catch (error) {
         console.error('Error fetching posting fees:', error);
-        res.status(500).json({ error: 'Internal server error' });
+        res.status(500).json({ error: 'Failed to fetch posting fees' });
     }
 });
 
@@ -176,7 +176,7 @@ router.put('/posting-fees', async (req, res) => {
         res.json({ message: 'Posting fees updated successfully' });
     } catch (error) {
         console.error('Error updating posting fees:', error);
-        res.status(500).json({ error: 'Internal server error' });
+        res.status(500).json({ error: 'Failed to update posting fees' });
     }
 });
 
