@@ -1,5 +1,5 @@
 const knex = require('knex');
-const knexConfig = require('../knexfile').development;
+const knexConfig = require('../backend/knexfile').test;
 
 const db = knex({
   ...knexConfig,
@@ -13,13 +13,18 @@ global.fetch = jest.fn(() =>
   })
 );
 
-beforeEach(async () => {
-  await db.migrate.latest(); // Run migrations before each test
-  await db.seed.run(); // Optionally run seeds
+beforeAll(async () => {
+  await db.migrate.latest(); // Run migrations before all tests
+  await db.seed.run(); // Optionally run seeds once
 });
 
-afterEach(async () => {
+afterAll(async () => {
   await db.destroy(); // Close connection after each test
+});
+
+beforeEach(() => {
+  // Reset any global mocks or states if needed
+  jest.clearAllMocks();
 });
 
 // Suppress unwanted console logs
