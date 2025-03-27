@@ -132,10 +132,18 @@ router.get('/authentication-requests/completed', async (req, res) => {
 router.put('/authentication-requests/assign', async (req, res) => {
     const { item_id, expert_id } = req.body;
 
+    if (!item_id || !expert_id) {
+        return res.status(400).json({ message: 'Both item_id and expert_id are required' });
+    }
+
     try {
-        await knex('authentication_requests')
-            .where({ item_id: item_id })
+        const updatedCount = await knex('authentication_requests')
+            .where({ item_id })
             .update({ expert_id });
+
+        if (updatedCount === 0) {
+            return res.status(404).json({ message: 'Item not found' })
+        }
 
         res.json({ message: 'Expert assigned successfully' });
     } catch (error) {
