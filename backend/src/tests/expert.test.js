@@ -120,3 +120,71 @@ describe("GET /api/expert/completed/:expertId", () => {
         expect(response.body).toEqual({ error: "Failed to fetch completed authentication requests" });
     });
 });
+
+describe("GET /api/expert/reviewed/:expertId", () => {
+    const expertId = 7;
+
+    afterEach(() => {
+        jest.clearAllMocks();
+    });
+
+    it("should return a list of reviewed authentication requests for an expert", async () => {
+        const mockReviewedItems = [
+            {
+                id: 1,
+                request_time: "2024-03-10T09:30:00Z",
+                decision_timestamp: "2024-03-11T12:45:00Z",
+                comments: "Verified as authentic",
+                item_title: "Antique Vase",
+                item_description: "A rare porcelain vase from China",
+                category: "Antiques",
+                image_urls: "vase1.jpg,vase2.jpg",
+                authentication_status: "Approved",
+                seller_id: 3,
+            },
+            {
+                id: 2,
+                request_time: "2024-03-12T11:15:00Z",
+                decision_timestamp: "2024-03-13T14:20:00Z",
+                comments: "Counterfeit detected",
+                item_title: "Luxury Handbag",
+                item_description: "Designer handbag with authenticity card",
+                category: "Fashion",
+                image_urls: "bag1.jpg",
+                authentication_status: "Rejected",
+                seller_id: 5,
+            },
+        ];
+
+        knex.mockImplementation(() => ({
+            select: jest.fn().mockReturnThis(),
+            leftJoin: jest.fn().mockReturnThis(),
+            where: jest.fn().mockReturnThis(),
+            whereIn: jest.fn().mockReturnThis(),
+            groupBy: jest.fn().mockReturnThis(),
+            orderBy: jest.fn().mockReturnThis(),
+            then: jest.fn((callback) => Promise.resolve(callback(mockReviewedItems))),
+        }));
+
+        const response = await request(app).get(`/api/expert/reviewed/${expertId}`);
+
+        expect(response.status).toBe(200);
+        expect(response.body).toEqual(mockReviewedItems);
+    });
+
+    it("should return 500 if database query fails", async () => {
+        knex.mockImplementation(() => ({
+            select: jest.fn().mockReturnThis(),
+            leftJoin: jest.fn().mockReturnThis(),
+            where: jest.fn().mockReturnThis(),
+            whereIn: jest.fn().mockReturnThis(),
+            groupBy: jest.fn().mockReturnThis(),
+            orderBy: jest.fn().mockRejectedValue(new Error('Database error'))
+        }));
+
+        const response = await request(app).get(`/api/expert/reviewed/${expertId}`);
+
+        expect(response.status).toBe(500);
+        expect(response.body).toEqual({ error: "Failed to fetch reviewed items" });
+    });
+});
