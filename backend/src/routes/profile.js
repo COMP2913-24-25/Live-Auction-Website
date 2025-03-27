@@ -6,13 +6,14 @@ const router = express.Router();
 // (gonna be used in profile.jsx in profile settings)
 router.put('/:id', async (req, res) => {
   const { id } = req.params; // id of user
-  const { formData, user } = req.body;
-  const { name, value } = formData;
+  const { formData, user, changes } = req.body;
 
   try {
-    await knex('profiles')
+    for (let change of changes) {
+    await knex('users')
       .where({ id : id})
-      .update({ [name]: value });
+      .update({ [change]: formData[change] });
+    }
 
     res.status(200).json({ message: `${user.username} profile info updated` });
 
@@ -29,7 +30,7 @@ router.get('/:id', async (req, res) => {
   const { id } = req.params;
 
   try {
-    const profile = await knex('profiles').where({ id : id }).first();
+    const profile = await knex('users').where({ id : id }).first();
     res.json(profile); // this is an object
 
   } catch (error) {
@@ -48,22 +49,20 @@ router.put('/favorites/:id', async (req, res) => {
 
   try {
 
-    const profile = await knex('profiles').where({ id: id }).first();
+    const profile = await knex('users').where({ id: id }).first();
     let favorites = [];
 
     if (profile && profile.favorites) {
       favorites = JSON.parse(profile.favorites);
     }
 
-    // 2. Add or delete the item
     if (!favorites.includes(auction_id) && favorites_boolean) {
       favorites.push(auction_id);
     } else if (favorites.includes(auction_id) && !favorites_boolean) {
       favorites = favorites.filter(fav => fav !== auction_id);
     }
 
-    // 3. Update the table
-    await knex('profiles')
+    await knex('users')
       .where({ id: id })
       .update({
         favorites: JSON.stringify(favorites)
@@ -78,18 +77,36 @@ router.put('/favorites/:id', async (req, res) => {
 });
 
 
-// get the list of user's favorite auction info based on the user id (gonna be used in profile.jsx for wishlist)
-router.get('/favorites/:id', async (req, res) => {
+// get the list of user's favorite auction info based on the user id 
+// (gonna be used in profile.jsx for wishlist and the format fro AuctionList
+router.get('/formatted-favorites/:id', async (req, res) => {
   try {
     // Get ID(s) from URL
-    const id = req.params;
+    const { id } = req.params;
 
-    const profile = await knex('profile').where({ id: id }).first();
+    const profile = await knex('users').where({ id: id }).first();
+
+    if (
+      !profile ||
+      !profile.favorites ||
+      profile.favorites === 'null' ||
+      profile.favorites === '""'
+    ) {
+      return res.json([]);
+    }
+
     const favorites = JSON.parse(profile.favorites);
     let favoriteAuctions = [];
 
+
+    let itemObj = null;
+    let imgURLs = [];
+    itemObj_with_images = null;
     for (let fav_id of favorites) {
-    favoriteAuctions.push((await knew(`/api/auction/${fav_id}`)).data);
+    itemObj = await knew('items').where({id : fav_id}).first();
+    imgURLs = await knew('item_images').where({item_id : fav_id}).select("image_url"); // as arrays
+    itemObj_with_images = {...itemObj, imgURLs : imgURLs}
+    favoriteAuctions.push(itemObj_with_images);    
     }
 
     res.json(favoriteAuctions);
@@ -99,6 +116,7 @@ router.get('/favorites/:id', async (req, res) => {
     res.status(500).json({ message: 'Failed to fetch auctions.' });
   }
 });
+
 
     
 module.exports = router;

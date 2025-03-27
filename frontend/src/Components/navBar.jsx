@@ -115,7 +115,7 @@ function NavBar() {
     const menuItems = [
       { label: 'Profile Settings', icon: Settings, path: '/profile-settings' },
       { label: 'My Auctions', icon: List, path: '/my-auctions' },
-      { label: 'Watchlist', icon: Heart, path: '/watchlist' },
+      { label: 'Wishlist', icon: Heart, path: '/wishlist' },
       { label: 'Purchase History', icon: ShoppingCart, path: '/purchase-history' },
       { label: 'Logout', icon: LogOut, path: '/logout' }
     ];
@@ -133,8 +133,8 @@ function NavBar() {
         case 'My Auctions':
           navigate('/my-auctions');
           break;
-        case 'Watchlist':
-          navigate('/watchlist');
+        case 'Wishlist':
+          navigate('/wishlist');
           break;
         case 'Purchase History':
           navigate('/purchase-history');
