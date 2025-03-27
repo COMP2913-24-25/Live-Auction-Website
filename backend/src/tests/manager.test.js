@@ -420,3 +420,65 @@ describe('GET /api/manager/authentication-requests/completed', () => {
         expect(res.body.message).toBe('Failed to fetch completed authentication requests');
     });
 });
+
+describe('PUT /api/manager/authentication-requests/assign', () => {
+    afterEach(() => {
+        jest.clearAllMocks();
+    });
+
+    test('should successfully assign expert to item', async () => {
+        const mockKnex = {
+            where: jest.fn().mockReturnThis(),
+            update: jest.fn().mockResolvedValue(1)
+        };
+        knex.mockImplementation(() => mockKnex);
+
+        const res = await request(app)
+            .put('/api/manager/authentication-requests/assign')
+            .send({ item_id: 101, expert_id: 5 });
+
+        expect(res.status).toBe(200);
+        expect(res.body.message).toBe('Expert assigned successfully');
+        expect(mockKnex.where).toHaveBeenCalledWith({ item_id: 101 });
+        expect(mockKnex.update).toHaveBeenCalledWith({ expert_id: 5 });
+    });
+
+    test('should return 404 if item not found', async () => {
+        const mockKnex = {
+            where: jest.fn().mockReturnThis(),
+            update: jest.fn().mockResolvedValue(0)
+        };
+        knex.mockImplementation(() => mockKnex);
+
+        const res = await request(app)
+            .put('/api/manager/authentication-requests/assign')
+            .send({ item_id: 999, expert_id: 5 });
+
+        expect(res.status).toBe(404);
+        expect(res.body.message).toBe('Item not found');
+    });
+
+    test('should return 400 for missing parameters', async () => {
+        const res = await request(app)
+            .put('/api/manager/authentication-requests/assign')
+            .send({ expert_id: 5 });
+
+        expect(res.status).toBe(400);
+        expect(res.body.message).toMatch(/required/);
+    });
+
+    test('should return 500 on database error', async () => {
+        const mockKnex = {
+            where: jest.fn().mockReturnThis(),
+            update: jest.fn().mockRejectedValue(new Error('Database error'))
+        };
+        knex.mockImplementation(() => mockKnex);
+
+        const res = await request(app)
+            .put('/api/manager/authentication-requests/assign')
+            .send({ item_id: 101, expert_id: 5 });
+
+        expect(res.status).toBe(500);
+        expect(res.body.message).toBe('Failed to assign expert');
+    });
+});
