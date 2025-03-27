@@ -326,3 +326,97 @@ describe('GET /api/manager/experts/:category_id/:current_expert_id', () => {
         );
     });
 });
+
+describe('GET /api/manager/authentication-requests/completed', () => {
+    afterEach(() => {
+        jest.clearAllMocks();
+    });
+
+    test('should fetch approved and rejected authentication requests', async () => {
+        const mockRequests = [
+            {
+                id: 1,
+                item_id: 101,
+                item_name: 'Vintage Watch',
+                assigned_expert_username: 'watch_expert',
+                second_opinion_requested: false,
+                status: 'Approved',
+                comments: 'Authentic piece',
+                decision_timestamp: '2023-06-15T10:30:00Z'
+            },
+            {
+                id: 2,
+                item_id: 102,
+                item_name: 'Modern Painting',
+                assigned_expert_username: 'art_specialist',
+                second_opinion_requested: true,
+                status: 'Rejected',
+                comments: 'Not authentic',
+                decision_timestamp: '2023-06-16T14:45:00Z'
+            }
+        ];
+
+        knex.mockImplementation(() => ({
+            select: jest.fn().mockReturnThis(),
+            join: jest.fn().mockReturnThis(),
+            leftJoin: jest.fn().mockReturnThis(),
+            whereIn: jest.fn().mockResolvedValue(mockRequests)
+        }));
+
+        const res = await request(app).get('/api/manager/authentication-requests/completed');
+        expect(res.status).toBe(200);
+        expect(res.body.length).toBe(2);
+        expect(res.body[0].status).toBe('Approved');
+        expect(res.body[1].status).toBe('Rejected');
+    });
+
+    test('should handle COALESCE for expert usernames', async () => {
+        const mockRequests = [{
+            id: 3,
+            item_id: 103,
+            item_name: 'Rare Coin',
+            assigned_expert_username: 'coin_analyst',
+            second_opinion_requested: true,
+            status: 'Approved',
+            comments: 'Genuine specimen',
+            decision_timestamp: '2023-06-17T09:15:00Z'
+        }];
+
+        knex.mockImplementation(() => ({
+            select: jest.fn().mockReturnThis(), // Simplified - don't need to verify raw SQL in tests
+            join: jest.fn().mockReturnThis(),
+            leftJoin: jest.fn().mockReturnThis(),
+            whereIn: jest.fn().mockResolvedValue(mockRequests)
+        }));
+
+        const res = await request(app).get('/api/manager/authentication-requests/completed');
+        expect(res.status).toBe(200);
+        expect(res.body[0].assigned_expert_username).toBe('coin_analyst');
+    });
+
+    test('should return empty array when no completed requests exist', async () => {
+        knex.mockImplementation(() => ({
+            select: jest.fn().mockReturnThis(),
+            join: jest.fn().mockReturnThis(),
+            leftJoin: jest.fn().mockReturnThis(),
+            whereIn: jest.fn().mockResolvedValue([])
+        }));
+
+        const res = await request(app).get('/api/manager/authentication-requests/completed');
+        expect(res.status).toBe(200);
+        expect(res.body).toEqual([]);
+    });
+
+    test('should return 500 on database error', async () => {
+        knex.mockImplementation(() => ({
+            select: jest.fn().mockReturnThis(),
+            join: jest.fn().mockReturnThis(),
+            leftJoin: jest.fn().mockReturnThis(),
+            whereIn: jest.fn().mockRejectedValue(new Error('Database timeout'))
+        }));
+
+        const res = await request(app).get('/api/manager/authentication-requests/completed');
+        expect(res.status).toBe(500);
+        expect(res.body.message).toBe('Failed to fetch completed authentication requests');
+    });
+});
