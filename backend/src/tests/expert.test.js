@@ -188,3 +188,65 @@ describe("GET /api/expert/reviewed/:expertId", () => {
         expect(response.body).toEqual({ error: "Failed to fetch reviewed items" });
     });
 });
+
+describe("GET /api/expert/requests/:requestId", () => {
+    const requestId = 1;
+
+    afterEach(() => {
+        jest.clearAllMocks();
+    });
+
+    it("should return the details of a specific request", async () => {
+        const mockRequest = {
+            id: 1,
+            title: "Antique Vase",
+            description: "A rare porcelain vase",
+            category_id: 2,
+            seller_name: "John Doe",
+            image_urls: "vase1.jpg,vase2.jpg",
+        };
+
+        knex.mockImplementation(() => ({
+            select: jest.fn().mockReturnThis(),
+            leftJoin: jest.fn().mockReturnThis(),
+            where: jest.fn().mockReturnThis(),
+            groupBy: jest.fn().mockReturnThis(),
+            first: jest.fn(() => Promise.resolve(mockRequest)),
+        }));
+
+        const response = await request(app).get(`/api/expert/requests/${requestId}`);
+
+        expect(response.status).toBe(200);
+        expect(response.body).toEqual(mockRequest);
+    });
+
+    it("should return 404 if request not found", async () => {
+        knex.mockImplementation(() => ({
+            select: jest.fn().mockReturnThis(),
+            leftJoin: jest.fn().mockReturnThis(),
+            where: jest.fn().mockReturnThis(),
+            groupBy: jest.fn().mockReturnThis(),
+            first: jest.fn(() => Promise.resolve(null)), // Simulating no request found
+        }));
+
+        const response = await request(app).get(`/api/expert/requests/${requestId}`);
+
+        expect(response.status).toBe(404);
+        expect(response.body).toEqual({ error: "Request not found" });
+    });
+
+    it("should return 500 if database query fails", async () => {
+        knex.mockImplementation(() => ({
+            select: jest.fn().mockReturnThis(),
+            leftJoin: jest.fn().mockReturnThis(),
+            where: jest.fn().mockReturnThis(),
+            groupBy: jest.fn().mockReturnThis(),
+            first: jest.fn().mockRejectedValue(new Error('Database error'))
+        }));
+
+        const response = await request(app).get(`/api/expert/requests/${requestId}`);
+
+        expect(response.status).toBe(500);
+        expect(response.body).toEqual({ error: "Failed to fetch request" });
+    });
+});
