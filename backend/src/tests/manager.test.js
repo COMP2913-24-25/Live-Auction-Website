@@ -178,3 +178,73 @@ describe("GET /api/manager/authentication-requests/pending-assigned", () => {
         expect(response.body).toEqual([]);
     });
 });
+
+describe('GET /api/manager/experts/:category_id', () => {
+    afterEach(() => {
+        jest.clearAllMocks();
+    });
+
+    test('should fetch available experts for a category within date range', async () => {
+        const mockExperts = [
+            { id: 5, username: 'art_expert' },
+            { id: 8, username: 'watch_specialist' }
+        ];
+
+        knex.mockImplementation(() => ({
+            select: jest.fn().mockReturnThis(),
+            join: jest.fn().mockReturnThis(),
+            where: jest.fn().mockReturnThis(),
+            whereBetween: jest.fn().mockReturnThis(),
+            groupBy: jest.fn().mockResolvedValue(mockExperts)
+        }));
+
+        const res = await request(app).get('/api/manager/experts/3');
+        expect(res.status).toBe(200);
+        expect(res.body.length).toBe(2);
+        expect(res.body).toEqual(mockExperts);
+    });
+
+    test('should return empty array when no experts are available', async () => {
+        knex.mockImplementation(() => ({
+            select: jest.fn().mockReturnThis(),
+            join: jest.fn().mockReturnThis(),
+            where: jest.fn().mockReturnThis(),
+            whereBetween: jest.fn().mockReturnThis(),
+            groupBy: jest.fn().mockResolvedValue([])
+        }));
+
+        const res = await request(app).get('/api/manager/experts/3');
+        expect(res.status).toBe(200);
+        expect(res.body).toEqual([]);
+    });
+
+    test('should return 500 if database query fails', async () => {
+        knex.mockImplementation(() => ({
+            select: jest.fn().mockReturnThis(),
+            join: jest.fn().mockReturnThis(),
+            where: jest.fn().mockReturnThis(),
+            whereBetween: jest.fn().mockReturnThis(),
+            groupBy: jest.fn().mockRejectedValue(new Error('Database error'))
+        }));
+
+        const res = await request(app).get('/api/manager/experts/3');
+        expect(res.status).toBe(500);
+        expect(res.body.message).toBe('Failed to fetch available experts in a category');
+    });
+
+    test('should handle string category_id parameter', async () => {
+        const mockExperts = [{ id: 5, username: 'art_expert' }];
+
+        knex.mockImplementation(() => ({
+            select: jest.fn().mockReturnThis(),
+            join: jest.fn().mockReturnThis(),
+            where: jest.fn().mockReturnThis(),
+            whereBetween: jest.fn().mockReturnThis(),
+            groupBy: jest.fn().mockResolvedValue(mockExperts)
+        }));
+
+        const res = await request(app).get('/api/manager/experts/3');
+        expect(res.status).toBe(200);
+        expect(res.body).toEqual(mockExperts);
+    });
+});
