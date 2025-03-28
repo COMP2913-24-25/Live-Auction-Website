@@ -225,7 +225,7 @@ router.get('/weekly-income', async (req, res) => {
         const weeklyData = await knex('payments')
             .select(
                 knex.raw('strftime("%Y-%W", created_at) as week'),
-                knex.raw('COALESCE(SUM(amount), 0) as total')
+                knex.raw('SUM(amount) as total')
             )
             .where('created_at', '>=', sixMonthsAgo.toISOString())
             .groupBy('week')
