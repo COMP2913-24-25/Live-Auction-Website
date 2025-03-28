@@ -1,14 +1,14 @@
 import axios from 'axios';
 
-// 拦截 /api/auth/* 请求并重定向到后端
+//Intercept /api/auth/* requests and redirect to the backend
 axios.interceptors.request.use(
   (config) => {
-    // 只处理认证相关请求
+    // manage the authentication requests
     if (config.url && config.url.startsWith('/api/auth/')) {
-      // 设置正确的基础 URL
+      // setup the correct base URL
       config.baseURL = 'http://localhost:5000';
       
-      // 添加认证头（如果有令牌）
+      // add the authentication header (if token exists)
       const token = localStorage.getItem('token');
       if (token) {
         config.headers['Authorization'] = `Bearer ${token}`;
@@ -25,15 +25,15 @@ axios.interceptors.request.use(
   }
 );
 
-// 拦截 /api/payment/* 请求
+// Intercept /api/payment/* requests and redirect to the backend
 axios.interceptors.request.use(
   (config) => {
-    // 只处理支付相关请求
+    // manage the payment requests
     if (config.url && config.url.startsWith('/api/payment/')) {
-      // 设置正确的基础 URL
+      // setup the correct base URL
       config.baseURL = 'http://localhost:5000';
       
-      // 添加认证头（如果有令牌）
+      // add the authentication header (if token exists)
       const token = localStorage.getItem('token');
       if (token) {
         config.headers['Authorization'] = `Bearer ${token}`;

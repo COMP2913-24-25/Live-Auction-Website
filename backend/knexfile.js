@@ -17,7 +17,8 @@ module.exports = {
     },
     seeds: {
       directory: './database/seeds'
-    }
+    },
+    pool: { min: 2, max: 10 } // Adjust max based on your needs
   },
 
   test: {
@@ -31,51 +32,7 @@ module.exports = {
     },
     seeds: {
       directory: './database/seeds'
-    }
+    },
+    pool: { min: 2, max: 10 } // Adjust max based on your needs
   },
-
-  staging: {
-    client: 'pg',
-    connection: {
-      host: process.env.STAGING_DB_HOST || 'localhost',
-      database: process.env.STAGING_DB_NAME || 'staging_db',
-      user: process.env.STAGING_DB_USER || 'staging_user',
-      password: process.env.STAGING_DB_PASSWORD || 'staging_password',
-      port: process.env.STAGING_DB_PORT || 5432
-    },
-    pool: {
-      min: 2,
-      max: 10
-    },
-    migrations: {
-      directory: './database/migrations',
-      tableName: 'knex_migrations'
-    },
-    seeds: {
-      directory: './database/seeds'
-    }
-  },
-
-  production: {
-    client: 'pg',
-    connection: {
-      host: process.env.PROD_DB_HOST || 'localhost',
-      database: process.env.PROD_DB_NAME || 'production_db',
-      user: process.env.PROD_DB_USER || 'production_user',
-      password: process.env.PROD_DB_PASSWORD || 'production_password',
-      port: process.env.PROD_DB_PORT || 5432
-    },
-    pool: {
-      min: 2,
-      max: 20
-    },
-    migrations: {
-      directory: './database/migrations',
-      tableName: 'knex_migrations'
-    },
-    seeds: {
-      directory: './database/seeds'
-    }
-  }
-
 };

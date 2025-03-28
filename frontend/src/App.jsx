@@ -1,12 +1,12 @@
 import { Navigate, BrowserRouter as Router, Route, Routes } from 'react-router-dom';
-import { AuthProvider, useAuth } from "./context/authContext";
+import { AuthProvider, useAuth } from "./context/AuthContext";
 import { NotificationProvider } from './context/notificationContext';
 import Browse from "./pages/Browse";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 import ManagerDashboard from "./pages/ManagerDashboard";
 import ExpertDashboard from "./pages/ExpertDashboard";  
-import NavBar from "./components/navBar";
+import NavBar from "./Components/navBar";
 import ProtectedRoute from "./context/ProtectedRoute";
 import AuctionDetails from './pages/AuctionDetails';
 import AuctionForm from './pages/AuctionForm';
@@ -15,6 +15,7 @@ import Notifications from './pages/Notifications';
 import ExpertAvailability from './components/ExpertAvailability';
 import AvailableExperts from './pages/AvailableExperts';
 import Users from './pages/Users';
+import FinalizeItems from './pages/FinalizeItems';
 
 const DashboardRouter = () => {
   const { user } = useAuth();
@@ -80,6 +81,12 @@ function App() {
           <Route path="/authenticate-item" element={
             <ProtectedRoute allowedRoles={[1]}>
               <ItemAuthenticationForm />
+            </ProtectedRoute>
+          } />
+
+          <Route path="/items" element={
+            <ProtectedRoute allowedRoles={[1]}>
+              <FinalizeItems />
             </ProtectedRoute>
           } />
           
