@@ -361,41 +361,36 @@ function NavBar() {
                 </div>
 
                 {/* Right side buttons */}
-                <div className="flex items-center space-x-4">
+                <div className="flex items-center space-x-6">
                   {isAuthenticated && (
                     <>
                       {/* Notification Bell */}
                       <NotificationBell />
 
-                      <div className="relative inline-block ml-36">
-                        {/* Profile Main Box */}
-                        <div className="flex items-center gap-6">
-                          
-                          {/* Username */}
-                          <div className="ml-4">
-                            <p className="text-white hover:text-blue-200 font-medium transition-colors duration-200">Welcome, {user.username}</p>
-                          </div>
-                          
-                          {/* Profile Picture */}
-                          <div
-                            key={user.username}
-                            className="w-12 h-12 rounded-full bg-gray-300 flex items-center justify-center overflow-hidden"
-                            onClick={toggleDropdown} // Click to toggle
-                          >
-                            <img 
-                              src="https://via.placeholder.com/150" 
-                              alt="Profile"
-                              className="w-full h-full object-cover transition-shadow hover:shadow-lg"
-                            />
-                          </div>
+                      {/* Profile Section */}
+                      <div className="flex items-center gap-4 relative">
+                        {/* Username */}
+                        <p className="text-white hover:text-blue-200 font-medium transition-colors duration-200">
+                          {user.username}
+                        </p>
+
+                        {/* Profile Picture */}
+                        <div
+                          className="w-10 h-10 rounded-full bg-gray-300 flex items-center justify-center overflow-hidden cursor-pointer"
+                          onClick={toggleDropdown}
+                        >
+                          <img 
+                            src="https://via.placeholder.com/150" 
+                            alt="Profile"
+                            className="w-full h-full object-cover"
+                          />
                         </div>
 
                         {/* Dropdown Menu */}
                         {isDropdownOpen && (
                           <div 
-                            className="absolute right-0 mt-2 w-56 bg-white border border-gray-200 rounded-lg shadow-lg z-50"
+                            className="absolute right-0 top-full mt-2 w-56 bg-white border border-gray-200 rounded-lg shadow-lg z-50"
                             onMouseLeave={() => setIsDropdownOpen(false)}
-                            onMouseEnter={() => setIsDropdownOpen(true)}
                           >
                             <div className="flex flex-col divide-y divide-gray-200">
                               {menuItems.map((item, index) => (
@@ -426,15 +421,12 @@ function NavBar() {
                   
                   {!isAuthenticated && (
                     <>
-                      <Link 
-                        to="/login" 
-                        className="text-white hover:text-blue-200 font-medium transition-colors duration-200"
-                      >
+                      <Link to="/login" className="text-white hover:text-blue-200 font-medium">
                         Login
                       </Link>
                       <Link 
                         to="/register" 
-                        className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-md font-medium transition-colors duration-200"
+                        className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-md font-medium"
                       >
                         Register
                       </Link>
