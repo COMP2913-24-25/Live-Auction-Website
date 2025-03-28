@@ -667,3 +667,62 @@ describe('PUT /api/manager/posting-fees', () => {
         expect(res.body.error).toBe('No posting fees record found to update');
     });
 });
+
+describe('GET /api/manager/weekly-income', () => {
+    afterEach(() => {
+        jest.clearAllMocks();
+    });
+
+    test('should return weekly income data', async () => {
+        const mockWeeklyData = [{ week: '2023-24', total: '1500.00' }];
+        const mockTotal = { total: '5000.00' };
+        const mockBreakdown = [{ category: 'Electronics', amount: '3000.00' }];
+
+        // Mock the three queries in sequence
+        knex.mockImplementationOnce(() => ({
+            select: jest.fn().mockReturnThis(),
+            where: jest.fn().mockReturnThis(),
+            groupBy: jest.fn().mockReturnThis(),
+            orderBy: jest.fn().mockReturnThis(),
+            then: jest.fn(cb => cb(mockWeeklyData))
+        }))
+            .mockImplementationOnce(() => ({
+                sum: jest.fn().mockReturnThis(),
+                where: jest.fn().mockReturnThis(),
+                first: jest.fn().mockResolvedValue(mockTotal)
+            }))
+            .mockImplementationOnce(() => ({
+                select: jest.fn().mockReturnThis(),
+                join: jest.fn().mockReturnThis(),
+                where: jest.fn().mockReturnThis(),
+                groupBy: jest.fn().mockReturnThis(),
+                sum: jest.fn().mockReturnThis(),
+                then: jest.fn(cb => cb(mockBreakdown))
+            }));
+
+        const res = await request(app).get('/api/manager/weekly-income');
+
+        expect(res.status).toBe(200);
+        expect(res.body).toEqual({
+            weekly: [{ week: '2023-24', total: 1500 }],
+            total: 5000,
+            startDate: expect.any(String),
+            endDate: expect.any(String),
+            breakdown: [{ category: 'Electronics', amount: 3000 }]
+        });
+    });
+
+    test('should return 500 on database error', async () => {
+        // Mock the first query to fail
+        knex.mockImplementationOnce(() => ({
+            select: jest.fn().mockReturnThis(),
+            where: jest.fn().mockReturnThis(),
+            groupBy: jest.fn().mockReturnThis(),
+            orderBy: jest.fn().mockRejectedValue(new Error('Database error'))
+        }));
+
+        const res = await request(app).get('/api/manager/weekly-income');
+        expect(res.status).toBe(500);
+        expect(res.body.error).toBe('Failed to fetch weekly income');
+    });
+});
