@@ -24,6 +24,7 @@ const expertRoutes = require('./routes/expert');
 const { router: emailRouter } = require('./routes/email');
 const expertAvailabilityRoutes = require('./routes/expertAvailability');
 const bidRoutes = require('./routes/bid');
+const finalizeListingRoutes = require('./routes/finalizeListing')
 
 // 导入 Cloudinary 配置
 const { upload } = require('./routes/upload');
@@ -61,6 +62,7 @@ app.use('/api/email', emailRouter);
 app.use('/api/expert-availability', expertAvailabilityRoutes);
 app.use('/api/bids', bidRoutes);
 app.use('/api/categories', categoriesRoutes);
+app.use('/api/finalize-listing', finalizeListingRoutes);
 
 // Example route
 app.get('/', (req, res) => {
