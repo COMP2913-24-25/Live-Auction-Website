@@ -482,3 +482,68 @@ describe('PUT /api/manager/authentication-requests/assign', () => {
         expect(res.body.message).toBe('Failed to assign expert');
     });
 });
+
+describe('PUT /api/manager/authentication-requests/reassign', () => {
+    afterEach(() => {
+        jest.clearAllMocks();
+    });
+
+    test('should successfully reassign expert for an item', async () => {
+        const mockKnex = {
+            where: jest.fn().mockReturnThis(),
+            update: jest.fn().mockResolvedValue(1)
+        };
+        knex.mockImplementation(() => mockKnex);
+
+        const res = await request(app)
+            .put('/api/manager/authentication-requests/reassign')
+            .send({ request_id: 101, new_expert_id: 7 });
+
+        expect(res.status).toBe(200);
+        expect(res.body.message).toBe('Expert reassigned successfully');
+        expect(mockKnex.where).toHaveBeenCalledWith({ item_id: 101 });
+        expect(mockKnex.update).toHaveBeenCalledWith({
+            new_expert_id: 7,
+            second_opinion_requested: true
+        });
+    });
+
+    test('should return 404 if request not found', async () => {
+        const mockKnex = {
+            where: jest.fn().mockReturnThis(),
+            update: jest.fn().mockResolvedValue(0)
+        };
+        knex.mockImplementation(() => mockKnex);
+
+        const res = await request(app)
+            .put('/api/manager/authentication-requests/reassign')
+            .send({ request_id: 999, new_expert_id: 7 });
+
+        expect(res.status).toBe(404);
+        expect(res.body.message).toBe('Request not found');
+    });
+
+    test('should return 400 for missing parameters', async () => {
+        const res = await request(app)
+            .put('/api/manager/authentication-requests/reassign')
+            .send({ new_expert_id: 7 }); // Missing request_id
+
+        expect(res.status).toBe(400);
+        expect(res.body.message).toMatch(/required/);
+    });
+
+    test('should return 500 on database error', async () => {
+        const mockKnex = {
+            where: jest.fn().mockReturnThis(),
+            update: jest.fn().mockRejectedValue(new Error('Database error'))
+        };
+        knex.mockImplementation(() => mockKnex);
+
+        const res = await request(app)
+            .put('/api/manager/authentication-requests/reassign')
+            .send({ request_id: 101, new_expert_id: 7 });
+
+        expect(res.status).toBe(500);
+        expect(res.body.message).toBe('Failed to reassign expert');
+    });
+});
