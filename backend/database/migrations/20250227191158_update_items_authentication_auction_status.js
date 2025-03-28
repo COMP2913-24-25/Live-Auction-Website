@@ -2,23 +2,25 @@ exports.up = async function (knex) {
     // Drop the dependent view
     await knex.schema.raw('DROP VIEW IF EXISTS item_current_bids');
 
+    // Modify the `items` table
     await knex.schema.alterTable('items', (table) => {
         table.dropColumn('authenticated'); // Remove old boolean field
         table
             .enum('authentication_status', ['Not Requested', 'Pending', 'Approved', 'Rejected'])
-            .defaultTo('Not Requested');
+            .defaultTo('Not Requested'); // Add new enum column
         table
             .enum('auction_status', ['Not Listed', 'Active', 'Ended - Sold', 'Ended - Unsold'])
-            .defaultTo('Not Listed');
+            .defaultTo('Not Listed'); // Add new enum column
         table.decimal('min_price').notNullable().defaultTo(1).alter(); // Set a safe default
-        table.timestamp('end_time').notNullable().defaultTo("2025-02-20 12:00:00").alter(); // Set default to 1 day later
+        table.timestamp('end_time').notNullable().alter(); // Ensure column is not nullable
     });
 
+    // Modify the `authentication_requests` table
     await knex.schema.alterTable('authentication_requests', (table) => {
-        table.boolean('second_opinion_requested').defaultTo(false);
-        table.integer('new_expert_id').references('id').inTable('users').onDelete('SET NULL');
-        table.text('comments').nullable().defaultTo('');
-        table.timestamp('decision_timestamp').nullable();
+        table.boolean('second_opinion_requested').defaultTo(false); // Add new column
+        table.integer('new_expert_id').references('id').inTable('users').onDelete('SET NULL'); // Add foreign key
+        table.text('comments').nullable().defaultTo(''); // Add comments column
+        table.timestamp('decision_timestamp').nullable(); // Add decision timestamp
     });
 
     // Recreate the view with the updated schema
@@ -45,21 +47,24 @@ exports.down = async function (knex) {
     // Drop the dependent view
     await knex.schema.raw('DROP VIEW IF EXISTS item_current_bids');
 
+    // Revert changes to the `items` table
     await knex.schema.alterTable('items', (table) => {
-        table.boolean('authenticated').defaultTo(false);
-        table.dropColumn('authentication_status');
-        table.dropColumn('auction_status');
-        table.decimal('min_price').notNullable().alter();
-        table.timestamp('end_time').notNullable().alter();
+        table.boolean('authenticated').defaultTo(false); // Re-add old boolean field
+        table.dropColumn('authentication_status'); // Remove new enum column
+        table.dropColumn('auction_status'); // Remove new enum column
+        table.decimal('min_price').notNullable().alter(); // Revert to original state
+        table.timestamp('end_time').notNullable().alter(); // Revert to original state
     });
 
+    // Revert changes to the `authentication_requests` table
     await knex.schema.alterTable('authentication_requests', (table) => {
-        table.dropColumn('second_opinion_requested');
-        table.dropColumn('comments');
-        table.dropColumn('decision_timestamp');
+        table.dropColumn('second_opinion_requested'); // Remove new column
+        table.dropColumn('new_expert_id'); // Remove foreign key
+        table.dropColumn('comments'); // Remove comments column
+        table.dropColumn('decision_timestamp'); // Remove decision timestamp
     });
 
-    // Recreate the view with the updated schema
+    // Recreate the view with the original schema
     await knex.schema.raw(`
         CREATE VIEW item_current_bids AS
         SELECT

@@ -76,10 +76,43 @@ const ExpertDashboard = () => {
     }
   };
 
-  const handleAction = (id, action) => {
-    axios.post(`/api/expert/authenticate/${id}`, { action, comment: comments[id] })
-      .then(() => setRequests(requests.filter(req => req.id !== id)))
-      .catch((err) => console.error("Error updating status:", err));
+  const handleAction = async (id, action) => {
+    try {
+      const response = await axios.post(`/api/expert/authenticate/${id}`, {
+        action,
+        comment: comments[id] || ''
+      });
+
+      if (response.data.success) {
+        // Update the requests list
+        setRequests(prev => prev.filter(request => request.id !== id));
+
+        // Move to reviewed items
+        const processedItem = requests.find(request => request.id === id);
+        if (processedItem) {
+          const reviewedItem = {
+            ...processedItem,
+            authentication_status: action,
+            comments: comments[id] || '',
+            decision_timestamp: new Date().toISOString()
+          };
+          setReviewedItems(prev => [reviewedItem, ...prev]);
+        }
+
+        // Clear the comment
+        setComments(prev => {
+          const newComments = { ...prev };
+          delete newComments[id];
+          return newComments;
+        });
+
+        alert(response.data.message);
+      }
+    } catch (error) {
+      console.error('Error updating authentication status:', error);
+      const errorMessage = error.response?.data?.error || 'Failed to process authentication';
+      alert(`Error: ${errorMessage}`);
+    }
   };
 
   const openModal = (images, index) => setModal({ open: true, images, index });
