@@ -156,10 +156,21 @@ router.put('/authentication-requests/assign', async (req, res) => {
 router.put('/authentication-requests/reassign', async (req, res) => {
     const { request_id, new_expert_id } = req.body;
 
+    if (!request_id || !new_expert_id) {
+        return res.status(400).json({ message: 'Both request_id and new_expert_id are required' });
+    }
+
     try {
-        await knex('authentication_requests')
+        const updatedCount = await knex('authentication_requests')
             .where({ item_id: request_id })
-            .update({ new_expert_id: new_expert_id });
+            .update({
+                new_expert_id,
+                second_opinion_requested: true
+            });
+
+        if (updatedCount === 0) {
+            return res.status(404).json({ message: 'Request not found' });
+        }
 
         res.json({ message: 'Expert reassigned successfully' });
     } catch (error) {
