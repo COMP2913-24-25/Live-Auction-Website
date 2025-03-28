@@ -17,6 +17,14 @@ exports.up = async function (knex) {
     );
   }
 
+  if (!hasPostingFee) {
+    operations.push(
+      knex.schema.alterTable("items", (table) => {
+        table.decimal("posting_fee", 10, 2);
+      })
+    );
+  }
+
   operations.push(
     knex.schema.createTable("transactions", (table) => {
       table.increments("id");
