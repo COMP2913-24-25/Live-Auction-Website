@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-// 创建 axios 实例
+// Create an axios instance with a base URL and default headers
 const instance = axios.create({
   baseURL: import.meta.env.VITE_API_URL || 'http://localhost:5000',
   withCredentials: true,
@@ -9,7 +9,7 @@ const instance = axios.create({
   }
 });
 
-// 请求拦截器
+// Add a request interceptor to include the token in the headers
 instance.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem('token');
