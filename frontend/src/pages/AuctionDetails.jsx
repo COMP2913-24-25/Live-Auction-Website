@@ -1,11 +1,14 @@
-import React, { useEffect, useState, useRef } from "react";
+import React, { useEffect, useState, useRef, useContext } from "react";
 import { useAuth } from "../context/authContext";
-import axios from "axios";
+import axios from "../api/axios";
 import Carousel from "react-multi-carousel";
 import "react-multi-carousel/lib/styles.css";
 import { Star } from "lucide-react";
 import { useParams, Link } from "react-router-dom";
+import PaymentForm from '../components/payment/PaymentForm';
+import PaymentSuccess from '../components/payment/PaymentSuccess';
 import PaymentCardSelector from '../components/payment/PaymentCardSelector';
+import { validateBidAmount } from '../components/BidForm';
 import authenticatedIcon from "../assets/authenticatedIcon.png";
 import { submitBid, fetchAuctionById } from '../api/bid';
 import { getSocket, joinAuctionRoom, leaveAuctionRoom } from '../socket';
@@ -38,40 +41,18 @@ const calculateTimeRemaining = (endTime, auctionStatus) => {
   return `${hours}h ${minutes}m ${seconds}s`;
 };
 
-const validateBidAmount = (bidAmount, currentBid, minPrice) => {
-  if (!bidAmount || isNaN(parseFloat(bidAmount))) {
-    return "Please enter a valid bid amount";
-  }
+const safeAccess = (obj, path, defaultValue = undefined) => {
+  const keys = path.split('.');
+  let result = obj;
   
-  const amount = parseFloat(bidAmount);
-  const minimumBid = Math.max(currentBid, minPrice) + 5;
-  
-  if (amount < minimumBid) {
-    return `The bid must be at least £${minimumBid}`;
-  }
-  
-  return null; // 没有错误
-};
-
-const formatDate = (dateString) => {
-  const date = new Date(dateString);
-  return date.toLocaleDateString();
-};
-
-// 保留这个安全访问函数
-const safeAccess = (obj, path, defaultValue = null) => {
-  try {
-    const keys = path.split('.');
-    let result = obj;
-    for (const key of keys) {
-      if (result === undefined || result === null) return defaultValue;
-      result = result[key];
+  for (const key of keys) {
+    if (result === null || result === undefined) {
+      return defaultValue;
     }
-    return result === undefined ? defaultValue : result;
-  } catch (error) {
-    console.error(`Error accessing path ${path}:`, error);
-    return defaultValue;
+    result = result[key];
   }
+  
+  return result === undefined ? defaultValue : result;
 };
 
 const AuctionDetails = () => {
@@ -93,44 +74,44 @@ const AuctionDetails = () => {
   const [error, setError] = useState("");
   const [placingBid, setPlacingBid] = useState(false);
   const [bidPlaced, setBidPlaced] = useState(false);
-  
   const section1Ref = useRef(null);
   const section2Ref = useRef(null);
 
   useEffect(() => {
-    console.log('[Debug] Component mounted, starting to fetch auction data');
-    fetchAuctionData();
+    const fetchAuctionDetails = async () => {
+      try {
+        const response = await axios.get(`/api/auctions/${id}`);
+        console.log('Received auction details:', response.data);
+        
+        if (response.data) {
+          setAuction(response.data);
+          setBidAmount(response.data.current_bid + 5);
+          setRemainingTime(calculateTimeRemaining(response.data.end_time, response.data.auction_status));
+        }
+      } catch (error) {
+        console.error('Error fetching auction details:', error);
+        setError(error.response?.data?.error || 'Failed to load auction details');
+      }
+    };
+
+    if (id) {
+      fetchAuctionDetails();
+    }
   }, [id]);
 
   useEffect(() => {
-    console.log('[Debug] auction state updated:', auction);
-    if (auction) {
-      console.log('[Debug] Setting bidAmount to:', auction.current_bid + 5);
-      setBidAmount(auction.current_bid + 5);
-    }
-  }, [auction]);
-
-  useEffect(() => {
-    if (bidPlaced) {
-      console.log('[Debug] Detected bidPlaced as true, fetching auction data again');
-      fetchAuctionData();
-      setBidPlaced(false);
-    }
-  }, [bidPlaced]);
-
-  useEffect(() => {
-    if (!auction?.end_time) return;
+    if (!auction?.end_time) return; // Ensure end_time exists before setting the interval
 
     const updateRemainingTime = () => {
       setRemainingTime(calculateTimeRemaining(auction.end_time, auction.auction_status));
     };
 
-    updateRemainingTime();
+    updateRemainingTime(); // Set initial value immediately
 
     const interval = setInterval(updateRemainingTime, 1000);
 
     return () => clearInterval(interval);
-  }, [auction?.end_time]);
+  }, [auction?.end_time]); // Run effect when auction.end_time changes
 
   useEffect(() => {
     const adjustHeight = () => {
@@ -157,21 +138,24 @@ const AuctionDetails = () => {
     socket.on('bid_updated', (data) => {
       console.log('[Debug] Received bid_updated event:', data);
       if (data.item_id === parseInt(id)) {
-        // 更新当前出价
+        // 确保使用函数式更新，保证基于最新状态更新
         setAuction(prev => {
           if (!prev) return null;
           
-          return {
+          const updatedAuction = {
             ...prev,
             current_bid: parseFloat(data.bid_amount),
             highest_bidder_id: data.bidder_id
           };
+          
+          console.log('[Debug] Updating auction with new data:', updatedAuction);
+          return updatedAuction;
         });
         
-        // 更新建议的出价金额
-        setBidAmount(parseFloat(data.bid_amount) + 5);
+        // 立即更新出价金额建议
+        setBidAmount(prev => parseFloat(data.bid_amount) + 5);
         
-        // 根据需要可以显示通知
+        // 显示更新通知
         if (user?.id !== data.bidder_id) {
           setSuccess(`New bid of £${data.bid_amount} by ${data.bidder_name}`);
           setTimeout(() => setSuccess(""), 3000);
@@ -187,9 +171,22 @@ const AuctionDetails = () => {
     };
   }, [id, user]);
 
+  useEffect(() => {
+    if (auction) {
+      console.log('[Debug] Auction state changed:', { 
+        id: auction.id,
+        current_bid: auction.current_bid,
+        highest_bidder_id: auction.highest_bidder_id,
+        bidAmount: bidAmount
+      });
+    }
+  }, [auction, bidAmount]);
+
   const handlePlaceBid = () => {
+    // 清除之前的错误
     setBidError("");
     
+    // 检查出价是否满足最低要求
     const minimumBid = auction.current_bid + 5;
     if (parseFloat(bidAmount) < minimumBid) {
       setBidError(`Your bid must be at least £${minimumBid}`);
@@ -197,38 +194,62 @@ const AuctionDetails = () => {
     }
     
     if (!paymentMethod) {
+      // 如果用户还没有添加支付方式，先显示支付表单
       setShowBidForm(true);
       return;
     }
     
+    // 实际实现中会调用API提交出价
     console.log(`Placing bid of £${bidAmount} on item ${id}`);
-    setAuction({
-      ...auction,
-      current_bid: parseFloat(bidAmount)
+    // 模拟成功出价
+    setAuction(prev => {
+      if (!prev) return null;
+      
+      const updatedAuction = {
+        ...prev,
+        current_bid: parseFloat(bidAmount),
+        highest_bidder_id: user?.id
+      };
+      
+      console.log('[Debug] Updating auction state to:', updatedAuction);
+      return updatedAuction;
     });
   };
 
   const handlePaymentSuccess = (paymentInfo) => {
+    // 保存支付方式信息
     setPaymentMethod(paymentInfo);
+    // 关闭支付表单
     setShowBidForm(false);
-    setAuction({
-      ...auction,
-      current_bid: parseFloat(bidAmount),
-      highest_bidder_id: user?.id
+    // 提交出价
+    setAuction(prev => {
+      if (!prev) return null;
+      
+      const updatedAuction = {
+        ...prev,
+        current_bid: parseFloat(bidAmount),
+        highest_bidder_id: user?.id
+      };
+      
+      console.log('[Debug] Updating auction state to:', updatedAuction);
+      return updatedAuction;
     });
   };
 
   const handleWinPayment = () => {
+    // 模拟自动支付处理
     setTimeout(() => {
       setPaymentSuccess(true);
     }, 1500);
   };
 
+  // 当用户更改出价时，清除已保存的支付方式，要求重新输入
   const handleBidAmountChange = (e) => {
     const newAmount = e.target.value;
     setBidAmount(newAmount);
-    setBidError("");
+    setBidError(""); // 清除错误消息
     
+    // 如果金额变化，清除已保存的支付方式
     if (paymentMethod && parseFloat(newAmount) !== auction.current_bid) {
       setPaymentMethod(null);
     }
@@ -238,6 +259,7 @@ const AuctionDetails = () => {
     e.preventDefault();
     console.log('Bid submit clicked', bidAmount, auction.current_bid, auction.min_price);
     
+    // 验证出价
     const bidError = validateBidAmount(bidAmount, auction.current_bid, auction.min_price);
     if (bidError) {
       setBidError(bidError);
@@ -245,6 +267,8 @@ const AuctionDetails = () => {
       return;
     }
     
+    console.log('Showing payment selector');
+    // 显示支付卡选择界面
     setShowPaymentSelector(true);
   };
 
@@ -290,41 +314,36 @@ const AuctionDetails = () => {
         return;
       }
       
+      // 在客户端先检查是否是自己的商品 - 如果auction对象包含seller_id或user_id
+      if (auction.user_id && userId === auction.user_id) {
+        console.log('[Debug] Cannot bid on your own item');
+        setError('You cannot bid on your own auction item');
+        setPlacingBid(false);
+        return;
+      }
+      
       const bidData = {
         user_id: userId,
         item_id: parseInt(id),
-        bid_amount: parseFloat(bidAmount)
+        bid_amount: parseFloat(bidAmount),
+        payment_method_id: card.id
       };
       
       console.log('[Debug] Preparing to submit bid:', bidData);
       
-      // 显示加载状态至少1秒，提供更好的用户体验
+      // 显示加载状态至少1秒
       await new Promise(resolve => setTimeout(resolve, 1000));
       
-      // 只使用/api/bids路径发送请求
-      console.log('[Debug] Submitting bid to /api/bids');
-      const response = await axios.post('/api/bids', bidData, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      // 使用submitBid函数发送请求
+      const result = await submitBid(bidData);
+      console.log('[Debug] Bid result:', result);
       
-      console.log('[Debug] Bid response:', response.data);
-      
+      // 保存支付方式
       setPaymentMethod(card);
       
-      const currentBidAmount = bidAmount;
-      
-      console.log('[Debug] Before updating auction state, current auction:', auction);
-      
+      // 更新拍卖信息
       setAuction(prev => {
-        if (!prev) {
-          console.error('[Debug] auction is null, cannot update');
-          return null;
-        }
-        console.log('[Debug] Updating auction state', {
-          ...prev,
-          current_bid: parseFloat(bidAmount),
-          highest_bidder_id: userId
-        });
+        if (!prev) return null;
         return {
           ...prev,
           current_bid: parseFloat(bidAmount),
@@ -332,40 +351,19 @@ const AuctionDetails = () => {
         };
       });
       
-      console.log('[Debug] Setting new bid amount');
+      // 更新下一次出价建议
       setBidAmount(parseFloat(bidAmount) + 5);
       
-      console.log('[Debug] Setting success message');
-      setSuccess(`Your bid of £${currentBidAmount} has been successfully submitted!`);
+      // 显示成功消息
+      setSuccess(`Your bid of £${bidAmount} has been successfully submitted!`);
       setTimeout(() => setSuccess(""), 3000);
-      
-      console.log('[Debug] Setting bidPlaced to true');
-      setBidPlaced(true);
       
     } catch (error) {
       console.error('[Debug] Bid error:', error);
       
-      let errorMessage = 'Bid failed, please try again';
-      
-      if (error.response) {
-        // 服务器返回了错误状态码
-        errorMessage = error.response.data?.error || 
-                       error.response.data?.message || 
-                       `Server error (${error.response.status})`;
-        console.error('[Debug] Server error:', error.response.data);
-      } else if (error.request) {
-        // 请求发出但没有收到响应
-        errorMessage = 'Unable to connect to the server, please check your network connection';
-        console.error('[Debug] Request error:', error.request);
-      } else {
-        // 其他错误
-        errorMessage = error.message || errorMessage;
-        console.error('[Debug] Unknown error:', error.message);
-      }
-      
-      setError(errorMessage);
+      // 设置错误消息，显示在界面上
+      setError(error.message || "Failed to place bid");
     } finally {
-      console.log('[Debug] Bid processing completed, setting placingBid to false');
       setPlacingBid(false);
     }
   };
@@ -415,35 +413,47 @@ const AuctionDetails = () => {
   console.log('[Debug] Preparing to render full interface');
   console.log('[Debug] auction.images:', auction.images);
   
-  // 检查images是否为数组
+  // 安全处理images - 确保它是数组并且有默认值
   if (!Array.isArray(auction.images)) {
     console.error('[Debug] auction.images is not an array:', auction.images);
-    // 确保images始终是数组
-    auction.images = auction.images || [];
+    // 安全设置images
+    auction.images = Array.isArray(auction.images) ? auction.images : [];
   }
 
   return (
     <div className="flex justify-center items-center min-h-screen p-4 -mt-16">
+      {/* 添加通知栏 */}
+      {success && (
+        <div className="fixed top-20 right-4 z-50 bg-green-100 border-l-4 border-green-500 text-green-700 px-4 py-3 rounded max-w-md shadow-md">
+          <div className="flex items-center">
+            <svg className="h-6 w-6 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
+            </svg>
+            <span>{success}</span>
+            <button onClick={() => setSuccess("")} className="ml-auto">×</button>
+          </div>
+        </div>
+      )}
+      
+      {error && (
+        <div className="fixed top-20 right-4 z-50 bg-red-100 border-l-4 border-red-500 text-red-700 px-4 py-3 rounded max-w-md shadow-md">
+          <div className="flex items-center">
+            <svg className="h-6 w-6 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>
+            <span>{error}</span>
+            <button onClick={() => setError("")} className="ml-auto">×</button>
+          </div>
+        </div>
+      )}
+      
       <div className="flex flex-col md:flex-row items-stretch gap-6 p-4 max-w-5xl w-full mx-auto mt-16">
-        {success && (
-          <div className="fixed top-20 right-4 bg-green-100 border-l-4 border-green-500 text-green-700 p-4 z-50 rounded shadow-md">
-            {success}
-          </div>
-        )}
-        {error && (
-          <div className="fixed top-20 right-4 bg-red-100 border-l-4 border-red-500 text-red-700 p-4 z-50 rounded shadow-md">
-            {error}
-            <button onClick={() => setError("")} className="ml-2 font-bold">×</button>
-          </div>
-        )}
-        
         <div
           ref={section1Ref}
           className="relative flex justify-center items-center w-full md:w-1/2 border border-black p-2"
           style={{ minHeight: maxHeight }}
         >
-          {/* 使用防御性检查 */}
-          {safeAccess(auction, 'authentication_status') === 'Approved' ? (
+          {auction.authentication_status == 'Approved' ? (
             <img
               src={authenticatedIcon}
               alt="Authenticated Icon"
@@ -458,7 +468,7 @@ const AuctionDetails = () => {
             autoPlay={false}
             className="w-full bg-black"
           >
-            {Array.isArray(auction.images) && auction.images.length > 0 ? (
+            {auction.images.length > 0 ? (
               auction.images.map((image, index) => (
                 <img
                   key={index}
@@ -481,17 +491,17 @@ const AuctionDetails = () => {
           className="flex flex-col w-full md:w-1/2 gap-2 text-center md:text-left flex-grow"
           style={{ minHeight: maxHeight }}
         >
-          <h2 className="text-2xl font-semibold">{safeAccess(auction, 'title', '')}</h2>
-          <p className="text-gray-600 mb-2">{safeAccess(auction, 'description', '')}</p>
+          <h2 className="text-2xl font-semibold">{auction.title}</h2>
+          <p className="text-gray-600 mb-2">{auction.description}</p>
           <p className="text-sm text-gray-500">
-            Posted on {formatDate(safeAccess(auction, 'posting_date', new Date()))}
+            Posted on {new Date(auction.posting_date).toLocaleDateString()}
           </p>
 
           <div className="border border-gray-300 p-4 flex-grow">
             <div className="flex justify-between items-center mb-2">
               <div>
                 <p className="text-gray-600">Current Bid</p>
-                <p className="text-3xl font-bold">£ {safeAccess(auction, 'current_bid', 0)}</p>
+                <p className="text-3xl font-bold">£ {auction.current_bid}</p>
               </div>
               <button
                 onClick={() => setIsFavorite(!isFavorite)}
@@ -509,12 +519,11 @@ const AuctionDetails = () => {
               <div className="bg-gray-100 p-3 rounded mb-3">
                 <p className="font-semibold">Payment Method</p>
                 <p className="text-sm">
-                  {safeAccess(paymentMethod, 'cardType', 'Unknown')} card ending in {
-                    safeAccess(paymentMethod, 'last4') || 
-                    (safeAccess(paymentMethod, 'cardNumber') ? 
-                      safeAccess(paymentMethod, 'cardNumber').slice(-4) : 
-                      '****')
-                  }
+                  {paymentMethod.cardType || paymentMethod.card_type || 'Card'} 
+                  ending in 
+                  {paymentMethod.cardNumber 
+                    ? paymentMethod.cardNumber.slice(-4) 
+                    : (paymentMethod.last4 || '****')}
                 </p>
                 <p className="text-xs text-gray-500 mt-1">Your card will be charged automatically if you win the auction</p>
               </div>
@@ -524,12 +533,12 @@ const AuctionDetails = () => {
               <div className="mt-4">
                 <div className="bg-gray-100 p-3 rounded mb-3 text-center">
                   <p className="font-semibold">This auction has ended</p>
-                  {user && user.id === safeAccess(auction, 'highest_bidder_id', null) && (
+                  {user && user.id === auction.highest_bidder_id && (
                     <p className="text-green-600 mt-2">Congratulations! You won this auction.</p>
                   )}
                 </div>
                 
-                {user && user.id === safeAccess(auction, 'highest_bidder_id', null) && (
+                {user && user.id === auction.highest_bidder_id && (
                   <button 
                     className="w-full bg-gold text-white py-2 mt-2 hover:bg-yellow-600 cursor-pointer"
                     onClick={handleWinPayment}
@@ -543,10 +552,10 @@ const AuctionDetails = () => {
                 <input
                   type="number"
                   className="w-full p-2 mt-2 bg-gray-200 placeholder-gray-400"
-                  placeholder={`£ ${safeAccess(auction, 'current_bid', 0) + 5} or up`}
+                  placeholder={`£ ${auction.current_bid + 5} or up`}
                   value={bidAmount}
                   onChange={handleBidAmountChange}
-                  min={safeAccess(auction, 'current_bid', 0) + 5}
+                  min={auction.current_bid + 5}
                   step="5"
                 />
                 {bidError && (
@@ -564,40 +573,88 @@ const AuctionDetails = () => {
             )}
             
             <p className="text-center text-gray-600 mt-2">
-              Selected by <span className="underline">{safeAccess(auction, 'seller_name', 'Seller')}</span>
+              Selected by <span className="underline">{auction.seller_name}</span>
             </p>
           </div>
         </div>
       </div>
 
-      {showPaymentSelector && (
+      {showBidForm && !paymentMethod && (
         <>
           {/* 半透明背景 */}
           <div 
-            className="fixed inset-0 z-40"
+            className="fixed inset-0 z-40" 
             style={{ backgroundColor: 'rgba(0,0,0,0.3)', backdropFilter: 'blur(2px)' }}
-            onClick={() => {
-              console.log('[Debug] Clicked background to close payment selector');
-              setShowPaymentSelector(false);
-            }}
+            onClick={() => setShowBidForm(false)}
           ></div>
           
           {/* 模态框内容 */}
           <div className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-50 shadow-xl">
-            <div className="bg-white rounded-lg w-full max-w-md">
+            <div className="bg-white rounded-lg w-[1000px] max-w-[90vw]">
               <div className="flex justify-between items-center p-4 border-b">
-                <h3 className="text-lg font-semibold">Select Payment Method</h3>
+                <h3 className="text-lg font-semibold">Add Payment Method to Bid</h3>
                 <button 
-                  onClick={() => {
-                    console.log('[Debug] Clicked X to close payment selector');
-                    setShowPaymentSelector(false);
-                  }}
+                  onClick={() => setShowBidForm(false)}
                   className="text-gray-500 hover:text-gray-700"
                 >
                   ✕
                 </button>
               </div>
-              <div className="p-4">
+              <div className="p-8">
+                <p className="mb-4 text-gray-700">To participate in this auction, please add a payment method. Your card will only be charged if you win the auction.</p>
+                <PaymentForm 
+                  amount={parseFloat(bidAmount)} 
+                  itemId={auction.id}
+                  onSuccess={handlePaymentSuccess}
+                />
+              </div>
+            </div>
+          </div>
+        </>
+      )}
+
+      {paymentSuccess && (
+        <>
+          {/* 半透明背景 */}
+          <div 
+            className="fixed inset-0 z-40" 
+            style={{ backgroundColor: 'rgba(0,0,0,0.3)', backdropFilter: 'blur(2px)' }}
+          ></div>
+          
+          {/* 模态框内容 */}
+          <div className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-50 shadow-xl">
+            <div className="bg-white rounded-lg w-[1000px] max-w-[90vw] p-12">
+              <PaymentSuccess 
+                amount={parseFloat(bidAmount)}
+                itemTitle={auction.title}
+              />
+            </div>
+          </div>
+        </>
+      )}
+
+      {showPaymentSelector && (
+        <>
+          {/* 半透明背景 */}
+          <div 
+            className="fixed inset-0 z-40" 
+            style={{ backgroundColor: 'rgba(0,0,0,0.3)', backdropFilter: 'blur(2px)' }}
+            onClick={() => setShowPaymentSelector(false)}
+          ></div>
+          
+          {/* 模态框内容 */}
+          <div className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-50 shadow-xl">
+            <div className="bg-white rounded-lg w-[1000px] max-w-[90vw]">
+              <div className="flex justify-between items-center p-4 border-b">
+                <h3 className="text-lg font-semibold">Select Payment Method</h3>
+                <button 
+                  onClick={() => setShowPaymentSelector(false)}
+                  className="text-gray-500 hover:text-gray-700"
+                >
+                  ✕
+                </button>
+              </div>
+              <div className="p-8">
                 <PaymentCardSelector
                   onCardSelected={(card) => {
                     console.log('[Debug] PaymentCardSelector component selected card:', card);
@@ -611,23 +668,15 @@ const AuctionDetails = () => {
         </>
       )}
 
+      {/* Processing Modal */}
       {placingBid && (
-        <>
-          {/* 半透明背景 */}
-          <div 
-            className="fixed inset-0 z-40"
-            style={{ backgroundColor: 'rgba(0,0,0,0.4)', backdropFilter: 'blur(2px)' }}
-          ></div>
-          
-          {/* 模态框内容 */}
-          <div className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-50 shadow-xl">
-            <div className="bg-white p-8 rounded-lg flex flex-col items-center">
-              <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-gold mb-4"></div>
-              <p className="text-gray-800 text-xl font-medium">Processing your bid...</p>
-              <p className="text-gray-600 mt-2">Please wait a moment, do not refresh the page</p>
-            </div>
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white p-5 rounded-lg flex flex-col items-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-gold mb-4"></div>
+            <p className="text-gray-700">Processing payment...</p>
+            <p className="text-xs text-gray-500 mt-2">Connecting to Stripe...</p>
           </div>
-        </>
+        </div>
       )}
     </div>
   );

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import axios from 'axios';
+import axios from '../api/axios';  // Update this import
 import Carousel from 'react-multi-carousel';
 import 'react-multi-carousel/lib/styles.css';
 import { useNavigate, useLocation } from 'react-router-dom';
@@ -71,23 +71,40 @@ const AuctionList = ({ filters }) => {
 
       const formattedAuctions = response.data.map(auction => ({
         ...auction,
-        imageUrls: auction.image_urls ? auction.image_urls.split(',') : [],
+        // Remove the split since image_urls is already an array from backend
+        imageUrls: auction.image_urls || [],
         remainingTime: calculateTimeRemaining(auction.end_time, auction.auction_status)
       }));
 
       setAuctions(formattedAuctions);
       setLoading(false);
     } catch (error) {
-      console.error('Fetch error:', error);
+      console.error('Fetch error:', error.response?.data || error);
       setError(error.message);
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    console.log('Filters changed:', filters);
-    fetchAuctions();
-  }, [filters]);
+    const params = new URLSearchParams(location.search);
+    
+    // Add filters if they exist
+    if (filters) {
+      if (filters.search) params.append('query', filters.search);
+      if (filters.categories?.length > 0) params.append('categories', filters.categories.join(','));
+      if (filters.minPrice) params.append('minPrice', filters.minPrice);
+      if (filters.maxPrice) params.append('maxPrice', filters.maxPrice);
+      if (filters.authenticatedOnly) params.append('authenticatedOnly', 'true');
+      if (filters.daysRemaining) params.append('daysRemaining', filters.daysRemaining);
+    }
+
+    // Add sorting parameters
+    if (!params.has('sort')) params.append('sort', 'created_at');
+    if (!params.has('order')) params.append('order', 'desc');
+    params.append('_t', Date.now());
+
+    fetchAuctions(params);
+  }, [filters, location.search]);
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -186,8 +203,17 @@ const AuctionList = ({ filters }) => {
     <div className="bg-white rounded-lg shadow-sm">
       <div className="w-full max-w-7xl mx-auto px-6 py-6">
         {auctions.length === 0 ? (
-          <div className="text-center text-gray-500 p-6">
-            No items found in this category
+          <div className="text-center text-gray-500 p-6 bg-gray-200 rounded-lg shadow-lg">
+            <p className="text-2xl font-semibold text-gray-700">
+              {filters && Object.keys(filters).length > 0 
+                ? "No items found matching your criteria"
+                : "There are no active auctions ongoing"}
+            </p>
+            <p className="text-sm text-gray-600">
+              {filters && Object.keys(filters).length > 0 
+                ? "Try adjusting your search filters"
+                : "Please check back later for new listings"}
+            </p>
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -196,7 +222,8 @@ const AuctionList = ({ filters }) => {
                 key={auction.id} 
                 className="bg-white shadow-lg overflow-hidden cursor-pointer" 
                 onClick={(e) => {
-                  if (e.target.closest('object-cover') && !e.target.closest('.react-multi-carousel-arrow') && !e.target.closest('.react-multi-carousel-dot')) {
+                  if (!e.target.closest('.react-multi-carousel-arrow') && 
+                      !e.target.closest('.react-multi-carousel-dot')) {
                     navigate(`/auctions/${auction.id}`);
                   }
                 }}
@@ -231,6 +258,7 @@ const AuctionList = ({ filters }) => {
                     </Carousel>
                   )}
                   <div className="absolute bottom-2 right-2 bg-gray-800 text-white text-sm px-2 py-1 rounded">
+                    {/* If timer runs out, show Ended instead of Active. On reload, will display real auction_status */}
                     {(auction.remainingTime) == "Active" ? "Ended" : auction.remainingTime}
                   </div>
                 </div>

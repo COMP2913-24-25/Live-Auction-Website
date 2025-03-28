@@ -5,16 +5,14 @@ import axios from 'axios';
 
 const registerUser = async (userData) => {
     try {
-        const response = await axios.post(
-            `/api/auth/register`, 
+        const { data } = await axios.post(
+            `api/auth/register`, 
             userData, 
-            { withCredentials: true }
+            { withCredentials: true } // Ensures cookies are included
         );
-        console.log('Register response:', response.data);
-        return response.data;
+        return data;
     } catch (error) {
-        console.error('Register error:', error);
-        throw new Error(error.response?.data?.error || error.response?.data?.message || 'Registration failed');
+        throw new Error(error.response?.data?.message || 'Registration failed');
     }
 };
 

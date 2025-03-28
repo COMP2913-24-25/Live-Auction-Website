@@ -31,63 +31,78 @@ const DashboardRouter = () => {
 
 function App() {
   return (
-    <Router>
-      <AuthProvider>
-        <NotificationProvider>
-          <NavBar />
-          <Routes>
-            {/* Redirect root to /browse */}
-            <Route path="/" element={<Navigate to="/browse" />} />
+    <AuthProvider>
+      <NotificationProvider>
+        <NavBar />
+        <Routes>
+          {/* Public Routes */}
+          <Route path="/" element={<Navigate to="/browse" />} />
+          <Route path="/browse" element={<Browse />} />
+          <Route path="/login" element={<Login />} />
+          <Route path="/register" element={<Register />} />
+          <Route path="/auctions/:id" element={<AuctionDetails />} />
 
-            {/* Public Routes */}
-            <Route path="/browse" element={<Browse />} />
-            <Route path="/auctions/:id" element={<AuctionDetails />} />
-            <Route path="/login" element={<Login />} />
-            <Route path="/register" element={<Register />} />
-            
-            {/* Protected Routes */}
-            <Route path="/dashboard" element={
-              <ProtectedRoute allowedRoles={[2, 3]}>
-                <DashboardRouter />
-              </ProtectedRoute>
-            } />
-            <Route path="/experts" element={
-              <ProtectedRoute allowedRoles={[3]}>
-                <AvailableExperts />
-              </ProtectedRoute>
-            } />
-            <Route path="/users" element={
-              <ProtectedRoute allowedRoles={[3]}>
-                <Users />
-              </ProtectedRoute>
-            } />
-            <Route path="/create-auction" 
-              element={
-                <ProtectedRoute allowedRoles={[1]}>
-                  <AuctionForm />
-                </ProtectedRoute>
-              }
-            />
-            <Route path="/authenticate-item" element={<ItemAuthenticationForm />} />
-            <Route path="/notifications" element={
-              <ProtectedRoute>
-                <Notifications />
-              </ProtectedRoute>
-              } />
-            <Route path="/working-hours" element={
-              <ProtectedRoute allowedRoles={[2]}>
-                <ExpertAvailability />
-              </ProtectedRoute>
-            } />
-            <Route path="/reviewed" element={
-              <ProtectedRoute allowedRoles={[2]}>
-                <ExpertDashboard />
-              </ProtectedRoute>
-            } />
-          </Routes>
-        </NotificationProvider>
-      </AuthProvider>
-    </Router>
+          {/* Expert Dashboard Routes */}
+          <Route path="/expert-dashboard/*" element={
+            <ProtectedRoute allowedRoles={[2]}>
+              <Routes>
+                <Route index element={<ExpertDashboard />} />
+                <Route path="pending/:requestId" element={<ExpertDashboard />} />
+              </Routes>
+            </ProtectedRoute>
+          } />
+
+          {/* Protected Routes */}
+          <Route path="/dashboard" element={
+            <ProtectedRoute allowedRoles={[2, 3]}>
+              <DashboardRouter />
+            </ProtectedRoute>
+          } />
+          
+          <Route path="/experts" element={
+            <ProtectedRoute allowedRoles={[3]}>
+              <AvailableExperts />
+            </ProtectedRoute>
+          } />
+          
+          <Route path="/users" element={
+            <ProtectedRoute allowedRoles={[3]}>
+              <Users />
+            </ProtectedRoute>
+          } />
+          
+          <Route path="/create-auction" element={
+            <ProtectedRoute allowedRoles={[1]}>
+              <AuctionForm />
+            </ProtectedRoute>
+          } />
+          
+          <Route path="/authenticate-item" element={
+            <ProtectedRoute allowedRoles={[1]}>
+              <ItemAuthenticationForm />
+            </ProtectedRoute>
+          } />
+          
+          <Route path="/notifications" element={
+            <ProtectedRoute>
+              <Notifications />
+            </ProtectedRoute>
+          } />
+          
+          <Route path="/working-hours" element={
+            <ProtectedRoute allowedRoles={[2]}>
+              <ExpertAvailability />
+            </ProtectedRoute>
+          } />
+          
+          <Route path="/reviewed" element={
+            <ProtectedRoute allowedRoles={[2]}>
+              <ExpertDashboard />
+            </ProtectedRoute>
+          } />
+        </Routes>
+      </NotificationProvider>
+    </AuthProvider>
   );
 }
 

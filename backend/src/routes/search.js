@@ -2,102 +2,86 @@ const express = require('express');
 const knex = require('../db');
 const router = express.Router();
 
-// Remove '/search' from here since it's already mounted with '/api/search' in app.js
 router.get('/', async (req, res) => {
   try {
-    const { query, categories, minPrice, maxPrice, authenticatedOnly, daysRemaining } = req.query;
+    let { 
+      query, 
+      categories, 
+      minPrice, 
+      maxPrice, 
+      authenticatedOnly,
+      daysRemaining,
+      sort = 'created_at',
+      order = 'desc'
+    } = req.query;
 
-    let queryBuilder = knex('item_current_bids as icb')
+    // Convert string parameters to proper types
+    minPrice = minPrice ? parseFloat(minPrice) : null;
+    maxPrice = maxPrice ? parseFloat(maxPrice) : null;
+    daysRemaining = daysRemaining ? parseInt(daysRemaining) : null;
+
+    let queryBuilder = knex('items as i')
       .select(
-        'icb.item_id as id',
-        'icb.title',
-        'icb.description',
-        'icb.min_price',
-        'icb.end_time',
-        'icb.authentication_status',
-        'icb.auction_status',
-        'icb.current_bid',
+        'i.*',
+        'u.username as seller_name',
+        'c.name as category_name',
         knex.raw('GROUP_CONCAT(DISTINCT ii.image_url) as image_urls'),
-        'u.username as seller_name'
+        knex.raw('COALESCE(MAX(b.bid_amount), i.min_price) as current_bid') // Changed from b.amount to b.bid_amount
       )
-      .leftJoin('items as i', 'icb.item_id', 'i.id')
       .leftJoin('users as u', 'i.user_id', 'u.id')
-      .leftJoin('item_images as ii', 'icb.item_id', 'ii.item_id')
-      .where('icb.auction_status', 'Active')
-      .where('icb.end_time', '>', knex.raw("datetime('now')"));
+      .leftJoin('categories as c', 'i.category_id', 'c.id')
+      .leftJoin('item_images as ii', 'i.id', 'ii.item_id')
+      .leftJoin('bids as b', 'i.id', 'b.item_id')
+      .where('i.auction_status', 'Active')
+      .groupBy('i.id');
 
-    // Search query
-    if (query) {
-      queryBuilder.whereRaw('LOWER(icb.title) LIKE ?', [`%${query.toLowerCase()}%`]);
-    }
-
-    // Categories filter
+    // Apply all filters
     if (categories) {
-      const categoryList = categories.split(',');
-      queryBuilder.whereIn('i.category_id', categoryList);
+      const categoryArray = Array.isArray(categories) ? categories : [categories];
+      queryBuilder.whereIn('i.category_id', categoryArray);
     }
 
-    // Price range filter
-    if (minPrice) {
-      const minPriceNum = parseFloat(minPrice);
-      console.log('Filtering by minPrice:', minPriceNum);
-      queryBuilder.where('icb.current_bid', '>=', minPriceNum);
-    }
-    if (maxPrice) {
-      const maxPriceNum = parseFloat(maxPrice);
-      console.log('Filtering by maxPrice:', maxPriceNum);
-      queryBuilder.where('icb.current_bid', '<=', maxPriceNum);
+    if (query) {
+      queryBuilder.where(builder => 
+        builder.whereRaw('LOWER(i.title) LIKE ?', [`%${query.toLowerCase()}%`])
+               .orWhereRaw('LOWER(i.description) LIKE ?', [`%${query.toLowerCase()}%`])
+      );
     }
 
-    // Authenticated only
-    if (authenticatedOnly === 'true') {
-      queryBuilder.where('icb.authentication_status', 'Approved');
-    }
-
-    // Time remaining filter
+    if (minPrice) queryBuilder.having('current_bid', '>=', minPrice);
+    if (maxPrice) queryBuilder.having('current_bid', '<=', maxPrice);
+    if (authenticatedOnly === 'true') queryBuilder.where('i.authentication_status', 'Approved');
+    
     if (daysRemaining) {
-      const timeValue = parseFloat(daysRemaining);
-      
-      if (timeValue === 1 && req.query.unit === 'hours') {
-        // 特殊处理24小时选项
-        const secondsRemaining = 24 * 60 * 60;
-        queryBuilder.whereRaw(`
-          ROUND(
-            (JULIANDAY(icb.end_time) - JULIANDAY(datetime('now'))) * 86400
-          ) <= ?
-        `, [secondsRemaining]);
-      } else {
-        // 正常处理天数选项
-        const secondsRemaining = timeValue * 24 * 60 * 60;
-        queryBuilder.whereRaw(`
-          ROUND(
-            (JULIANDAY(icb.end_time) - JULIANDAY(datetime('now'))) * 86400
-          ) BETWEEN 0 AND ?
-        `, [secondsRemaining]);
-      }
+      queryBuilder
+        .where('i.end_time', '>', knex.raw('datetime("now")'))
+        .where('i.end_time', '<=', knex.raw(`datetime("now", "+${daysRemaining} days")`));
     }
 
-    queryBuilder.groupBy('icb.item_id').orderBy('i.created_at', 'desc');
+    // Apply sorting
+    const validSortFields = ['created_at', 'end_time', 'min_price', 'current_bid'];
+    const sortField = validSortFields.includes(sort) ? sort : 'created_at';
+    const sortOrder = order.toUpperCase() === 'ASC' ? 'ASC' : 'DESC';
 
-    // 在查询执行前添加调试信息
-    const rawQuery = queryBuilder.toString();
-    console.log('Executing SQL:', rawQuery);
+    if (sortField === 'current_bid') {
+      queryBuilder.orderByRaw(`COALESCE(MAX(b.bid_amount), i.min_price) ${sortOrder}`); // Changed from b.amount to b.bid_amount
+    } else {
+      queryBuilder.orderBy(`i.${sortField}`, sortOrder);
+    }
 
     const results = await queryBuilder;
 
-    // 添加调试信息
-    console.log(`Found ${results.length} auctions with price filter, first few items:`, 
-      results.slice(0, 3).map(item => ({ 
-        id: item.id, 
-        title: item.title, 
-        current_bid: item.current_bid
-      }))
-    );
+    // Format the results to handle image_urls properly
+    const formattedResults = results.map(item => ({
+      ...item,
+      image_urls: item.image_urls ? item.image_urls.split(',') : [],
+      current_bid: parseFloat(item.current_bid || item.min_price)
+    }));
 
-    res.json(results);
+    res.json(formattedResults);
   } catch (error) {
     console.error('Search error:', error);
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: 'Search failed', details: error.message });
   }
 });
 

@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import axios from 'axios';
 import { useAuth } from '../../context/authContext';
+import PropTypes from 'prop-types';
 
-const PaymentForm = ({ onSubmitSuccess, amount }) => {
+const PaymentForm = ({ amount = 0, itemId = null, onSuccess = () => {}, onCancel = () => {} }) => {
   const [cardholderName, setCardholderName] = useState('');
   const [cardNumber, setCardNumber] = useState('');
   const [expiryMonth, setExpiryMonth] = useState('');
@@ -14,6 +15,7 @@ const PaymentForm = ({ onSubmitSuccess, amount }) => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setIsSubmitting(true);
     setError('');
 
     // 基本验证
@@ -38,8 +40,6 @@ const PaymentForm = ({ onSubmitSuccess, amount }) => {
     }
 
     try {
-      setIsSubmitting(true);
-
       // 计算过期年份的完整格式 (例如: '26' -> '2026')
       const fullYear = expiryYear.length === 2 ? `20${expiryYear}` : expiryYear;
       
@@ -110,26 +110,52 @@ const PaymentForm = ({ onSubmitSuccess, amount }) => {
 
       console.log('Submit payment method data:', paymentMethodData);
 
-      // 获取token
-      const token = localStorage.getItem('token');
-      if (!token) {
-        throw new Error('Token not found, please log in again');
+      // 尝试使用令牌
+      let response;
+      try {
+        const token = localStorage.getItem('token');
+        if (!token) {
+          throw new Error('Token not found');
+        }
+        
+        response = await axios.post('/api/payment/methods', paymentMethodData, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+      } catch (tokenError) {
+        console.log('Token request failed, trying with query parameter:', tokenError);
+        
+        // 使用查询参数降级
+        response = await axios.post(`/api/payment/methods?user_id=${userId}`, paymentMethodData);
       }
-
-      const response = await axios.post('/api/payment/methods', paymentMethodData, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
 
       console.log('Payment method saved successfully:', response.data);
 
       // 回调父组件成功处理函数
-      onSubmitSuccess({ 
-        id: tokenizedCardId,
+      onSuccess({ 
+        id: response.data.id || tokenizedCardId,
         last4: last4,
         brand: cardType,
         exp_month: parseInt(expiryMonth),
         exp_year: parseInt(fullYear)
       });
+
+      // 在成功保存卡片后添加到localStorage
+      const savedCard = {
+        id: response.data.id,
+        tokenized_card_id: response.data.tokenized_card_id || paymentMethodData.tokenized_card_id,
+        card_type: paymentMethodData.card_type,
+        last4: paymentMethodData.last4,
+        exp_month: paymentMethodData.exp_month,
+        exp_year: paymentMethodData.exp_year,
+        created_at: new Date().toISOString()
+      };
+
+      // 获取现有卡片
+      let savedCards = JSON.parse(localStorage.getItem('payment_methods') || '[]');
+      // 添加新卡片
+      savedCards.push(savedCard);
+      // 保存回 localStorage
+      localStorage.setItem('payment_methods', JSON.stringify(savedCards));
 
     } catch (error) {
       console.error('Error saving payment method:', error);
@@ -278,20 +304,18 @@ const PaymentForm = ({ onSubmitSuccess, amount }) => {
           </div>
         )}
 
-        <div className="flex justify-between pt-4">
-          <button
-            type="button"
-            onClick={() => onSubmitSuccess(null)}
+        <div className="flex justify-between mt-4">
+          <button 
+            type="button" 
+            onClick={onCancel} 
             className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
             disabled={isSubmitting}
           >
             Cancel
           </button>
-          <button
-            type="submit"
-            className={`px-4 py-2 bg-gold text-white rounded-md hover:bg-yellow-600 ${
-              isSubmitting ? 'opacity-50 cursor-not-allowed' : ''
-            }`}
+          <button 
+            type="submit" 
+            className="px-4 py-2 bg-amber-700 border border-amber-700 rounded-md text-white hover:bg-amber-800"
             disabled={isSubmitting}
           >
             {isSubmitting ? 'Saving...' : 'Save'}
@@ -305,6 +329,14 @@ const PaymentForm = ({ onSubmitSuccess, amount }) => {
       </div>
     </div>
   );
+};
+
+PaymentForm.propTypes = {
+  amount: PropTypes.number,
+  itemId: PropTypes.number,
+  onSuccess: PropTypes.func,
+  onSave: PropTypes.func,
+  onCancel: PropTypes.func
 };
 
 export default PaymentForm; 

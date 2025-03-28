@@ -20,16 +20,18 @@ function AuctionForm() {
   const [imagePreviews, setImagePreviews] = useState([]);
   const [fileNames, setFileNames] = useState('No files chosen');
   const [categories, setCategories] = useState([]);
+  const [error, setError] = useState('');
 
   // Fetch categories from backend
   useEffect(() => {
     const fetchCategories = async () => {
       try {
-        const response = await fetch(`${import.meta.env.VITE_API_URL}/api/categories`);
-        const data = await response.json();
-        setCategories(data); // Assuming API returns an array of { id, name }
+        const response = await axios.get('/api/categories');
+        console.log('Fetched categories:', response.data);
+        setCategories(response.data);
       } catch (error) {
-        console.error("Error fetching categories:", error);
+        console.error('Error fetching categories:', error);
+        setError('Failed to load categories. Please try again later.');
       }
     };
 
@@ -107,41 +109,64 @@ function AuctionForm() {
 const handleSubmit = async (e) => {
   e.preventDefault();
   
-  // 添加日志
-  console.log('Submitting form data:', formData);
+  // 验证前端所有必填字段
+  if (!formData.title || !formData.description || !formData.min_price || !formData.category) {
+    alert("All fields are required. Please complete the form.");
+    return;
+  }
   
-  // 创建 FormData 对象
+  if (!imageFiles || imageFiles.length === 0) {
+    alert("Please upload at least one image.");
+    return;
+  }
+  
+  // 创建 FormData 对象并打印关键信息
+  console.log('Submitting with user_id:', formData.user_id);
+  
   const formDataToSend = new FormData();
   
-  // 计算结束时间
-  const endTime = new Date();
-  endTime.setDate(endTime.getDate() + parseInt(formData.duration));
-  
-  // 添加表单字段
+  // 添加表单字段，确保所有必填字段都包含
   formDataToSend.append('user_id', formData.user_id);
   formDataToSend.append('title', formData.title);
   formDataToSend.append('description', formData.description);
   formDataToSend.append('min_price', formData.min_price);
+  formDataToSend.append('duration', formData.duration);
   formDataToSend.append('category', formData.category);
-  formDataToSend.append('duration', formData.duration); // 改为只传递duration，让后端计算end_time
   
   // 添加图片文件
   imageFiles.forEach(file => {
     formDataToSend.append('images', file);
   });
   
+  // 打印所有表单数据以验证
+  for (let pair of formDataToSend.entries()) {
+    console.log(pair[0] + ': ' + pair[1]);
+  }
+  
   try {
-    // 发送请求前打印完整的表单数据
-    for (let pair of formDataToSend.entries()) {
-      console.log(pair[0] + ': ' + pair[1]);
+    // 使用合并前的完整URL方式
+    // 确保环境变量存在，如果不存在则使用默认值
+    const apiBaseUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+    
+    // 获取令牌
+    const token = localStorage.getItem('token');
+    const headers = {
+      'Content-Type': 'multipart/form-data'
+    };
+    
+    // 如果有令牌，添加到头中
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
     }
     
-    // 修改请求URL为正确的端点
-    const response = await axios.post(`${import.meta.env.VITE_API_URL}/api/upload/create-listing`, formDataToSend, {
-      headers: {
-        'Content-Type': 'multipart/form-data'
-      }
-    });
+    console.log('API URL:', `${apiBaseUrl}/api/upload/create-listing`);
+    console.log('Headers:', headers);
+    
+    const response = await axios.post(
+      `${apiBaseUrl}/api/upload/create-listing`, 
+      formDataToSend, 
+      { headers }
+    );
     
     console.log('Create auction response:', response.data);
     
@@ -162,13 +187,24 @@ const handleSubmit = async (e) => {
       
       // 导航到浏览页面并添加时间戳参数，避免缓存
       navigate(`/browse?t=${Date.now()}`);
-    } else {
-      throw new Error('Failed to create auction');
     }
   } catch (error) {
     console.error('Error creating auction:', error);
-    console.error('Error details:', error.response?.data);
-    alert(`Failed to create auction: ${error.response?.data?.message || error.message}`);
+    
+    // 更详细的错误信息
+    if (error.response) {
+      console.error('Response data:', error.response.data);
+      console.error('Response status:', error.response.status);
+      console.error('Response headers:', error.response.headers);
+      
+      alert(`Server error (${error.response.status}): ${error.response.data.error || 'Unknown error'}`);
+    } else if (error.request) {
+      console.error('No response received:', error.request);
+      alert('No response from server. Please check your network connection.');
+    } else {
+      console.error('Error details:', error.message);
+      alert(`Error: ${error.message}`);
+    }
   }
 };
 

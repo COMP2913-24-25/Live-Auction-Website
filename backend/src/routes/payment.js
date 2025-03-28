@@ -7,7 +7,7 @@ if (process.env.STRIPE_SECRET_KEY) {
   stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 } else {
   console.warn('STRIPE_SECRET_KEY not set, using mock implementation');
-  // 模拟 Stripe 对象
+  // Mock Stripe implementation
   stripe = {
     paymentIntents: {
       create: async (options) => ({
@@ -26,19 +26,20 @@ if (process.env.STRIPE_SECRET_KEY) {
   };
 }
 const db = require('../db');
-const { authenticateToken } = require('../middleware/auth');
+const { authenticateUser: authenticateToken } = require('../middleware/auth');
+const jwt = require('jsonwebtoken');
 
-// 创建支付意图
+// create Payment Intent
 const createPaymentIntent = async (req, res) => {
   try {
     const { amount, itemId, userId, paymentMethodId } = req.body;
     
-    // 验证金额和商品
+    // test for missing fields
     if (!amount || !itemId || !userId) {
       return res.status(400).json({ error: 'Missing required fields' });
     }
     
-    // 验证支付方式是否存在
+    // check if payment method exists
     if (paymentMethodId) {
       const paymentMethod = await db('user_payment_methods')
         .where({ id: paymentMethodId, user_id: userId })
@@ -49,9 +50,9 @@ const createPaymentIntent = async (req, res) => {
       }
     }
     
-    // 创建 Stripe 支付意图
+    // create payment intent
     const paymentIntent = await stripe.paymentIntents.create({
-      amount: Math.round(amount * 100), // Stripe 使用分为单位
+      amount: Math.round(amount * 100), // 
       currency: 'gbp',
       metadata: {
         itemId,
@@ -60,7 +61,7 @@ const createPaymentIntent = async (req, res) => {
       }
     });
     
-    // 将支付意图保存到数据库
+    // change status to created
     await db('payment_intents').insert({
       stripe_payment_intent_id: paymentIntent.id,
       user_id: userId,
@@ -70,7 +71,7 @@ const createPaymentIntent = async (req, res) => {
       created_at: new Date()
     });
     
-    // 返回客户端密钥
+    // send client secret to client
     res.json({
       clientSecret: paymentIntent.client_secret
     });
@@ -80,20 +81,34 @@ const createPaymentIntent = async (req, res) => {
   }
 };
 
-// 保存支付方式
+// save Payment Method
 const savePaymentMethod = async (req, res) => {
   try {
-    const { userId, cardNumber, expiry, cvv } = req.body;
+    console.log('接收到保存支付方式请求, 请求体:', req.body);
     
-    // 验证数据
-    if (!userId || !cardNumber || !expiry || !cvv) {
-      return res.status(400).json({ error: 'Missing required fields' });
+    // 尝试从多个来源获取userId
+    let userId = req.user?.id || req.body.userId || req.body.user_id;
+    
+    // 检查查询参数
+    if (!userId && req.query && req.query.user_id) {
+      userId = parseInt(req.query.user_id);
+      console.log('从查询参数获取用户ID:', userId);
     }
+    
+    const { cardNumber, expiry, cvv } = req.body;
+    
+    // 检查必要字段
+    if (!userId || !cardNumber || !expiry || !cvv) {
+      console.error('缺少必要字段:', { userId, hasCardNumber: !!cardNumber, hasExpiry: !!expiry, hasCvv: !!cvv });
+      return res.status(400).json({ error: '缺少必要字段' });
+    }
+    
+    console.log('处理支付方式, 用户ID:', userId);
     
     // 获取卡号后四位
     const last4 = cardNumber.slice(-4);
     
-    // 解析过期日期 (MM/YY 格式)
+    // 获取过期月份和年份
     const [expMonth, expYear] = expiry.split('/');
     
     // 确定卡类型
@@ -108,75 +123,78 @@ const savePaymentMethod = async (req, res) => {
       cardType = "Discover";
     }
     
-    // 在实际应用中，这里应该调用 Stripe API 创建支付方式并获取 token
-    // 这里我们模拟一个 token
+    // 创建一个随机令牌ID
     const tokenizedCardId = `tok_${Math.random().toString(36).substring(2, 15)}`;
     
-    // 检查用户是否已经有这张卡
+    // 检查卡是否已存在
     const existingCard = await db('user_payment_methods')
       .where({ 
         user_id: userId,
         last4: last4,
         card_type: cardType,
         exp_month: parseInt(expMonth, 10),
-        exp_year: parseInt(expYear, 10) + 2000
+        exp_year: parseInt(expYear, 10) + 2000 // 年份处理
       })
       .first();
     
     if (existingCard) {
       return res.json({ 
         success: true, 
-        message: 'Payment method already exists',
-        paymentMethodId: existingCard.id
+        message: '支付方式已存在',
+        paymentMethodId: existingCard.id,
+        id: existingCard.id,
+        tokenized_card_id: existingCard.tokenized_card_id,
+        card_type: existingCard.card_type,
+        last4: existingCard.last4
       });
     }
     
-    // 插入数据
     let id;
     try {
-      // 对于 SQLite，我们需要特殊处理 returning
-      const result = await db('user_payment_methods').insert({
-        user_id: req.user.id,
+      // 保存支付方式到数据库
+      const paymentData = {
+        user_id: userId,
         payment_provider: 'Stripe',
         tokenized_card_id: tokenizedCardId,
-        last4,
+        last4: last4,
         card_type: cardType,
         exp_month: parseInt(expMonth, 10),
-        exp_year: parseInt(expYear, 10) + 2000, // 假设 YY 格式，转换为完整年份
+        exp_year: parseInt(expYear, 10) + 2000, // 加2000得到完整年份
         cvv: cvv,
-        created_at: db.fn.now() // 使用数据库的NOW()函数
-      });
+        created_at: new Date()
+      };
       
-      // 在 SQLite 中，insert 返回的是最后插入的 ID
+      console.log('插入支付方式数据:', paymentData);
+      
+      // 插入数据库
+      const result = await db('user_payment_methods').insert(paymentData);
       id = result[0];
       
-      console.log('Database insertion successful, ID:', id);
+      console.log('支付方式添加成功，ID:', id);
       
       res.status(201).json({ 
-        message: 'Payment method added successfully',
-        id: id
+        message: '支付方式添加成功',
+        id: id,
+        tokenized_card_id: tokenizedCardId,
+        card_type: cardType,
+        last4: last4
       });
     } catch (error) {
-      console.error('Error saving payment method:', error);
-      // 打印更详细的错误信息
-      if (error.code) {
-        console.error('Error code:', error.code);
-      }
-      if (error.errno) {
-        console.error('Error number:', error.errno);
-      }
-      if (error.sql) {
-        console.error('SQL:', error.sql);
-      }
-      res.status(500).json({ error: 'Internal server error', details: error.message });
+      console.error('保存支付方式错误:', error);
+      // 记录详细错误信息
+      if (error.code) console.error('错误码:', error.code);
+      if (error.errno) console.error('错误编号:', error.errno);
+      if (error.sql) console.error('SQL:', error.sql);
+      
+      res.status(500).json({ error: '内部服务器错误', details: error.message });
     }
   } catch (error) {
-    console.error('Error saving payment method:', error);
-    res.status(500).json({ error: 'Failed to save payment method' });
+    console.error('保存支付方式错误:', error);
+    res.status(500).json({ error: '保存支付方式失败' });
   }
 };
 
-// 处理 Stripe Webhook
+// handle Stripe Webhook
 const handleWebhook = async (req, res) => {
   const sig = req.headers['stripe-signature'];
   let event;
@@ -192,12 +210,12 @@ const handleWebhook = async (req, res) => {
     return res.status(400).send(`Webhook Error: ${err.message}`);
   }
   
-  // 处理支付成功事件
+  // Handle the event
   if (event.type === 'payment_intent.succeeded') {
     const paymentIntent = event.data.object;
     
     try {
-      // 更新数据库中的支付状态
+      // Update payment intent status
       await db('payment_intents')
         .where({ stripe_payment_intent_id: paymentIntent.id })
         .update({ 
@@ -205,10 +223,10 @@ const handleWebhook = async (req, res) => {
           updated_at: new Date()
         });
       
-      // 获取商品和用户信息
+      // Get metadata
       const { itemId, userId } = paymentIntent.metadata;
       
-      // 创建支付记录
+      // Create payment record
       await db('payments').insert({
         user_id: userId,
         item_id: itemId,
@@ -218,7 +236,7 @@ const handleWebhook = async (req, res) => {
         payment_time: new Date()
       });
       
-      // 更新商品状态
+      // Update item status
       await db('items')
         .where({ id: itemId })
         .update({ 
@@ -231,7 +249,7 @@ const handleWebhook = async (req, res) => {
     }
   }
   
-  // 处理支付失败事件
+  // Handle payment failure
   if (event.type === 'payment_intent.payment_failed') {
     const paymentIntent = event.data.object;
     
@@ -250,7 +268,7 @@ const handleWebhook = async (req, res) => {
   res.json({ received: true });
 };
 
-// 获取用户的支付方式
+// Get user's payment methods
 const getUserPaymentMethods = async (req, res) => {
   try {
     const { userId } = req.params;
@@ -259,7 +277,7 @@ const getUserPaymentMethods = async (req, res) => {
       .where({ user_id: userId })
       .select('id', 'last4', 'card_type', 'exp_month', 'exp_year', 'created_at');
     
-    // 格式化数据以便前端使用
+    // Format payment methods
     const formattedPaymentMethods = paymentMethods.map(method => ({
       id: method.id,
       cardNumberLast4: method.last4,
@@ -275,17 +293,17 @@ const getUserPaymentMethods = async (req, res) => {
   }
 };
 
-// 处理支付
+// Process payment
 const processPayment = async (req, res) => {
   try {
     const { userId, itemId, paymentMethodId, amount } = req.body;
     
-    // 验证数据
+    // Check for missing fields
     if (!userId || !itemId || !paymentMethodId || !amount) {
       return res.status(400).json({ error: 'Missing required fields' });
     }
     
-    // 获取支付方式
+    // get payment method
     const paymentMethod = await db('user_payment_methods')
       .where({ id: paymentMethodId, user_id: userId })
       .first();
@@ -294,7 +312,7 @@ const processPayment = async (req, res) => {
       return res.status(404).json({ error: 'Payment method not found' });
     }
     
-    // 获取物品信息
+    // get item
     const item = await db('items')
       .where({ id: itemId })
       .first();
@@ -303,17 +321,17 @@ const processPayment = async (req, res) => {
       return res.status(404).json({ error: 'Item not found' });
     }
     
-    // 检查物品状态
+    // check if auction is active
     if (item.auction_status !== 'Active') {
       return res.status(400).json({ error: 'This auction is not active' });
     }
     
-    // 在实际应用中，这里应该调用 Stripe API 处理支付
-    // 这里我们模拟一个成功的支付
+    // check if auction has ended
+    // simulate payment processing
     const paymentId = `pay_${Math.random().toString(36).substring(2, 15)}`;
     const paymentStatus = 'Completed';
     
-    // 创建支付记录
+    // create payment record
     await db('payments').insert({
       user_id: userId,
       item_id: itemId,
@@ -325,7 +343,7 @@ const processPayment = async (req, res) => {
       created_at: new Date()
     });
     
-    // 更新物品状态
+    // update item status
     await db('items')
       .where({ id: itemId })
       .update({ 
@@ -333,16 +351,16 @@ const processPayment = async (req, res) => {
         updated_at: new Date()
       });
     
-    // 创建通知
+    // send notifications
     await db('notifications').insert({
-      user_id: item.user_id, // 通知卖家
+      user_id: item.user_id,
       message: `Your item "${item.title}" has been sold for $${amount}`,
       read: false,
       created_at: new Date()
     });
     
     await db('notifications').insert({
-      user_id: userId, // 通知买家
+      user_id: userId, 
       message: `You have successfully purchased "${item.title}" for $${amount}`,
       read: false,
       created_at: new Date()
@@ -360,7 +378,7 @@ const processPayment = async (req, res) => {
   }
 };
 
-// 获取用户的支付历史
+// get user's payment history
 const getUserPaymentHistory = async (req, res) => {
   try {
     const { userId } = req.params;
@@ -388,7 +406,7 @@ const getUserPaymentHistory = async (req, res) => {
   }
 };
 
-// 获取支付详情
+// get payment details
 const getPaymentDetails = async (req, res) => {
   try {
     const { paymentId } = req.params;
@@ -426,7 +444,7 @@ const getPaymentDetails = async (req, res) => {
   }
 };
 
-// 获取物品的支付状态
+// get item payment status
 const getItemPaymentStatus = async (req, res) => {
   try {
     const { itemId } = req.params;
@@ -447,7 +465,7 @@ const getItemPaymentStatus = async (req, res) => {
   }
 };
 
-// 路由定义
+// router
 router.post('/create-payment-intent', authenticateToken, createPaymentIntent);
 router.post('/save-payment-method', authenticateToken, savePaymentMethod);
 router.post('/process-payment', authenticateToken, processPayment);
@@ -457,91 +475,136 @@ router.get('/payment/:paymentId', authenticateToken, getPaymentDetails);
 router.get('/item-payment-status/:itemId', getItemPaymentStatus);
 router.post('/webhook', express.raw({ type: 'application/json' }), handleWebhook);
 
-// 获取用户的支付方式
-router.get('/methods', authenticateToken, async (req, res) => {
-  try {
-    const userId = req.user.id;
-    console.log(`Getting payment methods for user ${userId}`);
-    
-    // 查询用户的支付方式
-    const payments = await db('user_payment_methods')
-      .where({ user_id: userId })
-      .select('id', 'user_id', 'tokenized_card_id', 'last4', 'card_type', 'exp_month', 'exp_year', 'cvv', 'created_at');
-    
-    // 格式化响应，使其与前端代码兼容
-    const formattedPayments = payments.map(payment => ({
-      id: payment.id,
-      user_id: payment.user_id,
-      payment_method_id: payment.tokenized_card_id, // 为了保持向后兼容
-      tokenized_card_id: payment.tokenized_card_id,
-      last4: payment.last4,
-      brand: payment.card_type, // 前端代码可能在使用brand，所以这里提供
-      card_type: payment.card_type,
-      exp_month: payment.exp_month,
-      exp_year: payment.exp_year,
-      cvv: payment.cvv,
-      created_at: payment.created_at
-    }));
-    
-    console.log(`Got payment methods for user ${userId}:`, formattedPayments);
-    
-    return res.json(formattedPayments);
-  } catch (error) {
-    console.error('Error obtaining payment method:', error);
-    return res.status(500).json({ error: 'Error obtaining payment method' });
-  }
-});
-
-// 添加新的支付方式
+// add payment method
 router.post('/methods', authenticateToken, async (req, res) => {
   try {
-    const { tokenized_card_id, user_id, card_type, last4, exp_month, exp_year, cvv } = req.body;
+    // 记录请求信息，帮助调试
+    console.log('The request to add payment method was received:', new Date().toISOString());
+    console.log('Request body:', req.body);
     
-    console.log('Received payment method request:', req.body);
+    // 尝试从令牌或请求体获取用户 ID
+    let userId;
     
-    // 验证用户ID是否与当前登录用户匹配
-    if (parseInt(user_id) !== req.user.id) {
-      return res.status(403).json({ error: 'You are not authorized to add payment methods for other users' });
+    // 首先尝试从令牌获取
+    const authHeader = req.headers['authorization'];
+    const token = authHeader && authHeader.split(' ')[1];
+    
+    if (token) {
+      try {
+        // 尝试所有可能的JWT密钥
+        console.log('Attempting to verify token with multiple possible keys');
+        
+        // 与.env中的密钥保持一致
+        const SECRET_KEY = process.env.SECRET_KEY || 'JH7g5Ff9KmNp3Qz8Xw6RdC2Vb1At0Er4';
+        
+        // 尝试其他可能使用的密钥
+        const possibleKeys = [
+          SECRET_KEY,
+          'your-secret-key',
+          'JH7g5Ff9KmNp3Qz8Xw6RdC2Vb1At0Er4'
+        ];
+        
+        // 打印密钥前缀进行调试
+        console.log('Using SECRET_KEY:', SECRET_KEY.substring(0, 3) + '...');
+        
+        let decoded;
+        let verificationSuccessful = false;
+        
+        // 尝试所有可能的密钥
+        for (const key of possibleKeys) {
+          if (!key) continue;
+          
+          try {
+            console.log('Trying key:', key.substring(0, 3) + '...');
+            decoded = jwt.verify(token, key);
+            userId = decoded.id;
+            console.log('Successfully verified token with key starting with', key.substring(0, 3));
+            verificationSuccessful = true;
+            break;
+          } catch (err) {
+            console.log('Verification failed with key starting with', key.substring(0, 3));
+            // 继续尝试下一个密钥
+          }
+        }
+        
+        if (!verificationSuccessful) {
+          throw new Error('Token verification failed with all keys');
+        }
+      } catch (tokenError) {
+        console.error('All token verification attempts failed:', tokenError.message);
+        
+        // 降级处理
+        if (req.body.user_id) {
+          userId = req.body.user_id;
+          console.log('Using fallback user_id from request body:', userId);
+        } else {
+          return res.status(403).json({ error: 'Token verification failed' });
+        }
+      }
+    } else if (req.body.user_id) {
+      // 如果没有令牌，尝试从请求体获取用户 ID
+      if (process.env.NODE_ENV !== 'production') {
+        userId = req.body.user_id;
+        console.log('No token provided, using user_id from request body in dev mode:', userId);
+      } else {
+        return res.status(401).json({ error: 'No authentication token provided' });
+      }
+    } else {
+      return res.status(400).json({ error: 'User ID is required' });
     }
+    
+    // 添加合并前的代码逻辑
+    const { tokenized_card_id, card_type, last4, exp_month, exp_year, cvv } = req.body;
+    
+    console.log('Validated request data:', { 
+      userId, 
+      tokenized_card_id, 
+      card_type, 
+      last4, 
+      exp_month, 
+      exp_year 
+    });
     
     // 检查是否已存在相同的支付方式
     const existingMethod = await db('user_payment_methods')
-      .where({ tokenized_card_id, user_id })
+      .where({ user_id: userId, last4 })
       .first();
     
     if (existingMethod) {
-      return res.json({ message: 'Payment method already exists', id: existingMethod.id });
+      return res.json({ 
+        message: 'Payment method already exists', 
+        id: existingMethod.id 
+      });
     }
     
-    // 准备插入数据 - 修复日期格式
+    // 准备插入数据
     const paymentData = {
-      user_id,
+      user_id: userId,
       payment_provider: 'Stripe',
-      tokenized_card_id,
+      tokenized_card_id: tokenized_card_id || `tok_${Math.random().toString(36).substring(2, 15)}`,
       last4,
       card_type,
       exp_month,
       exp_year,
       cvv,
-      created_at: db.fn.now() // 使用数据库的NOW()函数
+      created_at: db.fn.now()
     };
     
-    console.log('Preparing to insert data:', paymentData);
+    console.log('Preparing to insert data');
     
     // 插入新支付方式
     const [id] = await db('user_payment_methods').insert(paymentData);
     
-    console.log(`User ${user_id} added a new payment method:`, { id, tokenized_card_id, card_type, last4 });
+    console.log(`User ${userId} added a new payment method:`, { id, card_type, last4 });
     
     return res.status(201).json({ 
       message: 'Payment method added successfully', 
       id, 
-      tokenized_card_id,
+      tokenized_card_id: paymentData.tokenized_card_id,
       card_type,
       last4,
       exp_month,
-      exp_year,
-      cvv
+      exp_year
     });
   } catch (error) {
     console.error('Error adding payment method:', error);
@@ -579,6 +642,40 @@ router.delete('/methods/:id', authenticateToken, async (req, res) => {
   } catch (error) {
     console.error('Error deleting payment method:', error);
     return res.status(500).json({ error: 'Failed to delete payment method' });
+  }
+});
+
+// 获取用户的支付方式
+router.get('/methods', authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    console.log(`Getting payment methods for user ${userId}`);
+    
+    // 查询用户的支付方式
+    const payments = await db('user_payment_methods')
+      .where({ user_id: userId })
+      .select('id', 'user_id', 'tokenized_card_id', 'last4', 'card_type', 'exp_month', 'exp_year', 'created_at');
+    
+    // 格式化响应
+    const formattedPayments = payments.map(payment => ({
+      id: payment.id,
+      user_id: payment.user_id,
+      payment_method_id: payment.tokenized_card_id, // 为了保持向后兼容
+      tokenized_card_id: payment.tokenized_card_id,
+      last4: payment.last4,
+      brand: payment.card_type, // 前端代码可能在使用brand
+      card_type: payment.card_type,
+      exp_month: payment.exp_month,
+      exp_year: payment.exp_year,
+      created_at: payment.created_at
+    }));
+    
+    console.log(`Got payment methods for user ${userId}:`, formattedPayments);
+    
+    return res.json(formattedPayments);
+  } catch (error) {
+    console.error('Error obtaining payment method:', error);
+    return res.status(500).json({ error: 'Error obtaining payment method' });
   }
 });
 

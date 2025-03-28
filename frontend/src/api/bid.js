@@ -2,7 +2,7 @@ import axios from 'axios';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
-// 优化后的提交出价API
+// 修改提交出价API，恢复原有的简单实现
 export const submitBid = async (bidData) => {
   console.log('Start submitting bids, data:', bidData);
   
@@ -46,7 +46,7 @@ export const submitBid = async (bidData) => {
   }
 };
 
-// 获取拍卖最新状态的API
+// 保持获取拍卖最新状态的API不变
 export const fetchAuctionById = async (auctionId) => {
   console.log('Fetching auction details, ID:', auctionId);
   

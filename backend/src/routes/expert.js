@@ -83,29 +83,62 @@ router.post("/authenticate/:requestId", async (req, res) => {
             return res.status(400).json({ error: "Request has already been processed" });
         }
 
+        // Get item details for notification
+        const item = await knex('items')
+            .where('id', request.item_id)
+            .first();
+
         const update = {
             status: action,
             comments: comment,
             decision_timestamp: knex.fn.now()
         };
 
-        if (action === "Approved") {
-            update.expert_id = request.new_expert_id || request.expert_id;
-        } else if (action === "Rejected") {
-            update.expert_id = null;
-        }
+        await knex.transaction(async (trx) => {
+            // Update authentication request
+            await trx("authentication_requests")
+                .where("id", requestId)
+                .update(update);
 
-        await knex("authentication_requests")
-            .where("id", requestId)
-            .update(update);
+            // Update item status
+            await trx("items")
+                .where("id", request.item_id)
+                .update({ authentication_status: action });
 
-        await knex("items")
-            .where("id", request.item_id)
-            .update("authentication_status", update.status);
+            // Create notification for the seller
+            await createNotification(item.user_id, item.id, `authentication_${action.toLowerCase()}`, {
+                itemTitle: item.title
+            });
 
-        res.json({ message: "Request updated successfully" });
+            // Create notification for the expert
+            await createExpertNotification(request.expert_id, item.id, 'review_completed', {
+                itemTitle: item.title,
+                status: action
+            });
+        });
+
+        res.json({ message: "Authentication status updated successfully" });
     } catch (error) {
-        console.error("Error updating request status:", error);
+        console.error("Error updating authentication status:", error);
+        res.status(500).json({ error: "Internal server error" });
+    }
+});
+
+// Add this to handle expert assignment notifications
+router.post("/assign/:expertId/:itemId", async (req, res) => {
+    const { expertId, itemId } = req.params;
+    try {
+        const item = await knex('items')
+            .where('id', itemId)
+            .first();
+
+        await createExpertNotification(expertId, itemId, 'review_request', {
+            itemTitle: item.title
+        });
+
+        res.json({ message: "Expert notified successfully" });
+    } catch (error) {
+        console.error("Error notifying expert:", error);
         res.status(500).json({ error: "Internal server error" });
     }
 });
@@ -137,13 +170,13 @@ router.post("/request-reallocation/:requestId", async (req, res) => {
     }
 });
 
-// 获取专家已审核的项目
+// Received itemas authenticated by expert
 router.get('/reviewed/:expertId', async (req, res) => {
   try {
     const { expertId } = req.params;
     console.log('Received request for reviewed items with expertId:', expertId);
     
-    // 查询已审核的项目
+    // Check authenticated items
     const reviewedItems = await knex("authentication_requests as ar")
       .select(
         "ar.id",
@@ -175,9 +208,34 @@ router.get('/reviewed/:expertId', async (req, res) => {
   }
 });
 
-// 添加一个测试路由
 router.get('/test', (req, res) => {
   res.json({ message: 'Test route works!' });
+});
+
+router.get('/requests/:requestId', async (req, res) => {
+  try {
+    const { requestId } = req.params;
+    const request = await knex('items as i')
+      .select(
+        'i.*',
+        'u.username as seller_name',
+        knex.raw('GROUP_CONCAT(DISTINCT ii.image_url) as image_urls')
+      )
+      .leftJoin('users as u', 'i.user_id', 'u.id')
+      .leftJoin('item_images as ii', 'i.id', 'ii.item_id')
+      .where('i.id', requestId)
+      .groupBy('i.id')
+      .first();
+
+    if (!request) {
+      return res.status(404).json({ error: 'Request not found' });
+    }
+
+    res.json(request);
+  } catch (error) {
+    console.error('Error fetching request:', error);
+    res.status(500).json({ error: 'Failed to fetch request' });
+  }
 });
 
 module.exports = router;

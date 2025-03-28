@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import Hero from "../components/hero";
+import Hero from "../components/Hero";
 import Categories from "../components/categories";
 import TrustIndicators from "../components/TrustIndicators";
 import AuctionList from "../components/AuctionList";
@@ -30,7 +30,7 @@ function Browse() {
       maxPrice: searchParams.get("maxPrice") || "",
       authenticatedOnly: searchParams.get("authenticatedOnly") === "true",
       daysRemaining: searchParams.get("daysRemaining") ? 
-        parseFloat(searchParams.get("daysRemaining")) : 5
+        parseInt(searchParams.get("daysRemaining")) : 5
     };
     
     setFilters(newFilters);

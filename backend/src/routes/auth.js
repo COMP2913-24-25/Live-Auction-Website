@@ -5,6 +5,7 @@ const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const cors = require('cors');
 const knex = require('../db');
+const { authenticateUser } = require('../middleware/auth');
 
 const router = express.Router();
 
@@ -61,11 +62,10 @@ router.post('/register', async (req, res) => {
         const [userId] = await knex('users').insert(userData);
         
         // 生成JWT
-        const SECRET_KEY = process.env.SECRET_KEY || 'your-secret-key';
         const token = jwt.sign(
             { id: userId, email: email },
-            SECRET_KEY,
-            { expiresIn: '24h' }
+            process.env.SECRET_KEY || 'JH7g5Ff9KmNp3Qz8Xw6RdC2Vb1At0Er4',
+            { expiresIn: '7d' }
         );
         
         console.log(`New user registered successfully: ${username}`);
@@ -97,14 +97,14 @@ router.post('/login', async (req, res) => {
             return res.status(400).json({ message: 'Email and password are required' });
         }
         
-        // 查询用户
+        // Search for user by email
         const user = await knex('users').where({ email }).first();
         
         if (!user) {
             return res.status(401).json({ message: 'Invalid credentials' });
         }
         
-        // 验证密码
+        // Compare password hashes
         const isPasswordValid = await bcrypt.compare(password, user.password_hash);
         console.log('Password Comparison Result:', isPasswordValid);
         
@@ -112,14 +112,14 @@ router.post('/login', async (req, res) => {
             return res.status(401).json({ message: 'Invalid credentials' });
         }
         
-        // 生成 JWT - 使用SECRET_KEY而不是JWT_SECRET
+        //  Create JWT token
         const token = jwt.sign(
-            { id: user.id, email: user.email, role: user.role },
-            process.env.SECRET_KEY || 'your-secret-key',
-            { expiresIn: '24h' }
+            { id: user.id, email: user.email },
+            process.env.SECRET_KEY || 'JH7g5Ff9KmNp3Qz8Xw6RdC2Vb1At0Er4',
+            { expiresIn: '7d' }
         );
         
-        // 返回用户信息和令牌
+        // Send token and user data
         res.json({
             token,
             user: {
@@ -135,64 +135,24 @@ router.post('/login', async (req, res) => {
     }
 });
 
-// 临时路由 - 仅用于开发调试，生产环境请移除
-router.delete('/cleanup/:username', async (req, res) => {
-    try {
-        if (process.env.NODE_ENV === 'production') {
-            return res.status(403).json({ error: 'Production environment does not allow this operation' });
-        }
-        
-        const username = req.params.username;
-        console.log(`Attempting to delete user: ${username}`);
-        
-        // 检查用户是否存在
-        const existingUser = await knex('users')
-            .where(knex.raw('LOWER(username)'), username.toLowerCase())
-            .first();
-            
-        if (!existingUser) {
-            return res.status(404).json({ error: 'User does not exist' });
-        }
-        
-        // 删除用户
-        await knex('users').where('id', existingUser.id).delete();
-        
-        console.log(`Deleted user: ${username} (ID: ${existingUser.id})`);
-        return res.json({ message: `Deleted user: ${username}` });
-    } catch (error) {
-        console.error('Delete user error:', error);
-        return res.status(500).json({ error: 'Delete user error', details: error.message });
-    }
-});
-
-// 新增一个路由来查看是否有大小写不敏感的用户名匹配
-router.get('/check/:username', async (req, res) => {
-    try {
-        if (process.env.NODE_ENV === 'production') {
-            return res.status(403).json({ error: 'Production environment does not allow this operation' });
-        }
-        
-        const username = req.params.username;
-        console.log(`Check username: ${username}`);
-        
-        // 查询所有用户
-        const allUsers = await knex('users').select('id', 'username', 'email');
-        
-        // 查找可能的匹配（不区分大小写）
-        const possibleMatches = allUsers.filter(
-            user => user.username.toLowerCase() === username.toLowerCase()
-        );
-        
-        return res.json({
-            searched: username,
-            exactMatch: allUsers.find(u => u.username === username) || null,
-            caseInsensitiveMatches: possibleMatches,
-            allUsers: allUsers
-        });
-    } catch (error) {
-        console.error('Check username error:', error);
-        return res.status(500).json({ error: 'Check username error', details: error.message });
-    }
+// 添加刷新令牌路由
+router.post('/refresh-token', authenticateUser, (req, res) => {
+  try {
+    // 用户已经通过authenticateUser中间件验证
+    const user = req.user;
+    
+    // 生成新令牌，这次确保使用正确的密钥
+    const newToken = jwt.sign(
+      { id: user.id, email: user.email }, 
+      process.env.SECRET_KEY || 'JH7g5Ff9KmNp3Qz8Xw6RdC2Vb1At0Er4', 
+      { expiresIn: '7d' }
+    );
+    
+    res.json({ token: newToken });
+  } catch (error) {
+    console.error('Error refreshing token:', error);
+    res.status(500).json({ error: 'Failed to refresh token' });
+  }
 });
 
 module.exports = router;

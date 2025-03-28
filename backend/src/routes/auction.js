@@ -3,6 +3,7 @@ const knex = require('../db'); // Assuming you have a Knex setup in db/knex.js
 const router = express.Router();
 const cron = require('node-cron');
 const { sendWinningBidEmail } = require('./email');
+const { calculatePostingFee } = require('../utils/feeCalculator');
 
 // Fetch all active auctions
 router.get('/active', async (req, res) => {
@@ -17,7 +18,7 @@ router.get('/active', async (req, res) => {
       authenticatedOnly
     } = req.query;
 
-    // 构建基础查询
+    // Construct the basic query
     let query = knex('items as i')
       .select(
         'i.id',
