@@ -26,6 +26,7 @@ router.get('/:userId', async (req, res) => {
             .leftJoin("categories as c", "i.category_id", "c.id")
             .where('ar.user_id', userId)
             .andWhere("ar.status", "!=", "Pending")
+            .andWhere("i.auction_status", "Not Listed")
             .whereIn('i.authentication_status', ['Approved', 'Rejected'])
             .groupBy("ar.id")
             .orderBy('i.created_at', 'desc');
@@ -79,6 +80,37 @@ router.post('/:id/finalize', async (req, res) => {
     } catch (error) {
         console.error('Error finalizing item:', error);
         res.status(500).json({ error: 'Failed to finalize item' });
+    }
+});
+
+// Fetch past listed items by user
+router.get('/:userId/past-items', async (req, res) => {
+    try {
+        const { userId } = req.params;
+
+        const items = await knex('items as i')
+            .select(
+                "i.id",
+                "i.title as item_title",
+                "i.description as item_description",
+                "c.name as category",
+                knex.raw("GROUP_CONCAT(ii.image_url) as item_images"),
+                "i.auction_status",
+                "i.min_price",
+                "i.created_at",
+                "i.end_time"
+            )
+            .leftJoin("item_images as ii", "i.id", "ii.item_id")
+            .leftJoin("categories as c", "i.category_id", "c.id")
+            .where('i.user_id', userId)
+            .whereIn('i.auction_status', ['Active', 'Ended - Sold', 'Ended - Unsold']) // Filter by auction_status
+            .groupBy("i.id")
+            .orderBy('i.created_at', 'desc');
+
+        res.json(items);
+    } catch (error) {
+        console.error('Error fetching listed items:', error);
+        res.status(500).json({ error: 'Failed to fetch listed items' });
     }
 });
 
