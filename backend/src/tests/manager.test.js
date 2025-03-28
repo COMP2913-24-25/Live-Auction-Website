@@ -726,3 +726,101 @@ describe('GET /api/manager/weekly-income', () => {
         expect(res.body.error).toBe('Failed to fetch weekly income');
     });
 });
+
+describe('GET /api/manager/users', () => {
+    afterEach(() => {
+        jest.clearAllMocks();
+    });
+
+    test('should fetch paginated users with metadata', async () => {
+        const mockUsers = [
+            {
+                id: 1,
+                username: 'user1',
+                email: 'user1@example.com',
+                created_at: '2023-01-01T00:00:00Z',
+                role: 'user'
+            },
+            {
+                id: 2,
+                username: 'user2',
+                email: 'user2@example.com',
+                created_at: '2023-01-02T00:00:00Z',
+                role: 'admin'
+            }
+        ];
+
+        const mockTotal = { count: 20 };
+
+        // Mock users query
+        knex.mockImplementationOnce(() => ({
+            select: jest.fn().mockReturnThis(),
+            limit: jest.fn().mockReturnThis(),
+            offset: jest.fn().mockReturnThis(),
+            then: jest.fn(cb => cb(mockUsers))
+        }));
+
+        // Mock count query
+        knex.mockImplementationOnce(() => ({
+            count: jest.fn().mockReturnThis(),
+            first: jest.fn().mockResolvedValue(mockTotal)
+        }));
+
+        const res = await request(app)
+            .get('/api/manager/users')
+            .query({ page: 2, limit: 10 });
+
+        expect(res.status).toBe(200);
+        expect(res.body).toEqual({
+            users: mockUsers,
+            totalPages: 2,
+            totalUsers: 20
+        });
+    });
+
+    test('should use default pagination values', async () => {
+        const mockUsers = [];
+        const mockTotal = { count: 0 };
+
+        // Create mock instances we can track
+        const mockUsersQuery = {
+            select: jest.fn().mockReturnThis(),
+            limit: jest.fn().mockReturnThis(),
+            offset: jest.fn().mockReturnThis(),
+            then: jest.fn(cb => cb(mockUsers))
+        };
+
+        const mockCountQuery = {
+            count: jest.fn().mockReturnThis(),
+            first: jest.fn().mockResolvedValue(mockTotal)
+        };
+
+        knex.mockImplementationOnce(() => mockUsersQuery)
+            .mockImplementationOnce(() => mockCountQuery);
+
+        const res = await request(app).get('/api/manager/users');
+
+        expect(res.status).toBe(200);
+        expect(res.body).toEqual({
+            users: [],
+            totalPages: 0,
+            totalUsers: 0
+        });
+
+        // Verify method calls on the mock instance
+        expect(mockUsersQuery.limit).toHaveBeenCalledWith(10);
+        expect(mockUsersQuery.offset).toHaveBeenCalledWith(0);
+    });
+
+    test('should return 500 on database error', async () => {
+        knex.mockImplementationOnce(() => ({
+            select: jest.fn().mockReturnThis(),
+            limit: jest.fn().mockReturnThis(),
+            offset: jest.fn().mockRejectedValue(new Error('Database error'))
+        }));
+
+        const res = await request(app).get('/api/manager/users');
+        expect(res.status).toBe(500);
+        expect(res.body.error).toBe('Failed to fetch users');
+    });
+});
