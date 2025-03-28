@@ -15,6 +15,7 @@ import Notifications from './pages/Notifications';
 import ExpertAvailability from './components/ExpertAvailability';
 import AvailableExperts from './pages/AvailableExperts';
 import Users from './pages/Users';
+import Profile from './Components/profile';
 
 const DashboardRouter = () => {
   const { user } = useAuth();

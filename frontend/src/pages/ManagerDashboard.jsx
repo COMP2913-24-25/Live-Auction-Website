@@ -1,11 +1,4 @@
 import { useState, useEffect } from "react";
-<<<<<<< HEAD
-import axios from "axios";
-
-// const [hasSelectedPendingRequests, setHasSelectedPendingRequests] = useState(false);
-
-// export {hasSelectedPendingRequests};
-=======
 import axios from "../api/axios";
 import {
   Chart as ChartJS,
@@ -27,7 +20,6 @@ ChartJS.register(
   Tooltip,
   Legend
 );
->>>>>>> origin
 
 export default function ManagerDashboard() {
     const [pendingRequests, setPendingRequests] = useState([]);
@@ -36,13 +28,6 @@ export default function ManagerDashboard() {
     const [experts, setExperts] = useState({});
     const [selectedPendingRequests, setSelectedPendingRequests] = useState({});
     const [selectedAssignedRequests, setSelectedAssignedRequests] = useState({});
-<<<<<<< HEAD
-    const [hasSelectedPendingRequests, setHasSelectedPendingRequests] = useState(false);
-    const [loading, setLoading] = useState(true);
-    
-    // hasSelectedPendingRequests = false;
-    // export const hasSelectedPendingRequests = true; 
-=======
     const [loading, setLoading] = useState(true);
     const [postingFees, setPostingFees] = useState({
         fixedFee: 2,
@@ -64,17 +49,13 @@ export default function ManagerDashboard() {
     });
     const [incomeLoading, setIncomeLoading] = useState(true);
     const [error, setError] = useState(null);
->>>>>>> origin
 
     useEffect(() => {
         fetchPendingRequests();
         fetchAssignedRequests();
         fetchCompletedRequests();
-<<<<<<< HEAD
-=======
         fetchPostingFees();
         fetchWeeklyIncome();
->>>>>>> origin
     }, []);
 
     const fetchPendingRequests = async () => {
@@ -129,10 +110,6 @@ export default function ManagerDashboard() {
             ...prev,
             [itemId]: prev[itemId] ? undefined : { expertId: "", categoryId }
         }));
-<<<<<<< HEAD
-        // setHasSelectedPendingRequests(true);
-=======
->>>>>>> origin
     };
 
     const handleAssignedCheckboxChange = (itemId, categoryId) => {
@@ -206,8 +183,6 @@ export default function ManagerDashboard() {
         }
     };
 
-<<<<<<< HEAD
-=======
     const fetchPostingFees = async () => {
         try {
             setFeesLoading(true);
@@ -401,7 +376,6 @@ export default function ManagerDashboard() {
         );
     };
 
->>>>>>> origin
     return (
         <div className="p-4 md:p-6 space-y-6 pt-16 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <h2 className="text-2xl md:text-4xl font-bold text-center md:text-left">Manager Dashboard</h2>
@@ -429,11 +403,7 @@ export default function ManagerDashboard() {
                                 <th className="p-2">Assign Expert</th>
                             </tr>
                         </thead>
-<<<<<<< HEAD
-                        <tbody> 
-=======
                         <tbody>
->>>>>>> origin
                             {pendingRequests.map((req) => (
                                 <tr key={req.item_id} className="odd:bg-white even:bg-gray-200">
                                     <td className="p-2 text-center">
@@ -450,25 +420,13 @@ export default function ManagerDashboard() {
                                     <td className="p-2 text-center">
                                         <select
                                             onFocus={() => fetchExperts(req.category_id)}
-<<<<<<< HEAD
-                                            onChange={(e) => {
-                                                handlePendingExpertChange(req.item_id, e.target.value)
-                                                // setHasSelectedPendingRequests(true);
-                                            }
-                                        }
-=======
                                             onChange={(e) => handlePendingExpertChange(req.item_id, e.target.value)}
->>>>>>> origin
                                             className="border p-1 w-full md:w-auto"
                                         >
                                             <option value="">Select Expert</option>
                                             {experts[req.category_id]?.map((exp) => (
                                                 <option key={exp.id} value={exp.id}>{exp.username}</option>
-<<<<<<< HEAD
-                                            ))} 
-=======
                                             ))}
->>>>>>> origin
                                         </select>
                                     </td>
                                 </tr>
@@ -524,11 +482,7 @@ export default function ManagerDashboard() {
                                             className="border p-1 w-full md:w-auto"
                                         >
                                             <option value="">Select New Expert</option>
-<<<<<<< HEAD
-                                            {experts[req.category_id]?.map((exp) => (
-=======
                                             {experts[`${req.category_id}-${req.assigned_expert_id}`]?.map((exp) => (
->>>>>>> origin
                                                 <option key={exp.id} value={exp.id}>{exp.username}</option>
                                             ))}
                                         </select>
@@ -572,12 +526,6 @@ export default function ManagerDashboard() {
                     </table>
                 </div>
             </div>
-<<<<<<< HEAD
-        </div>
-    );
-}
-
-=======
 
             {/* Posting Fees Configuration */}
             <div className="border border-gray-300 p-4 rounded-lg">
@@ -745,4 +693,3 @@ export default function ManagerDashboard() {
         </div>
     );
 }
->>>>>>> origin
