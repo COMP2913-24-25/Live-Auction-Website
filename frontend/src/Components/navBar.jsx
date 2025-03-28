@@ -281,8 +281,8 @@ function NavBar() {
 
                       {user.role == 2 && (
                         <>
-                          <Link to="/reviewed" className="text-white hover:text-blue-200 font-medium transition-colors duration-200">
-                            Reviewed
+                          <Link to="/working-hours" className="text-white hover:text-blue-200 font-medium transition-colors duration-200">
+                            Schedule
                           </Link>
                         </>
                       )}
