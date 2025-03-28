@@ -14,7 +14,8 @@ exports.up = function(knex) {
                 'bid_placed',
                 'review_request',
                 'review_reminder',
-                'review_completed'
+                'review_completed',
+                'item_authenticated'
             )) not null,
             message text null,
             read boolean default '0',
@@ -41,6 +42,8 @@ exports.down = function(knex) {
                 'won',
                 'ending_soon',
                 'ended',
+                'posting_fee',
+                'bid_placed',
                 'review_request',
                 'review_reminder',
                 'review_completed'

@@ -337,4 +337,93 @@ router.use((err, req, res, next) => {
     });
 });
 
+// Get pending items needing expert assignment
+router.get('/pending-items', async (req, res) => {
+  try {
+    const items = await knex('items as i')
+      .select(
+        'i.id',
+        'i.title',
+        'i.description',
+        'i.category_id',
+        'c.name as category_name',
+        'u.username as seller_name',
+        knex.raw('GROUP_CONCAT(DISTINCT ii.image_url) as image_urls')
+      )
+      .leftJoin('categories as c', 'i.category_id', 'c.id')
+      .leftJoin('users as u', 'i.user_id', 'u.id')
+      .leftJoin('item_images as ii', 'i.id', 'ii.item_id')
+      .whereNull('i.assigned_expert_id')
+      .where('i.authentication_status', 'Pending')
+      .groupBy('i.id');
+
+    res.json(items);
+  } catch (error) {
+    console.error('Error fetching pending items:', error);
+    res.status(500).json({ error: 'Failed to fetch pending items' });
+  }
+});
+
+// Get available experts by category
+router.get('/experts-by-category/:categoryId', async (req, res) => {
+  try {
+    const { categoryId } = req.params;
+    const experts = await knex('users as u')
+      .select('u.id', 'u.username')
+      .join('expert_categories as ec', 'u.id', 'ec.expert_id')
+      .where({
+        'ec.category_id': categoryId,
+        'u.role': 'expert'
+      });
+
+    console.log(`Found ${experts.length} experts for category ${categoryId}`); // Debug log
+    res.json(experts);
+  } catch (error) {
+    console.error('Error fetching experts:', error);
+    res.status(500).json({ error: 'Failed to fetch experts' });
+  }
+});
+
+// Assign expert to item
+router.post('/assign-expert', async (req, res) => {
+  const trx = await knex.transaction();
+  
+  try {
+    const { itemId, expertId } = req.body;
+
+    // Update item with assigned expert
+    await trx('items')
+      .where('id', itemId)
+      .update({ 
+        assigned_expert_id: expertId,
+        updated_at: trx.fn.now()
+      });
+
+    // Create authentication request
+    await trx('authentication_requests').insert({
+      item_id: itemId,
+      expert_id: expertId,
+      status: 'Pending',
+      request_time: trx.fn.now()
+    });
+
+    // Create notification for expert
+    await trx('notifications').insert({
+      user_id: expertId,
+      type: 'NEW_ASSIGNMENT',
+      message: `You have been assigned a new item for authentication`,
+      auction_id: itemId,
+      created_at: trx.fn.now()
+    });
+
+    await trx.commit();
+    res.json({ success: true });
+
+  } catch (error) {
+    await trx.rollback();
+    console.error('Error assigning expert:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 module.exports = router;
