@@ -7,7 +7,6 @@ import Carousel from 'react-multi-carousel';
 import { calculateTimeRemaining } from '../components/AuctionList';
 import authenticatedIcon from '../assets/authenticatedIcon.png';
 
-'use strict';
 
 function Profile() {
   const location = useLocation();
@@ -70,13 +69,15 @@ function Profile() {
 }
 
 const ProfileSettings = ({ user }) => {
+  
+  const location = useLocation();
   const [editPageOpen, setEditPageOpen] = useState(false);
 
   const [formData, setFormData] = useState(null);
   const [changes, setChanges] = useState([]);
 
   useEffect(() => {
-    if (user) {
+    if (user && location.pathname === '/profile-settings') {
       const fetchProfile = async () => {
         try {
           const response = await axios.get(`/api/profile/${user.id}`);
@@ -88,7 +89,7 @@ const ProfileSettings = ({ user }) => {
       };
       fetchProfile();
     }
-  }, [user]);
+  }, [user, location.pathname]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -97,7 +98,7 @@ const ProfileSettings = ({ user }) => {
       [name]: value
     }));
     console.log("woohoo data updated to formData",formData); // Debugging
-    setChanges(changes => [...changes, name]);
+    setChanges(changes => [ ...changes, name ]);
   };
 
   const handleSubmit = async () => {
@@ -115,7 +116,9 @@ const ProfileSettings = ({ user }) => {
 
   const Input = ({ key_name, isEmail = false }) => {
 
-    if (!formData) return null;
+    if (!formData) return <p>Loading profile data...</p>;
+
+    // console.log("Rendering input for", key_name, "with value", formData[key_name]);
   
     // Show a mailto: link only when it's an email field and in read-only mode
     if (!editPageOpen && isEmail) {
@@ -228,34 +231,37 @@ const MyAuctions = () => {
 
 const Wishlist = ({user}) => {
 
+  const location = useLocation();
   const [auctions, setAuctions] = useState([]);
 
   useEffect(() => {
-    const fetchFavoriteAuctions = async () => {
-      try {
-        const favoriteAuctions = await axios.get(`/api/profile/formatted-favorites/${user.id}`);
+    if (user && location.pathname === '/wishlist') {
+      const fetchFavoriteAuctions = async () => {
+        try {
+          const favoriteAuctions = await axios.get(`/api/profile/formatted-favorites/${user.id}`);
 
-        console.log("0. printing out formatted_favorites lezzzzz gooooooooo", favoriteAuctions.data); // Debugging
+          console.log("0. printing out formatted_favorites lezzzzz gooooooooo", favoriteAuctions.data); // Debugging
 
-        if (favoriteAuctions.data == []) {
-          setAuctions([]);
-          return;
+          if (favoriteAuctions.data == []) {
+            setAuctions([]);
+            return;
+          }
+          const formattedFavoriteAuctions = favoriteAuctions.data.map(auction => ({
+            ...auction, 
+            remainingTime: calculateTimeRemaining(auction.end_time, auction.auction_status)
+          }));
+          setAuctions(formattedFavoriteAuctions);
+          console.log("1. printing out", auctions, "for DEBUGGGGG!!!");
+          } catch (error) {
+          console.error('Failed to fetch wishlist:', error);
+          console.log("2. printing out", auctions, "for DEBUGGGGG!!!");
         }
-        const formattedFavoriteAuctions = favoriteAuctions.data.map(auction => ({
-          ...auction, 
-          remainingTime: calculateTimeRemaining(auction.end_time, auction.auction_status)
-        }));
-        setAuctions(formattedFavoriteAuctions);
-        console.log("1. printing out", auctions, "for DEBUGGGGG!!!");
-        } catch (error) {
-        console.error('Failed to fetch wishlist:', error);
-        console.log("2. printing out", auctions, "for DEBUGGGGG!!!");
-      }
-    };  
-    fetchFavoriteAuctions();
-    const interval = setInterval(fetchFavoriteAuctions, 10000);
-    return () => clearInterval(interval);
-  }, [user]);
+      };  
+      fetchFavoriteAuctions();
+      const interval = setInterval(fetchFavoriteAuctions, 10000);
+      return () => clearInterval(interval);
+    }
+  }, [user, location.pathname]);
 
   // this is for updating the left over time for auctions
   useEffect(() => {
@@ -295,7 +301,7 @@ const Wishlist = ({user}) => {
                     <div className="relative">
                       {auction.authentication_status === 'Approved' ? (
                         <img
-                          src={authenticatedIcon}
+                          src={authenticatedIcon} 
                           alt="Authenticated Badge"
                           className="absolute top-2 left-2 w-12 h-12 z-10 opacity-90"
                         />

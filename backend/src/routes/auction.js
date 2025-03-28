@@ -127,43 +127,101 @@ router.get('/:id', async (req, res) => {
   }
 });
 
-// In your bid placement route
+// Route for placing bids
 router.post('/:id/bid', async (req, res) => {
+  const trx = await knex.transaction();
+  
   try {
-    // Notify previous highest bidder
-    if (previousHighestBid) {
-      await axios.post('/api/notifications/bid-notification', {
-        userId: previousHighestBid.user_id,
-        auctionId: req.params.id,
-        type: 'outbid'
+    const { id } = req.params;
+    const { user_id, bid_amount } = req.body;
+
+    // Get current highest bid
+    const currentHighestBid = await trx('bids')
+      .where('item_id', id)
+      .orderBy('bid_amount', 'desc')
+      .first();
+
+    // Get auction details
+    const auction = await trx('items')
+      .where('id', id)
+      .first();
+
+    if (!auction) {
+      throw new Error('Auction not found');
+    }
+
+    // Validate bid amount
+    const minimumBid = currentHighestBid 
+      ? currentHighestBid.bid_amount + 5 
+      : auction.min_price;
+
+    if (bid_amount < minimumBid) {
+      throw new Error(`Bid must be at least £${minimumBid}`);
+    }
+
+    // Place new bid
+    await trx('bids').insert({
+      user_id,
+      item_id: id,
+      bid_amount,
+      created_at: knex.fn.now()
+    });
+
+    // Notify previous highest bidder if exists
+    if (currentHighestBid) {
+      await trx('notifications').insert({
+        user_id: currentHighestBid.user_id,
+        auction_id: id,
+        type: 'OUTBID',
+        message: `You have been outbid on "${auction.title}". New highest bid: £${bid_amount}`,
+        created_at: knex.fn.now()
       });
     }
-    // Check if auction is ending soon
-    const auction = await knex('items').where('id', req.params.id).first();
+
+    // Check if auction is ending soon (within 1 hour)
     const endTime = new Date(auction.end_time);
     const now = new Date();
     const hoursRemaining = (endTime - now) / (1000 * 60 * 60);
+
     if (hoursRemaining <= 1) {
-      const bidders = await knex('bids')
-        .where('item_id', req.params.id)
+      // Get all unique bidders
+      const bidders = await trx('bids')
+        .where('item_id', id)
         .select('user_id')
         .distinct();
+
+      // Notify all bidders about auction ending soon
       for (const bidder of bidders) {
-        await axios.post('/api/notifications/bid-notification', {
-          userId: bidder.user_id,
-          auctionId: req.params.id,
-          type: 'ending_soon'
+        await trx('notifications').insert({
+          user_id: bidder.user_id,
+          auction_id: id,
+          type: 'ENDING_SOON',
+          message: `Auction "${auction.title}" is ending soon! Current highest bid: £${bid_amount}`,
+          created_at: knex.fn.now()
         });
       }
     }
-    res.json({ success: true });
+
+    await trx.commit();
+
+    res.json({
+      success: true,
+      message: 'Bid placed successfully',
+      newHighestBid: bid_amount,
+      previousHighestBid: currentHighestBid ? currentHighestBid.bid_amount : null
+    });
+
   } catch (error) {
+    await trx.rollback();
     console.error('Error placing bid:', error);
-    res.status(500).json({ error: 'Failed to place bid' });
+    res.status(500).json({ 
+      error: 'Failed to place bid',
+      message: error.message
+    });
   }
 });
 
-// Remove the second cron job and fix the first one
+// In the cron job section
 cron.schedule('* * * * *', async () => {
   try {
     console.log('Checking and updating expired auctions...');
@@ -175,49 +233,65 @@ cron.schedule('* * * * *', async () => {
         .where('end_time', '<=', knex.fn.now());
 
       for (const auction of expiredAuctions) {
-        // Get highest bid
         const highestBid = await trx('bids')
           .where('item_id', auction.id)
           .orderBy('bid_amount', 'desc')
           .first();
 
-        // Update auction status
-        await trx('items')
-          .where('id', auction.id)
-          .update({ 
-            auction_status: highestBid ? 'Ended - Sold' : 'Ended - Unsold'
-          });
-
-        // Create end notification
-        await trx('notifications').insert({
-          user_id: auction.user_id,
-          type: 'ended', 
-          message: `Your auction has ended with a final price of £${highestBid?.bid_amount || auction.min_price}`,
-          auction_id: auction.id,
-          created_at: knex.fn.now()
-        });
-
-        // If sold, create winner notification
         if (highestBid) {
-          await trx('notifications').insert({
-            user_id: highestBid.user_id,
-            auction_id: auction.id,
-            type: 'won',
-            message: `You won the auction for "${auction.title}"`
-          });
+          try {
+            // Deduct posting fee from seller
+            const postingFee = await deductPostingFee(
+              auction.user_id, 
+              auction.id, 
+              highestBid.bid_amount
+            );
+
+            // Update auction status and record fee
+            await trx('items')
+              .where('id', auction.id)
+              .update({ 
+                auction_status: 'Ended - Sold',
+                final_price: highestBid.bid_amount,
+                posting_fee: postingFee
+              });
+
+            // Notify seller about fee deduction
+            await trx('notifications').insert({
+              user_id: auction.user_id,
+              type: 'FEE_DEDUCTION',
+              message: `A posting fee of £${postingFee.toFixed(2)} has been deducted for your auction "${auction.title}" (final price: £${highestBid.bid_amount.toFixed(2)})`,
+              auction_id: auction.id,
+              created_at: knex.fn.now()
+            });
+
+          } catch (feeError) {
+            console.error('Error processing posting fee:', feeError);
+            
+            // Log the error for admin review
+            await trx('admin_logs').insert({
+              type: 'FEE_ERROR',
+              user_id: auction.user_id,
+              auction_id: auction.id,
+              error_message: feeError.message,
+              created_at: knex.fn.now()
+            });
+
+            // Still end the auction but mark fee as pending
+            await trx('items')
+              .where('id', auction.id)
+              .update({ 
+                auction_status: 'Ended - Sold',
+                final_price: highestBid.bid_amount,
+                fee_status: 'PENDING'
+              });
+          }
+        } else {
+          await trx('items')
+            .where('id', auction.id)
+            .update({ auction_status: 'Ended - Unsold' });
         }
       }
-
-      // Update any remaining unsold auctions
-      await trx('items')
-        .where('end_time', '<=', knex.fn.now())
-        .where('auction_status', 'Active')
-        .whereNotExists(function () {
-          this.select('*')
-            .from('bids')
-            .whereRaw('bids.item_id = items.id');
-        })
-        .update({ auction_status: 'Ended - Unsold' });
     });
 
     console.log('Auction updates completed successfully');

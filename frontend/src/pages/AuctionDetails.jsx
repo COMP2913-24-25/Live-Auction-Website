@@ -4,7 +4,7 @@ import axios from "../api/axios";
 import Carousel from "react-multi-carousel";
 import "react-multi-carousel/lib/styles.css";
 import { Star } from "lucide-react";
-import { useParams } from "react-router-dom";
+import { useParams, useLocation } from "react-router-dom";
 import PaymentForm from '../components/payment/PaymentForm';
 import PaymentSuccess from '../components/payment/PaymentSuccess';
 import PaymentCardSelector from '../components/PaymentCardSelector';
@@ -58,9 +58,12 @@ const AuctionDetails = () => {
   const [success, setSuccess] = useState("");
   const [error, setError] = useState("");
   const [processing, setProcessing] = useState(false);
+  const location = useLocation();
 
   const section1Ref = useRef(null);
   const section2Ref = useRef(null);
+
+  // console.log("THIS IS ID!!!!!!!!!!!!!!!!!!!!",id);
 
   useEffect(() => {
     const fetchAuctionDetails = async () => {
@@ -97,6 +100,41 @@ const AuctionDetails = () => {
 
     return () => clearInterval(interval);
   }, [auction?.end_time]); // Run effect when auction.end_time changes
+
+  useEffect(() => {
+    const updateFavorite = async () => {
+      try{ 
+        // console.log("this is user.d!!!!!!!!!!!!", user.id);
+        // console.log("this is isFavorite value", isFavorite);
+        console.log('user:', user);          
+        console.log('user.id:', user?.id);  
+        console.log('id:', id);             
+        await axios.put(`/api/profile/favorites/${user.id}`, {id, isFavorite});
+        console.log("updated favorite!!!!!!!!!!!!!!");
+      } catch (err) {
+        console.error('Failed to update favorites:', err);
+      }
+    };
+    updateFavorite();
+
+  }, [isFavorite])
+
+  useEffect(() => {
+    if (user && location.pathname === `/auctions/${id}`) {
+      const fetchFavorite = async () => {
+        try {
+          const response = await axios.get(`/api/profile/${user.id}`);
+          JSON.parse(response.data.favorites).includes(id) 
+          ? setIsFavorite(true) 
+          : setIsFavorite(false);
+        } catch (err) {
+          console.error('Failed to fetch profile:', err);
+        }
+      };
+      fetchFavorite();
+    }
+
+  }, [user, location.pathname]);
 
   
   useEffect(() => {

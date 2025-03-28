@@ -31,6 +31,7 @@ router.get('/:id', async (req, res) => {
 
   try {
     const profile = await knex('users').where({ id : id }).first();
+    console.log("got profile info", profile);
     res.json(profile); // this is an object
 
   } catch (error) {
@@ -61,6 +62,8 @@ router.put('/favorites/:id', async (req, res) => {
     } else if (favorites.includes(auction_id) && !favorites_boolean) {
       favorites = favorites.filter(fav => fav !== auction_id);
     }
+
+    console.log("updated profile favorites", favorites);
 
     await knex('users')
       .where({ id: id })
