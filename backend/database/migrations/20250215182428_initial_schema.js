@@ -38,9 +38,10 @@ exports.up = function (knex) {
             table.increments('id').primary();
             table.integer('user_id').notNullable().references('id').inTable('users').onDelete('CASCADE');
             table.integer('item_id').notNullable().references('id').inTable('items').onDelete('CASCADE');
-            table.float('amount').notNullable();
+            table.decimal('amount', 10, 2).notNullable();
             table.enum('status', ['Pending', 'Completed', 'Failed']).defaultTo('Pending');
             table.timestamp('payment_time').defaultTo(knex.fn.now());
+            table.timestamp('created_at').defaultTo(knex.fn.now());
         })
         .createTable('watchlist', function (table) {
             table.increments('id').primary();
@@ -51,8 +52,22 @@ exports.up = function (knex) {
         .createTable('notifications', function (table) {
             table.increments('id').primary();
             table.integer('user_id').notNullable().references('id').inTable('users').onDelete('CASCADE');
-            table.text('message').notNullable();
+            table.integer('auction_id').references('id').inTable('items').onDelete('CASCADE');
+            table.enum('type', [
+                // User notifications
+                'outbid',
+                'won',
+                'ending_soon',
+                'ended',
+                'bid_placed',
+                // Expert notifications
+                'review_request',
+                'review_reminder',
+                'review_completed'
+            ]).notNullable();
+            table.text('message').nullable();
             table.boolean('read').defaultTo(false);
+            table.boolean('deleted').defaultTo(false);
             table.timestamp('created_at').defaultTo(knex.fn.now());
         })
         .createTable('item_images', function (table) {

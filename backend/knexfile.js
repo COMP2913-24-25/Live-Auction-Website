@@ -9,47 +9,30 @@ module.exports = {
   development: {
     client: 'sqlite3',
     connection: {
-      filename: process.env.DATABASE_URL || './database/db.sqlite',
+      filename: './database/db.sqlite'
     },
     useNullAsDefault: true,
     migrations: {
-      directory: "./database/migrations",
+      directory: './database/migrations'
     },
     seeds: {
-      directory: "./database/seeds",
+      directory: './database/seeds'
     },
+    pool: { min: 2, max: 10 } // Adjust max based on your needs
   },
 
-  staging: {
-    client: 'postgresql',
+  test: {
+    client: 'sqlite3',
     connection: {
-      database: 'my_db',
-      user: 'username',
-      password: 'password'
+      filename: ':memory:' // Use in-memory database for tests
     },
-    pool: {
-      min: 2,
-      max: 10
-    },
+    useNullAsDefault: true,
     migrations: {
-      tableName: 'knex_migrations'
-    }
+      directory: './database/migrations'
+    },
+    seeds: {
+      directory: './database/seeds'
+    },
+    pool: { min: 2, max: 10 } // Adjust max based on your needs
   },
-
-  production: {
-    client: 'postgresql',
-    connection: {
-      database: 'my_db',
-      user: 'username',
-      password: 'password'
-    },
-    pool: {
-      min: 2,
-      max: 10
-    },
-    migrations: {
-      tableName: 'knex_migrations'
-    }
-  }
-
 };

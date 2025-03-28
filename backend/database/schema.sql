@@ -74,6 +74,21 @@ CREATE TABLE
         FOREIGN KEY (item_id) REFERENCES items (id)
     );
 
+CREATE TABLE 
+    user_payment_methods (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER NOT NULL,
+        payment_provider TEXT NOT NULL,
+        tokenized_card_id TEXT NOT NULL,
+        last4 TEXT NOT NULL,
+        card_type TEXT NOT NULL,
+        exp_month INTEGER NOT NULL,
+        exp_year INTEGER NOT NULL,
+        cvv TEXT NOT NULL,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+    );
+
 CREATE TABLE
     watchlist (
         id INTEGER PRIMARY KEY AUTOINCREMENT,

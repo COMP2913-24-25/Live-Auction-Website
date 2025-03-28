@@ -1,6 +1,6 @@
 import { useState, useContext, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { AuthContext } from '../context/AuthContext';
+import { AuthContext, useAuth } from '../context/authContext';
 import axios from 'axios';
 
 const loginUser = async (credentials) => {
@@ -18,6 +18,7 @@ const loginUser = async (credentials) => {
 
 const Login = () => {
     const { user, login } = useContext(AuthContext);
+    const { login: authLogin } = useAuth();
     const navigate = useNavigate();
 
     // Check if user is already logged in
@@ -31,31 +32,41 @@ const Login = () => {
         }
     }, [user, navigate]);
 
-    const [form, setForm] = useState({ email: '', password: '' });
+    const [credentials, setCredentials] = useState({ email: '', password: '' });
     const [error, setError] = useState('');
 
     const handleChange = (e) => {
         const { name, value } = e.target;
-        setForm(prevForm => ({
-            ...prevForm,
-            [name]: value
-        }));
+        setCredentials(prev => ({ ...prev, [name]: value }));
     };
 
     const handleSubmit = async (e) => {
         e.preventDefault();
         try {
-            const data = await loginUser(form);
-            if (data.token) {
-                login({ id: data.id, token: data.token, username: data.username, role: data.role });
-                if (data.role == 1) {
-                    navigate('/browse');
-                } else {
-                    navigate('/dashboard');
-                }
+            // 确保发送正确的凭据
+            console.log("Sending login request:", credentials);
+            
+            // 使用 axios 直接发送请求
+            const response = await axios.post('/api/auth/login', credentials);
+            
+            // 处理登录成功
+            const { token, user } = response.data;
+            
+            // 保存到 localStorage
+            localStorage.setItem('token', token);
+            localStorage.setItem('user', JSON.stringify(user));
+            
+            // 更新 auth context
+            authLogin(response.data);
+            
+            // 导航到适当的页面
+            if (user.role === 1) {
+                navigate('/browse');
+            } else {
+                navigate('/dashboard');
             }
-        } catch (err) {
-            setError(err.message);
+        } catch (error) {
+            setError(error.response?.data?.message || 'Login failed');
         }
     };
 
@@ -69,7 +80,7 @@ const Login = () => {
                         <input 
                             type="email" 
                             name="email" 
-                            value={form.email}
+                            value={credentials.email}
                             placeholder="Email" 
                             onChange={handleChange} 
                             className="input"
@@ -80,7 +91,7 @@ const Login = () => {
                         <input 
                             type="password" 
                             name="password" 
-                            value={form.password}
+                            value={credentials.password}
                             placeholder="Password" 
                             onChange={handleChange} 
                             className="input"
@@ -95,7 +106,7 @@ const Login = () => {
                     </button>
                 </form>
                 <p className="mt-6 text-center text-sm">
-                    Do not have an account?
+                    Don't have an account?
                     <Link to="/register" className="ml-1 text-[var(--color-secondary)] hover:text-[var(--color-primary)]">
                         Register here
                     </Link>

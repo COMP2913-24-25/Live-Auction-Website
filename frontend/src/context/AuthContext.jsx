@@ -12,18 +12,34 @@ export function AuthProvider({ children }) {
 
   // Load user from localStorage
   useEffect(() => {
-    const storedUser = localStorage.getItem('user');
-    if (storedUser) {
-      setUser(JSON.parse(storedUser));
-      setIsAuthenticated(true);
+    try {
+      const storedUser = localStorage.getItem('user');
+      if (storedUser) {
+        const parsedUser = JSON.parse(storedUser);
+        console.log("Parsed user from localStorage:", parsedUser);
+        
+        // 确保用户对象有 role 属性
+        if (!parsedUser.role && parsedUser.user) {
+          // 有些 API 可能会将用户信息嵌套在 user 属性中
+          setUser(parsedUser.user);
+        } else {
+          setUser(parsedUser);
+        }
+        setIsAuthenticated(true);
+      }
+    } catch (error) {
+      console.error("Error parsing user from localStorage:", error);
+      // 清除可能损坏的数据
+      localStorage.removeItem('user');
     }
-    setLoading(false); // Authentication check completed
+    setLoading(false);
   }, []);
 
   const login = (userData) => {
     setUser(userData);
     setIsAuthenticated(true);
     localStorage.setItem('user', JSON.stringify(userData)); // Persist user session
+    window.location.reload(); // Refresh the page after login
   };
 
   const logout = () => {

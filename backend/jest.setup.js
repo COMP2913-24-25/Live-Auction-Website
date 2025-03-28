@@ -1,27 +1,41 @@
-const { beforeEach } = require('@jest/globals');
-const sqlite3 = require('sqlite3').verbose();
+const knex = require('knex');
+const knexConfig = require('../backend/knexfile').test;
 
-// 在每次测试之前清理数据库
-// Clean the database before each test
-beforeEach(async () => {
-  const db = new sqlite3.Database(':memory:'); // 使用内存数据库进行测试 // Use an in-memory database for testing
-  
-  await new Promise((resolve, reject) => {
-    db.run(`
-      CREATE TABLE IF NOT EXISTS auctions (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        title TEXT NOT NULL,
-        description TEXT,
-        image_url TEXT,
-        starting_price DECIMAL(10,2) NOT NULL,
-        min_increment DECIMAL(10,2) NOT NULL,
-        start_time DATETIME NOT NULL,
-        end_time DATETIME NOT NULL,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-      )
-    `, (err) => {
-      if (err) reject(err);
-      else resolve();
-    });
-  });
-}); 
+const db = knex({
+  ...knexConfig,
+  connection: { filename: ':memory:' }, // Use in-memory DB for testing
+});
+
+// Mock global fetch to avoid network tests
+global.fetch = jest.fn(() =>
+  Promise.resolve({
+    json: () => Promise.resolve({}),
+  })
+);
+
+beforeAll(async () => {
+  await db.migrate.latest(); // Run migrations before all tests
+  await db.seed.run(); // Optionally run seeds once
+});
+
+afterAll(async () => {
+  await db.destroy(); // Close connection after each test
+});
+
+beforeEach(() => {
+  // Reset any global mocks or states if needed
+  jest.clearAllMocks();
+});
+
+// Suppress unwanted console logs
+const suppressLogs = (method) => {
+  const original = console[method];
+  beforeAll(() => (console[method] = jest.fn()));
+  afterAll(() => (console[method] = original));
+};
+
+suppressLogs('log'); // Suppress console.log
+suppressLogs('warn'); // Suppress console.warn
+suppressLogs('error'); // Suppress console.error
+
+module.exports = db;

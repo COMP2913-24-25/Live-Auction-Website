@@ -27,37 +27,48 @@ router.post('/register', async (req, res) => {
 // Login
 router.post('/login', async (req, res) => {
     try {
+        console.log('Received Login Request:', req.body);
+        
         const { email, password } = req.body;
-        console.log('Received Login Request:', { email, password }); // Debugging log
-
+        
         if (!email || !password) {
             return res.status(400).json({ message: 'Email and password are required' });
         }
-
+        
+        // Search for user by email
         const user = await knex('users').where({ email }).first();
-        console.log('Fetched User from DB:', user); // Debugging log
-
+        
         if (!user) {
-            return res.status(400).json({ message: 'Invalid credentials' });
+            return res.status(401).json({ message: 'Invalid credentials' });
         }
-
-        if (!user.password_hash) {
-            console.error('User password is missing from the database:', user);
-            return res.status(500).json({ message: 'Server error: Password missing from database' });
+        
+        // Compare password hashes
+        const isPasswordValid = await bcrypt.compare(password, user.password_hash);
+        console.log('Password Comparison Result:', isPasswordValid);
+        
+        if (!isPasswordValid) {
+            return res.status(401).json({ message: 'Invalid credentials' });
         }
-
-        const validPassword = await bcrypt.compare(password, user.password_hash);
-        console.log('Password Comparison Result:', validPassword); // Debugging log
-
-        if (!validPassword) {
-            return res.status(400).json({ message: 'Invalid credentials' });
-        }
-
-        console.log(`Secret Key: ${process.env.SECRET_KEY}`); // Debugging log
-        const token = jwt.sign({ id: user.id, username: user.username }, process.env.SECRET_KEY, { expiresIn: '1h' });
-        res.json({ id: user.id, token, username: user.username, role: user.role });
+        
+        //  Create JWT token
+        const token = jwt.sign(
+            { id: user.id, email: user.email, role: user.role },
+            process.env.JWT_SECRET || 'your-secret-key',
+            { expiresIn: '24h' }
+        );
+        
+        // Send token and user data
+        res.json({
+            token,
+            user: {
+                id: user.id,
+                username: user.username,
+                email: user.email,
+                role: user.role
+            }
+        });
     } catch (error) {
-        console.error('Login Error:', error);
+        console.error('Login error:', error);
         res.status(500).json({ message: 'Server error' });
     }
 });

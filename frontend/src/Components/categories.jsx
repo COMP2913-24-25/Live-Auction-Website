@@ -1,5 +1,18 @@
 import { useState } from "react";
-import { Book, Clock, Diamond, ShoppingBag, Smartphone, Bookmark, Car, Home, Palette, Gamepad2, Dumbbell, Package } from "lucide-react";
+import { 
+  Book, 
+  Clock, 
+  Diamond, 
+  ShoppingBag, 
+  Smartphone, 
+  Bookmark, 
+  Car, 
+  Home, 
+  Palette, 
+  Gamepad2, 
+  Dumbbell, 
+  Package 
+} from "lucide-react";
 
 function Categories({ onCategorySelect, selectedCategory, allSelectedCategories }) {
   const [showMore, setShowMore] = useState(false);

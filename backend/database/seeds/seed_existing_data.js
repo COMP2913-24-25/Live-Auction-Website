@@ -1,10 +1,12 @@
 exports.seed = async function (knex) {
-  // Delete existing data to prevent duplication
+  // Delete existing data in correct order (handling foreign key constraints)
   await knex("item_images").del();
   await knex("notifications").del();
   await knex("watchlist").del();
+  await knex("user_payment_methods").del();
   await knex("payments").del();
   await knex("authentication_requests").del();
+  await knex("expert_categories").del();
   await knex("bids").del();
   await knex("items").del();
   await knex("users").del();
@@ -46,14 +48,15 @@ exports.seed = async function (knex) {
     { expert_id: 2, category_id: 6 },
     { expert_id: 3, category_id: 2 },
     { expert_id: 3, category_id: 5 },
+    { expert_id: 3, category_id: 6 },
     { expert_id: 3, category_id: 11 }
   ]);
 
   // Insert Items
   await knex("items").insert([
-    { id: 1, user_id: 4, title: "Vintage Clock", description: "An old clock", min_price: 50.0, category_id: 2, end_time: "2025-03-17 17:35:00", authentication_status: 'Approved', auction_status: 'Active' },
+    { id: 1, user_id: 4, title: "Vintage Clock", description: "An old clock", min_price: 50.0, category_id: 2, end_time: "2025-03-17 17:35:00", authentication_status: 'Approved', auction_status: 'Not Listed' },
     { id: 2, user_id: 4, title: "Antique Vase", description: "A rare vase", min_price: 100.0, category_id: 2, end_time: "2025-03-16 15:00:00", authentication_status: 'Pending', auction_status: 'Not Listed' },
-    { id: 3, user_id: 5, title: "Rare Coin", description: "A valuable coin", min_price: 200.0, category_id: 5, end_time: "2025-03-20 18:00:00", authentication_status: 'Rejected', auction_status: 'Active' },
+    { id: 3, user_id: 4, title: "Rare Coin", description: "A valuable coin", min_price: 200.0, category_id: 5, end_time: "2025-03-20 18:00:00", authentication_status: 'Rejected', auction_status: 'Not Listed' },
     { id: 4, user_id: 4, title: "Vintage Camera", description: "An old camera", min_price: 150.0, category_id: 6, end_time: "2025-03-20 21:00:00", authentication_status: 'Pending', auction_status: 'Not Listed' },
     { id: 5, user_id: 6, title: "Rare Stamp", description: "A valuable stamp", min_price: 250.0, category_id: 5, end_time: "2025-03-21 00:00:00", authentication_status: 'Pending', auction_status: 'Not Listed' },
     { id: 6, user_id: 5, title: "Vintage Typewriter", description: "An old typewriter", min_price: 300.0, category_id: 6, end_time: "2025-03-21 03:00:00", authentication_status: 'Pending', auction_status: 'Not Listed' },
@@ -70,7 +73,7 @@ exports.seed = async function (knex) {
   await knex("authentication_requests").insert([
     { id: 1, user_id: 4, item_id: 1, status: "Approved", expert_id: 2, second_opinion_requested: false, new_expert_id: null, comments: "Looks good!", decision_timestamp: "2025-02-25 12:00:00" },
     { id: 2, user_id: 4, item_id: 2, status: "Pending", expert_id: 2, second_opinion_requested: true, new_expert_id: null, comments: "Looks good!", decision_timestamp: "2025-02-25 12:00:00" },
-    { id: 3, user_id: 5, item_id: 3, status: "Pending", expert_id: 3, second_opinion_requested: false, new_expert_id: null, comments: "", decision_timestamp: "2025-02-25 12:00:00" },
+    { id: 3, user_id: 4, item_id: 3, status: "Rejected", expert_id: 3, second_opinion_requested: false, new_expert_id: null, comments: "Not authentic", decision_timestamp: "2025-02-25 12:00:00" },
     { id: 4, user_id: 4, item_id: 4, status: "Pending", expert_id: 3, second_opinion_requested: false, new_expert_id: null, comments: "", decision_timestamp: "2025-02-25 12:00:00" },
     { id: 5, user_id: 6, item_id: 5, status: "Pending", expert_id: null, second_opinion_requested: false, new_expert_id: null, comments: "Looks good!", decision_timestamp: "2025-02-25 12:00:00" },
     { id: 6, user_id: 5, item_id: 6, status: "Pending", expert_id: null, second_opinion_requested: false, new_expert_id: null, comments: "Looks good!", decision_timestamp: "2025-02-25 12:00:00" },
@@ -82,21 +85,93 @@ exports.seed = async function (knex) {
     { id: 1, user_id: 2, item_id: 1, amount: 55.0, status: "Completed" }
   ]);
 
+  // Insert Payments
+  await knex("user_payment_methods").insert([
+    {
+      id: 1,
+      user_id: 2,
+      payment_provider: "Stripe",
+      tokenized_card_id: "tok_visa_test1",
+      last4: "4242",
+      card_type: "Visa",
+      exp_month: 12,
+      exp_year: 2025,
+      cvv: "123"
+    },
+    {
+      id: 2,
+      user_id: 4,
+      payment_provider: "Stripe",
+      tokenized_card_id: "tok_mastercard_test1",
+      last4: "5678",
+      card_type: "MasterCard",
+      exp_month: 10,
+      exp_year: 2024,
+      cvv: "456"
+    }
+  ]);
+
   // Insert Watchlist
   await knex("watchlist").insert([
     { id: 1, user_id: 4, item_id: 2 }
   ]);
 
-  // Update the Notifications section to only create notifications for valid actions
+  // Update notifications with correct types for both users and experts
   await knex("notifications").insert([
-    { 
-      id: 1, 
-      user_id: 6, // User who placed the bid
+    // User notifications
+    {
+      id: 1,
+      user_id: 6,
       auction_id: 1,
       type: 'outbid',
-      message: null,
+      message: 'You have been outbid on Vintage Clock',
       read: false,
-      deleted: false,
+      created_at: new Date()
+    },
+    {
+      id: 2,
+      user_id: 6,
+      auction_id: 1,
+      type: 'ended',
+      message: 'Your auction has ended with a final price of £55.00',
+      read: false,
+      created_at: new Date()
+    },
+    {
+      id: 3,
+      user_id: 4,
+      auction_id: 1,
+      type: 'won',
+      message: 'You have won the bid',
+      read: false,
+      created_at: new Date()
+    },
+    // Expert notifications
+    {
+      id: 4,
+      user_id: 2,
+      auction_id: 2,
+      type: 'review_request',
+      message: 'New authentication request for "Antique Vase"',
+      read: false,
+      created_at: new Date()
+    },
+    {
+      id: 5,
+      user_id: 2,
+      auction_id: 4,
+      type: 'review_reminder',
+      message: 'Reminder: Authentication pending for "Vintage Camera"',
+      read: false,
+      created_at: new Date()
+    },
+    {
+      id: 6,
+      user_id: 3,
+      auction_id: 3,
+      type: 'review_completed',
+      message: 'Authentication completed for "Rare Coin"',
+      read: false,
       created_at: new Date()
     }
   ]);
@@ -118,5 +193,15 @@ exports.seed = async function (knex) {
     { id: 13, item_id: 7, image_url: "https://i.imgur.com/3gBPkYp.jpeg" },
     { id: 14, item_id: 7, image_url: "https://i.imgur.com/r9IRuHY.jpeg" },
     { id: 15, item_id: 7, image_url: "https://i.imgur.com/CUEk71d.jpeg" }
+  ]);
+
+  // Insert Expert Availability
+  await knex("expert_availability").insert([
+    { expert_id: 2, date: "2025-03-26", start_time: "09:00", end_time: "20:00", unavailable: false },
+    { expert_id: 2, date: "2025-03-27", start_time: "09:00", end_time: "20:00", unavailable: false },
+    { expert_id: 2, date: "2025-03-28", start_time: "09:00", end_time: "20:00", unavailable: false },
+    { expert_id: 3, date: "2025-03-26", start_time: "09:00", end_time: "20:00", unavailable: false },
+    { expert_id: 3, date: "2025-03-27", start_time: "09:00", end_time: "20:00", unavailable: false },
+    { expert_id: 3, date: "2025-03-28", start_time: "09:00", end_time: "20:00", unavailable: false }
   ]);
 };

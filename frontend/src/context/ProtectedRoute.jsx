@@ -1,28 +1,45 @@
+import React from 'react';
 import { Navigate } from 'react-router-dom';
-import { useAuth } from './AuthContext';
+import { useAuth } from './authContext.jsx';
 import PropTypes from 'prop-types';
 
-const ProtectedRoute = ({ children, allowedRoles }) => {
-    const { user, loading } = useAuth();
+const ProtectedRoute = ({ children, allowedRoles = [] }) => {
+  const { isAuthenticated, user, loading } = useAuth();
 
-    if (loading) {
-        return <div>Loading...</div>; // Show loading indicator instead of redirecting
-    }
+  console.log("ProtectedRoute - User:", user);
+  console.log("ProtectedRoute - Allowed roles:", allowedRoles);
+  console.log("ProtectedRoute - isAuthenticated:", isAuthenticated);
 
-    // If allowedRoles are provided, check if user has access
-    if (user) {
-        if (allowedRoles && !allowedRoles.includes(user.role)) {
-            return <Navigate to={user.role === 1 ? "/browse" : "/dashboard"} replace />;
-        }
-    } else {
-        return <Navigate to="/login" replace />;
-    }
+  // Display loading state while checking authentication
+  if (loading) {
+    return <div className="flex justify-center items-center h-screen">Loading...</div>;
+  }
+
+  // Red
+  if (!isAuthenticated) {
+    console.log("Not authenticated, redirecting to login");
+    return <Navigate to="/login" replace />;
+  }
+
+  // Check if user has the required role
+  if (allowedRoles.length > 0) {
+    // Check if user role is a string and parse it to an integer
+    const userRole = typeof user?.role === 'string' ? parseInt(user.role) : user?.role;
     
-    return children;
+    if (!userRole || !allowedRoles.includes(userRole)) {
+      console.log("Role mismatch, redirecting to browse page");
+      console.log("User role:", userRole, "Allowed roles:", allowedRoles);
+      return <Navigate to="/browse" replace />;
+    }
+  }
+
+  // User is authenticated and has the required role, render the children
+  return children;
 };
 
 ProtectedRoute.propTypes = {
-    children: PropTypes.node.isRequired,
+  children: PropTypes.node.isRequired,
+  allowedRoles: PropTypes.array
 };
 
-export default ProtectedRoute;
+export default ProtectedRoute; 

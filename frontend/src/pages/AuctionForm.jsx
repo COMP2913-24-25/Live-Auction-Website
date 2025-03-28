@@ -1,12 +1,14 @@
 import { useState, useEffect } from 'react';
-import { useAuth } from '../context/AuthContext';
+import { useAuth } from '../context/authContext';
 import axios from 'axios';
+import { useNavigate } from 'react-router-dom';
 
 function AuctionForm() {
   const { user } = useAuth();
+  const navigate = useNavigate();
 
   const [formData, setFormData] = useState({
-    user_id: user?.id, // Attach current user ID to the form data
+    user_id: user?.id,
     title: '',
     description: '',
     min_price: '',
@@ -23,10 +25,12 @@ function AuctionForm() {
   useEffect(() => {
     const fetchCategories = async () => {
       try {
-        const response = await axios.get(`/api/categories`);
-        setCategories(response.data); 
+        const response = await axios.get('/api/categories');
+        console.log('Fetched categories:', response.data); // Add this for debugging
+        setCategories(response.data);
       } catch (error) {
-        console.error("Error fetching categories:", error);
+        console.error('Error fetching categories:', error);
+        alert('Failed to load categories. Please try again later.');
       }
     };
 
@@ -40,8 +44,11 @@ function AuctionForm() {
       alert("You can only upload up to 6 images.");
       return;
     }
+
+    // Allowed file types
+    const allowedTypes = ["image/jpeg", "image/png", "image/webp", "image/jpg"];
   
-    const validFiles = files.filter(file => file.type.match('image.*') && file.size <= 5 * 1024 * 1024);
+    const validFiles = files.filter(file => allowedTypes.includes(file.type) && file.size <= 5 * 1024 * 1024);
   
     if (validFiles.length !== files.length) {
       alert("Some files were invalid (wrong format or size > 5MB). Only valid images were selected.");
@@ -98,33 +105,73 @@ function AuctionForm() {
     }
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    try {
-      const submitData = new FormData();
-      Object.keys(formData).forEach(key => {
-        submitData.append(key, formData[key]);
-      });
-      imageFiles.forEach(file => submitData.append('images', file));
-
-      const response = await axios.post('/api/upload/create-listing', submitData, {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        }
-      });
-
-      if (response.status === 201) {
-        alert('Auction item created successfully!');
-        setFormData({ title: '', description: '', min_price: '', duration: 1, category: '' });
-        setImageFiles([]);
-        setImagePreviews([]);
-        setFileNames('No files chosen');
-      }
-    } catch (error) {
-      console.error('Submit error:', error);
-      alert('Error: ' + (error.response?.data?.error || error.message));
+const handleSubmit = async (e) => {
+  e.preventDefault();
+  
+  // 添加日志
+  console.log('Submitting form data:', formData);
+  
+  // 创建 FormData 对象
+  const formDataToSend = new FormData();
+  
+  // 计算结束时间
+  const endTime = new Date();
+  endTime.setDate(endTime.getDate() + parseInt(formData.duration));
+  
+  // 添加表单字段
+  formDataToSend.append('user_id', formData.user_id);
+  formDataToSend.append('title', formData.title);
+  formDataToSend.append('description', formData.description);
+  formDataToSend.append('min_price', formData.min_price);
+  formDataToSend.append('category', formData.category);
+  formDataToSend.append('end_time', endTime.toISOString());
+  formDataToSend.append('auction_status', 'Active');
+  
+  // 添加图片文件
+  imageFiles.forEach(file => {
+    formDataToSend.append('images', file);
+  });
+  
+  try {
+    // 发送请求前打印完整的表单数据
+    for (let pair of formDataToSend.entries()) {
+      console.log(pair[0] + ': ' + pair[1]);
     }
-  };
+    
+    const response = await axios.post(`${import.meta.env.VITE_API_URL}/api/auctions`, formDataToSend, {
+      headers: {
+        'Content-Type': 'multipart/form-data'
+      }
+    });
+    
+    console.log('Create auction response:', response.data);
+    
+    if (response.data) {
+      alert('Auction item created successfully!');
+      // 重置表单
+      setFormData({ 
+        user_id: user?.id,
+        title: '', 
+        description: '', 
+        min_price: '', 
+        duration: 1, 
+        category: '' 
+      });
+      setImageFiles([]);
+      setImagePreviews([]);
+      setFileNames('No files chosen');
+      
+      // 导航到浏览页面并添加时间戳参数，避免缓存
+      navigate(`/browse?t=${Date.now()}`);
+    } else {
+      throw new Error('Failed to create auction');
+    }
+  } catch (error) {
+    console.error('Error creating auction:', error);
+    console.error('Error details:', error.response?.data);
+    alert(`Failed to create auction: ${error.response?.data?.message || error.message}`);
+  }
+};
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -173,7 +220,7 @@ function AuctionForm() {
               required
               className="w-full px-4 py-3 rounded-lg border border-gray-200 focus:outline-none focus:border-teal focus:ring-1 focus:ring-teal/20 bg-white text-charcoal"
             >
-              <option value="" disabled>Select a category</option>
+              <option value="" disabled>Please select a category</option>
               {categories.map(category => (
                 <option key={category.id} value={category.id}>{category.name}</option>
               ))}
@@ -185,7 +232,7 @@ function AuctionForm() {
             <div className="border-2 border-dashed border-teal/30 rounded-lg p-6 bg-white">
               <input
                 type="file"
-                accept="image/*"
+                accept="image/jpeg, image/jpg, image/png, image/webp"
                 multiple
                 onChange={handleImageChange}
                 className="hidden"
