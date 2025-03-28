@@ -2,7 +2,7 @@ const express = require('express');
 const knex = require('../db');
 const router = express.Router();
 const cron = require('node-cron');
-const { calculatePostingFee } = require('../utils/feeCalculator');
+const { calculatePostingFee, deductPostingFee } = require('../utils/feeCalculator');
 
 // Fetch all active auctions
 router.get('/active', async (req, res) => {
@@ -267,24 +267,6 @@ cron.schedule('* * * * *', async () => {
 
           } catch (feeError) {
             console.error('Error processing posting fee:', feeError);
-
-            // Log the error for admin review
-            await trx('admin_logs').insert({
-              type: 'FEE_ERROR',
-              user_id: auction.user_id,
-              auction_id: auction.id,
-              error_message: feeError.message,
-              created_at: knex.fn.now()
-            });
-
-            // Still end the auction but mark fee as pending
-            await trx('items')
-              .where('id', auction.id)
-              .update({
-                auction_status: 'Ended - Sold',
-                final_price: highestBid.bid_amount,
-                fee_status: 'PENDING'
-              });
           }
         } else {
           await trx('items')

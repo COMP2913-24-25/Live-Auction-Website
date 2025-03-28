@@ -19,6 +19,7 @@ const notificationsRoutes = require('./routes/notifications');
 const expertRoutes = require('./routes/expert');
 const expertAvailabilityRoutes = require('./routes/expertAvailability');
 const profileRoutes = require('./routes/profile')
+const finalizeListingRoutes = require('./routes/finalizeListing')
 
 const upload = multer({ dest: 'uploads/' });
 
@@ -54,6 +55,7 @@ app.use('/api/expert', expertRoutes);
 app.use('/api/expert-availability', expertAvailabilityRoutes);
 app.use('/api/categories', categoriesRoutes);
 app.use('/api/profile', profileRoutes);
+app.use('/api/finalize-listing', finalizeListingRoutes);
 
 // Example route
 app.get('/', (req, res) => {

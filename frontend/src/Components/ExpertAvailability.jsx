@@ -16,6 +16,8 @@ const ExpertAvailability = () => {
     if (!user) return;
     try {
       const response = await axios.get(`/api/expert-availability/${user.id}`);
+      console.log("Current week data:", response.data.currentWeek);
+      console.log("Next week data:", response.data.nextWeek);
       setCurrentWeekAvailability(response.data.currentWeek);
       setNextWeekAvailability(response.data.nextWeek);
     } catch (error) {

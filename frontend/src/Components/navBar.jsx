@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { Menu, Bell, Search, LogOut, AlertCircle, Check, Clock, ArrowRight, ClipboardCheck, CheckCircle } from "lucide-react";
+import { Menu, Bell, Search, LogOut, AlertCircle, Check, Clock, ArrowRight, ClipboardCheck, CheckCircle, LucideLink } from "lucide-react";
 import { useAuth } from "../context/authContext";
 import { useNotifications } from "../context/notificationContext";
 import useOnClickOutside from '../hooks/useOnClickOutside';
@@ -302,6 +302,12 @@ function NavBar() {
                           >
                             Authenticate Items
                           </Link>
+                          <Link 
+                            to="/items" 
+                            className="text-white hover:text-blue-200 font-medium transition-colors duration-200"
+                          >
+                            My Items
+                          </Link>
                         </>
                       )}
 
@@ -556,6 +562,12 @@ function NavBar() {
                         className="block px-3 py-2 text-white font-medium hover:bg-slate-700 rounded-md"
                       >
                         Authenticate Items
+                      </Link>
+                      <Link 
+                        to="/items" 
+                        className="block px-3 py-2 text-white font-medium hover:bg-slate-700 rounded-md"
+                      >
+                        My Items
                       </Link>
                     </>
                   )}
