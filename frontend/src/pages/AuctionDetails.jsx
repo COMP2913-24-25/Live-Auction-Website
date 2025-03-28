@@ -11,7 +11,7 @@ import PaymentCardSelector from '../components/payment/PaymentCardSelector';
 import { validateBidAmount } from '../components/BidForm';
 import authenticatedIcon from "../assets/authenticatedIcon.png";
 import { submitBid, fetchAuctionById } from '../api/bid';
-import { getSocket, joinAuctionRoom, leaveAuctionRoom } from '../socket';
+import { getSocket, joinAuctionRoom, leaveAuctionRoom, joinUserRoom } from '../socket';
 
 const responsive = {
   desktop: { breakpoint: { max: 3000, min: 1024 }, items: 1 },

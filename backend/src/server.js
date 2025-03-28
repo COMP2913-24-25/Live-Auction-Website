@@ -28,6 +28,12 @@ io.on('connection', (socket) => {
     console.log(`Client ${socket.id} joined room: ${roomName}`);
   });
   
+  // 用户加入用户专属房间
+  socket.on('join_user', (userId) => {
+    console.log(`Client ${socket.id} joined room: user_${userId}`);
+    socket.join(`user_${userId}`);
+  });
+  
   // 用户离开拍卖房间
   socket.on('leave_auction', (auctionId) => {
     const roomName = `auction_${auctionId}`;

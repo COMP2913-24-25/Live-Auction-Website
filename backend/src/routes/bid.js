@@ -57,6 +57,36 @@ const authenticateUser = (req, res, next) => {
   }
 };
 
+// 创建通知的辅助函数
+const createNotification = async (userId, auctionId, type, message) => {
+  try {
+    const [id] = await knex('notifications').insert({
+      user_id: userId,
+      auction_id: auctionId,
+      type,
+      read: false,
+      deleted: false,
+      message,
+      created_at: new Date()
+    });
+    
+    console.log(`Created ${type} notification (ID: ${id}) for user ${userId}`);
+    return id;
+  } catch (error) {
+    console.error(`Failed to create ${type} notification for user ${userId}:`, error);
+    return null;
+  }
+};
+
+// 确保使用允许的通知类型
+function getSafeNotificationType(desiredType) {
+  // 从数据库截图中获取的允许类型列表
+  const allowedTypes = ['outbid', 'ended', 'won', 'review_request', 'review_reminder', 'review_completed'];
+  
+  // 如果desiredType在allowedTypes中，则返回它，否则返回一个默认值
+  return allowedTypes.includes(desiredType) ? desiredType : 'outbid';
+}
+
 // 提交新出价
 router.post('/', authenticateUser, async (req, res) => {
   try {
@@ -124,32 +154,112 @@ router.post('/', authenticateUser, async (req, res) => {
       bid_time: knex.raw('CURRENT_TIMESTAMP')
     });
     
-    // 在发送Socket.io事件时添加更多日志
-if (global.io) {
-  // 获取用户名
-  const bidder = await knex('users').where('id', bidder_id).select('username').first();
-  
-  const eventData = {
-    item_id,
-    bid_amount,
-    bidder_id,
-    bidder_name: bidder?.username || 'Anonymous',
-    bid_id,
-    timestamp: new Date().toISOString()
-  };
-  
-  console.log('Preparing to send bid_updated event, data:', eventData);
-  console.log('Send to room:', `auction_${item_id}`);
-  console.log('Number of currently connected clients:', Object.keys(global.io.sockets.sockets).length);
-  
-  // 向拍卖房间广播新出价
-  global.io.to(`auction_${item_id}`).emit('bid_updated', eventData);
-  
-  // 同时向所有客户端广播，确保主页也能收到更新
-  global.io.emit('bid_updated', eventData);
-  
-  console.log(`Sent 'bid_updated' event to auction_${item_id} and all clients`);
-}
+    // 获取出价者信息
+    const bidder = await knex('users').where('id', bidder_id).select('username').first();
+    
+    // 【新增】创建数据库通知 - 并行执行以提升性能
+    const notificationPromises = [];
+    
+    // 为出价者创建通知 - 使用语义上更接近的类型
+    notificationPromises.push(
+      knex('notifications').insert({
+        user_id: bidder_id,
+        auction_id: item_id,
+        type: getSafeNotificationType('bid_placed'),  // 会返回'outbid'作为fallback
+        read: false,
+        deleted: false,
+        message: `Your bid of £${bid_amount} has been placed on "${item.title}"`,
+        created_at: new Date()
+      })
+    );
+    
+    // 为拍卖物品所有者创建通知
+    notificationPromises.push(
+      knex('notifications').insert({
+        user_id: item.user_id,
+        auction_id: item_id,
+        type: 'review_request',  // 拍卖有新动态，需要卖家关注
+        read: false,
+        deleted: false,
+        message: `${bidder?.username || 'Someone'} placed a bid of £${bid_amount} on your auction "${item.title}"`,
+        created_at: new Date()
+      })
+    );
+    
+    // 如果存在之前的最高出价者，这个是完全匹配的
+    if (highestBid && highestBid.user_id !== bidder_id) {
+      notificationPromises.push(
+        knex('notifications').insert({
+          user_id: highestBid.user_id,
+          auction_id: item_id,
+          type: 'outbid',  // 这个类型是完全匹配的
+          read: false,
+          deleted: false,
+          message: `You have been outbid on "${item.title}" - current bid is £${bid_amount}`,
+          created_at: new Date()
+        })
+      );
+    }
+    
+    // 异步处理所有通知创建，不阻塞主流程
+    Promise.all(notificationPromises)
+      .then(results => {
+        console.log(`Created ${results.length} notifications successfully`);
+      })
+      .catch(error => {
+        console.error('Error creating notifications:', error);
+        // 不阻止主流程继续
+      });
+    
+    // 保持原有的Socket.io事件广播逻辑
+    if (global.io) {
+      const eventData = {
+        item_id,
+        bid_amount,
+        bidder_id,
+        bidder_name: bidder?.username || 'Anonymous',
+        bid_id,
+        timestamp: new Date().toISOString()
+      };
+      
+      console.log('Preparing to send bid_updated event, data:', eventData);
+      console.log('Send to room:', `auction_${item_id}`);
+      console.log('Number of currently connected clients:', Object.keys(global.io.sockets.sockets).length);
+      
+      // 向拍卖房间广播新出价
+      global.io.to(`auction_${item_id}`).emit('bid_updated', eventData);
+      
+      // 同时向所有客户端广播
+      global.io.emit('bid_updated', eventData);
+      
+      // 【优化】精确发送通知事件
+      // 为涉及用户发送个人通知
+      const involvedUserIds = [bidder_id, item.user_id];
+      if (highestBid && highestBid.user_id !== bidder_id) {
+        involvedUserIds.push(highestBid.user_id);
+      }
+      
+      involvedUserIds.forEach(userId => {
+        global.io.to(`user_${userId}`).emit('new_notification', {
+          user_ids: [userId],
+          auction_id: item_id,
+          auction_title: item.title,
+          message: 'New bid notification',
+          timestamp: new Date().toISOString()
+        });
+        console.log(`Sending direct notification to user ${userId}`);
+      });
+      
+      // 继续保留全局通知，以防客户端没有加入用户房间
+      global.io.emit('new_notification', {
+        user_ids: [bidder_id, item.user_id, highestBid?.user_id].filter(Boolean),
+        auction_id: item_id,
+        message: 'New bid notification',
+        timestamp: new Date().toISOString()
+      });
+      
+      console.log(`Sent 'bid_updated' event to auction_${item_id} and all clients`);
+    }
     
     // 返回成功响应
     console.log(`Bid saved successfully: ID=${bid_id}, amount=${bid_amount}, user=${bidder_id}`);
@@ -195,4 +305,4 @@ router.get('/auction/:itemId', async (req, res) => {
   }
 });
 
-module.exports = router; 
+module.exports = router;

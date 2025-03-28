@@ -12,6 +12,19 @@ export const connectSocket = () => {
     
     socket.on('connect', () => {
       console.log('Socket.io connected! ID:', socket.id);
+      
+      // 连接成功后自动加入当前用户的房间
+      const user = localStorage.getItem('user');
+      if (user) {
+        try {
+          const userData = JSON.parse(user);
+          if (userData && userData.id) {
+            joinUserRoom(userData.id);
+          }
+        } catch (error) {
+          console.error('Parsing user data failed. Procedure:', error);
+        }
+      }
     });
     
     socket.on('disconnect', () => {
@@ -53,6 +66,15 @@ export const disconnectSocket = () => {
     socket.disconnect();
     socket = null;
   }
+};
+
+// 确保加入用户专属房间的函数存在
+export const joinUserRoom = (userId) => {
+  if (!userId) return;
+  
+  const socket = getSocket();
+  console.log('Join a user-only room:', userId);
+  socket.emit('join_user', userId);
 };
 
 export default {

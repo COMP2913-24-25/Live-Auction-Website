@@ -1,6 +1,7 @@
 import { createContext, useContext, useState, useEffect } from 'react';
 import axios from '../api/axios';  // Use the configured axios instance
 import { useAuth } from './authContext';
+import { getSocket } from '../socket';
 
 const NotificationContext = createContext();
 
@@ -135,9 +136,35 @@ export function NotificationProvider({ children }) {
   useEffect(() => {
     if (user) {
       fetchNotifications();
-      // Poll for new notifications every 30 seconds
+      
+      // 添加Socket.io实时通知监听
+      const socket = getSocket();
+      
+      // 监听通知更新事件
+      socket.on('new_notification', (data) => {
+        console.log('Received a new notification event:', data);
+        // 检查是否包含当前用户
+        if (data.user_ids && data.user_ids.includes(user.id)) {
+          console.log('A new notification for the current user is detected, and the notification list is refreshed');
+          fetchNotifications(); // 立即刷新通知列表
+        }
+      });
+      
+      // 监听出价更新事件
+      socket.on('bid_updated', (data) => {
+        console.log('Receive bid update event:', data);
+        // 总是刷新通知，因为可能是多种关系(出价者、被超越者、卖家)
+        fetchNotifications();
+      });
+      
+      // 保留原有的轮询机制作为备份
       const interval = setInterval(fetchNotifications, 30000);
-      return () => clearInterval(interval);
+      
+      return () => {
+        clearInterval(interval);
+        socket.off('new_notification');
+        socket.off('bid_updated');
+      };
     }
   }, [user]);
 
