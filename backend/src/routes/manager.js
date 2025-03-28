@@ -21,7 +21,7 @@ router.get('/authentication-requests/pending-unassigned', async (req, res) => {
         res.json(pendingRequests);
     } catch (error) {
         console.error('Error fetching pending authentication requests:', error);
-        res.status(500).json({ message: 'Server error' });
+        res.status(500).json({ message: 'Failed to fetch pending unassigned authentication requests' });
     }
 });
 
@@ -48,7 +48,7 @@ router.get('/authentication-requests/pending-assigned', async (req, res) => {
         res.json(pendingRequests);
     } catch (error) {
         console.error('Error fetching pending authentication requests with experts:', error);
-        res.status(500).json({ success: false, message: 'Internal server error' });
+        res.status(500).json({ success: false, message: 'Failed to fetch pending rellacation authentication requests' });
     }
 });
 
@@ -71,7 +71,7 @@ router.get('/experts/:category_id', async (req, res) => {
         res.json(experts);
     } catch (error) {
         console.error('Error fetching experts:', error);
-        res.status(500).json({ message: 'Server error' });
+        res.status(500).json({ message: 'Failed to fetch available experts in a category' });
     }
 });
 
@@ -95,7 +95,7 @@ router.get('/experts/:category_id/:current_expert_id', async (req, res) => {
         res.json(experts);
     } catch (error) {
         console.error('Error fetching experts:', error);
-        res.status(500).json({ message: 'Server error' });
+        res.status(500).json({ message: 'Failed to fetch available experts besides the current assigned' });
     }
 });
 
@@ -124,7 +124,7 @@ router.get('/authentication-requests/completed', async (req, res) => {
         res.json(completedRequests);
     } catch (error) {
         console.error('Error fetching completed authentication requests:', error);
-        res.status(500).json({ message: 'Server error' });
+        res.status(500).json({ message: 'Failed to fetch completed authentication requests' });
     }
 });
 
@@ -132,15 +132,23 @@ router.get('/authentication-requests/completed', async (req, res) => {
 router.put('/authentication-requests/assign', async (req, res) => {
     const { item_id, expert_id } = req.body;
 
+    if (!item_id || !expert_id) {
+        return res.status(400).json({ message: 'Both item_id and expert_id are required' });
+    }
+
     try {
-        await knex('authentication_requests')
-            .where({ item_id: item_id })
+        const updatedCount = await knex('authentication_requests')
+            .where({ item_id })
             .update({ expert_id });
+
+        if (updatedCount === 0) {
+            return res.status(404).json({ message: 'Item not found' })
+        }
 
         res.json({ message: 'Expert assigned successfully' });
     } catch (error) {
         console.error('Error assigning expert:', error);
-        res.status(500).json({ message: 'Server error' });
+        res.status(500).json({ message: 'Failed to assign expert' });
     }
 });
 
@@ -148,35 +156,63 @@ router.put('/authentication-requests/assign', async (req, res) => {
 router.put('/authentication-requests/reassign', async (req, res) => {
     const { request_id, new_expert_id } = req.body;
 
+    if (!request_id || !new_expert_id) {
+        return res.status(400).json({ message: 'Both request_id and new_expert_id are required' });
+    }
+
     try {
-        await knex('authentication_requests')
+        const updatedCount = await knex('authentication_requests')
             .where({ item_id: request_id })
-            .update({ new_expert_id: new_expert_id });
+            .update({
+                new_expert_id,
+                second_opinion_requested: true
+            });
+
+        if (updatedCount === 0) {
+            return res.status(404).json({ message: 'Request not found' });
+        }
 
         res.json({ message: 'Expert reassigned successfully' });
     } catch (error) {
         console.error('Error reassigning expert:', error);
-        res.status(500).json({ message: 'Server error' });
+        res.status(500).json({ message: 'Failed to reassign expert' });
     }
 });
 
 router.get('/posting-fees', async (req, res) => {
     try {
         const fees = await knex('posting_fees').first();
+
+        if (!fees) {
+            return res.status(404).json({ error: 'Posting fees not configured' });
+        }
+
         res.json(fees);
     } catch (error) {
         console.error('Error fetching posting fees:', error);
-        res.status(500).json({ error: 'Internal server error' });
+        res.status(500).json({ error: 'Failed to fetch posting fees' });
     }
 });
 
 router.put('/posting-fees', async (req, res) => {
     try {
-        await knex('posting_fees').update(req.body);
+        // Basic validation
+        if (!req.body || Object.keys(req.body).length === 0) {
+            return res.status(400).json({ error: 'No update data provided' });
+        }
+
+        // Update fees
+        const updatedCount = await knex('posting_fees')
+            .update(req.body);
+
+        if (updatedCount === 0) {
+            return res.status(404).json({ error: 'No posting fees record found to update' });
+        }
+
         res.json({ message: 'Posting fees updated successfully' });
     } catch (error) {
         console.error('Error updating posting fees:', error);
-        res.status(500).json({ error: 'Internal server error' });
+        res.status(500).json({ error: 'Failed to update posting fees' });
     }
 });
 
@@ -189,7 +225,7 @@ router.get('/weekly-income', async (req, res) => {
         const weeklyData = await knex('payments')
             .select(
                 knex.raw('strftime("%Y-%W", created_at) as week'),
-                knex.raw('COALESCE(SUM(amount), 0) as total')
+                knex.raw('SUM(amount) as total')
             )
             .where('created_at', '>=', sixMonthsAgo.toISOString())
             .groupBy('week')
