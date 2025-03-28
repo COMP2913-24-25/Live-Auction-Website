@@ -6,7 +6,7 @@ const calculatePostingFee = (salePrice, feeStructure) => {
     }
 
     const price = Number(salePrice);
-    
+
     if (isNaN(price) || price < 0) {
         return 0;
     }
@@ -24,7 +24,7 @@ const calculatePostingFee = (salePrice, feeStructure) => {
 
 const deductPostingFee = async (sellerId, auctionId, finalPrice) => {
     const trx = await knex.transaction();
-    
+
     try {
         // Get fee structure
         const feeStructure = await trx('fee_structure')

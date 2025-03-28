@@ -5,7 +5,7 @@ import Browse from "./pages/Browse";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 import ManagerDashboard from "./pages/ManagerDashboard";
-import ExpertDashboard from "./pages/ExpertDashboard";  
+import ExpertDashboard from "./pages/ExpertDashboard";
 import NavBar from "./Components/navBar";
 import ProtectedRoute from "./context/ProtectedRoute";
 import AuctionDetails from './pages/AuctionDetails';

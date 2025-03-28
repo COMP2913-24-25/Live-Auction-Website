@@ -1,4 +1,4 @@
-exports.up = function(knex) {
+exports.up = function (knex) {
     return knex.schema.raw(`
         DROP TABLE IF EXISTS notifications_new;
         CREATE TABLE notifications_new (
@@ -30,7 +30,7 @@ exports.up = function(knex) {
     `);
 };
 
-exports.down = function(knex) {
+exports.down = function (knex) {
     return knex.schema.raw(`
         DROP TABLE IF EXISTS notifications_new;
         CREATE TABLE notifications_new (

@@ -69,19 +69,18 @@ router.get('/:id', async (req, res) => {
       .leftJoin('items as i', 'n.auction_id', 'i.id')
       .leftJoin('bids as b', 'i.id', 'b.item_id')
       .leftJoin('item_images as im', 'i.id', 'im.item_id')
-      .where({ 
+      .where({
         'n.user_id': userId,
-        'n.deleted': false 
+        'n.deleted': false
       })
       .groupBy('n.id')
       .orderBy('n.created_at', 'desc');
 
     const formattedNotifications = notifications.map(notification => {
-      // Format time ago
       const createdAt = new Date(notification.created_at);
       const now = new Date();
       const diffInMinutes = Math.floor((now - createdAt) / (1000 * 60));
-      
+
       let timeAgo;
       if (diffInMinutes < 1) {
         timeAgo = 'Just now';
@@ -94,13 +93,13 @@ router.get('/:id', async (req, res) => {
       }
 
       // Format images
-      const imageUrls = notification.image_urls 
+      const imageUrls = notification.image_urls
         ? notification.image_urls.split(',')
         : [];
 
       // Format notification message
       let message;
-      switch(notification.type) {
+      switch (notification.type) {
         case 'outbid':
           message = `You have been outbid on "${notification.auction_title}"`;
           break;
@@ -125,9 +124,22 @@ router.get('/:id', async (req, res) => {
         case 'authentication_rejected':
           message = `Authentication rejected for "${notification.auction_title}"`;
           break;
+        case 'bid_placed':
+          message = `Your bid has been placed on "${notification.auction_title}"`;
+          break;
+        case 'authentication_requested':
+          message = `Authentication requested for "${notification.auction_title}"`;
+          break;
+        case 'authentication_approved':
+          message = `Authentication approved for "${notification.auction_title}"`;
+          break;
+        case 'authentication_rejected':
+          message = `Authentication rejected for "${notification.auction_title}"`;
+          break;
         default:
           message = notification.message;
       }
+
 
       return {
         ...notification,
@@ -150,6 +162,7 @@ router.get('/:id', async (req, res) => {
   } catch (error) {
     console.error('Error fetching notifications:', error);
     res.status(500).json({ error: 'Failed to fetch notifications' });
+    res.status(500).json({ error: 'Failed to fetch notifications' });
   }
 });
 
@@ -157,11 +170,11 @@ router.get('/:id', async (req, res) => {
 router.put('/:id/read', async (req, res) => {
   try {
     const { id } = req.params;
-    
+
     await knex('notifications')
       .where('id', id)
       .update({ read: true });
-    
+
     res.json({ success: true });
   } catch (error) {
     console.error('Error marking notification as read:', error);
@@ -173,11 +186,11 @@ router.put('/:id/read', async (req, res) => {
 router.delete('/:id', async (req, res) => {
   try {
     const { id } = req.params;
-    
+
     await knex('notifications')
       .where('id', id)
       .update({ deleted: true });
-    
+
     res.json({ success: true });
   } catch (error) {
     console.error('Error deleting notification:', error);

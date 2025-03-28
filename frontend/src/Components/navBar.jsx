@@ -6,7 +6,6 @@ import { useNotifications } from "../context/notificationContext";
 import useOnClickOutside from '../hooks/useOnClickOutside';
 import { Settings, List, Heart, ShoppingCart} from 'lucide-react';
 
-
 const getDashboardLink = (role) => {
     switch (role) {
         case 2:
