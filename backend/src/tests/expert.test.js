@@ -250,3 +250,108 @@ describe("GET /api/expert/requests/:requestId", () => {
         expect(response.body).toEqual({ error: "Failed to fetch request" });
     });
 });
+
+describe("POST /api/expert/assign/:expertId/:itemId", () => {
+    const expertId = 7;
+    const itemId = 15;
+
+    afterEach(() => {
+        jest.clearAllMocks();
+    });
+
+    it("should successfully notify an expert about an item review request", async () => {
+        const mockItem = {
+            id: itemId,
+            title: "Vintage Collectible"
+        };
+
+        knex.mockImplementation(() => ({
+            where: jest.fn().mockReturnThis(),
+            first: jest.fn(() => Promise.resolve(mockItem)),
+        }));
+
+        const response = await request(app).post(`/api/expert/assign/${expertId}/${itemId}`);
+
+        expect(response.status).toBe(200);
+        expect(response.body).toEqual({ message: "Expert notified successfully" });
+    });
+
+    it("should return 500 on DB error", async () => {
+        knex.mockImplementation(() => ({
+            where: jest.fn().mockReturnThis(),
+            first: jest.fn().mockRejectedValue(new Error('Database error'))
+        }));
+
+        const response = await request(app).post(`/api/expert/assign/${expertId}/${itemId}`);
+
+        expect(response.status).toBe(500);
+        expect(response.body).toEqual({ error: "Internal server error" });
+    });
+});
+
+describe("POST /api/expert/request-reallocation/:requestId", () => {
+    const requestId = 10;
+
+    afterEach(() => {
+        jest.clearAllMocks();
+    });
+
+    it("should successfully request a second opinion", async () => {
+        const mockRequest = {
+            id: requestId,
+            status: "Pending"
+        };
+
+        knex.mockImplementation(() => ({
+            where: jest.fn().mockReturnThis(),
+            first: jest.fn(() => Promise.resolve(mockRequest)),
+            update: jest.fn(() => Promise.resolve(1))
+        }));
+
+        const response = await request(app).post(`/api/expert/request-reallocation/${requestId}`);
+
+        expect(response.status).toBe(200);
+        expect(response.body).toEqual({ message: "Second opinion requested successfully" });
+    });
+
+    it("should return 404 if request not found", async () => {
+        knex.mockImplementation(() => ({
+            where: jest.fn().mockReturnThis(),
+            first: jest.fn(() => Promise.resolve(null))
+        }));
+
+        const response = await request(app).post(`/api/expert/request-reallocation/${requestId}`);
+
+        expect(response.status).toBe(404);
+        expect(response.body).toEqual({ error: "Request not found" });
+    });
+
+    it("should return 400 if request is not in pending status", async () => {
+        const mockRequest = {
+            id: requestId,
+            status: "Approved"
+        };
+
+        knex.mockImplementation(() => ({
+            where: jest.fn().mockReturnThis(),
+            first: jest.fn(() => Promise.resolve(mockRequest))
+        }));
+
+        const response = await request(app).post(`/api/expert/request-reallocation/${requestId}`);
+
+        expect(response.status).toBe(400);
+        expect(response.body).toEqual({ error: "Request has already been processed" });
+    });
+
+    it("should return 500 on DB error", async () => {
+        knex.mockImplementation(() => ({
+            where: jest.fn().mockReturnThis(),
+            first: jest.fn().mockRejectedValue(new Error('Database error'))
+        }));
+
+        const response = await request(app).post(`/api/expert/request-reallocation/${requestId}`);
+
+        expect(response.status).toBe(500);
+        expect(response.body).toEqual({ error: "Internal server error" });
+    });
+});
