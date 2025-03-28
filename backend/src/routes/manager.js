@@ -196,7 +196,19 @@ router.get('/posting-fees', async (req, res) => {
 
 router.put('/posting-fees', async (req, res) => {
     try {
-        await knex('posting_fees').update(req.body);
+        // Basic validation
+        if (!req.body || Object.keys(req.body).length === 0) {
+            return res.status(400).json({ error: 'No update data provided' });
+        }
+
+        // Update fees
+        const updatedCount = await knex('posting_fees')
+            .update(req.body);
+
+        if (updatedCount === 0) {
+            return res.status(404).json({ error: 'No posting fees record found to update' });
+        }
+
         res.json({ message: 'Posting fees updated successfully' });
     } catch (error) {
         console.error('Error updating posting fees:', error);
