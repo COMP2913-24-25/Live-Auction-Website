@@ -824,3 +824,74 @@ describe('GET /api/manager/users', () => {
         expect(res.body.error).toBe('Failed to fetch users');
     });
 });
+
+describe('PATCH /api/manager/users/:id/role', () => {
+    afterEach(() => {
+        jest.clearAllMocks();
+    });
+
+    test('should update user role successfully', async () => {
+        const mockKnex = {
+            where: jest.fn().mockReturnThis(),
+            update: jest.fn().mockResolvedValue(1)
+        };
+        knex.mockImplementation(() => mockKnex);
+
+        const res = await request(app)
+            .patch('/api/manager/users/123/role')
+            .send({ role: 2 });
+
+        expect(res.status).toBe(200);
+        expect(res.body.message).toBe('User role updated successfully');
+        expect(mockKnex.where).toHaveBeenCalledWith({ id: '123' });
+        expect(mockKnex.update).toHaveBeenCalledWith({ role: 2 });
+    });
+
+    test('should return 400 for invalid role', async () => {
+        const res = await request(app)
+            .patch('/api/manager/users/123/role')
+            .send({ role: 4 });
+
+        expect(res.status).toBe(400);
+        expect(res.body.error).toBe('Invalid role');
+    });
+
+    test('should return 404 if user not found', async () => {
+        const mockKnex = {
+            where: jest.fn().mockReturnThis(),
+            update: jest.fn().mockResolvedValue(0)
+        };
+        knex.mockImplementation(() => mockKnex);
+
+        const res = await request(app)
+            .patch('/api/manager/users/999/role')
+            .send({ role: 2 });
+
+        expect(res.status).toBe(404);
+        expect(res.body.error).toBe('User not found');
+    });
+
+    test('should return 500 on database error', async () => {
+        const mockKnex = {
+            where: jest.fn().mockReturnThis(),
+            update: jest.fn().mockRejectedValue(new Error('Database error'))
+        };
+        knex.mockImplementation(() => mockKnex);
+
+        const res = await request(app)
+            .patch('/api/manager/users/123/role')
+            .send({ role: 2 });
+
+        expect(res.status).toBe(500);
+        expect(res.body.error).toBe('Failed to update user role');
+    });
+
+    test('should return 400 if role is missing', async () => {
+        const res = await request(app)
+            .patch('/api/manager/users/123/role')
+            .send({});
+
+        expect(res.status).toBe(400);
+        expect(res.body.error).toMatch(/role/);
+    });
+});
