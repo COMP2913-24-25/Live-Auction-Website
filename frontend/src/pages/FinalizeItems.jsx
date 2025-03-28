@@ -14,38 +14,70 @@ const FinalizeItems = () => {
   const [pastItems, setPastItems] = useState([]);  // To store past items
   const [modal, setModal] = useState({ open: false, images: [], index: 0 });
 
+  const fetchItems = () => {
+    axios.get(`/api/finalize-listing/${user.id}`)
+      .then(response => {
+        setFinalizedItems(response.data.map(item => ({
+          ...item,
+          item_images: item.item_images ? item.item_images.split(',') : []
+        })));
+      })
+      .catch(err => console.error("Error fetching finalized items:", err));
+  
+    axios.get(`/api/finalize-listing/${user.id}/past-items`)
+      .then(response => {
+        setPastItems(response.data.map(item => ({
+          ...item,
+          item_images: item.item_images ? item.item_images.split(',') : []
+        })));
+      })
+      .catch(err => console.error("Error fetching past finalized items:", err));
+  };
+  
   useEffect(() => {
-    if (activeTab === "finalized") {
-      // Fetch finalized items
-      axios.get(`/api/finalize-listing/${user.id}`)
-        .then(response => {
-          const items = response.data.map(item => ({
-            ...item,
-            item_images: item.item_images ? item.item_images.split(',') : []
-          }));
-          setFinalizedItems(items);
-        })
-        .catch((err) => console.error("Error fetching finalized items:", err));
-    }
-
-    if (activeTab === "past") {
-      // Fetch past finalized items
-      axios.get(`/api/finalize-listing/${user.id}/past-items`)
-        .then(response => {
-          const items = response.data.map(item => ({
-            ...item,
-            item_images: item.item_images ? item.item_images.split(',') : []
-          }));
-          setPastItems(items);
-        })
-        .catch((err) => console.error("Error fetching past finalized items:", err));
-    }
-  }, [user?.id, activeTab]);
+    fetchItems();  // Fetch items immediately on mount
+  }, [user?.id]);
+  
+  useEffect(() => {
+    fetchItems();  // Fetch items when switching tabs
+  }, [activeTab]);  
 
   const openModal = (images, index) => setModal({ open: true, images, index });
   const closeModal = () => setModal({ open: false, images: [], index: 0 });
   const nextImage = () => setModal((prev) => ({ ...prev, index: (prev.index + 1) % prev.images.length }));
   const prevImage = () => setModal((prev) => ({ ...prev, index: (prev.index - 1 + prev.images.length) % prev.images.length }));
+
+  const handleInputChange = (e, itemId, field) => {
+    let value = e.target.value;
+  
+    // If the field is duration, ensure the value is between 1 and 5
+    if (field === "duration") {
+      value = Math.max(1, Math.min(5, value));  // Ensure the value is between 1 and 5
+    }
+  
+    setFinalizedItems((prevItems) =>
+      prevItems.map((item) =>
+        item.id === itemId ? { ...item, [field]: value } : item
+      )
+    );
+  };
+
+  const handleFinalizeItem = (id, minPrice, duration) => {
+    axios.post(`/api/finalize-listing/${id}/finalize`, { min_price: minPrice, duration: duration })
+      .then(() => {
+        // Filter out the newly listed item from finalizedItems
+        setFinalizedItems(prevItems => prevItems.filter(item => item.id !== id));
+        
+        // Optionally, add the item to pastItems if needed
+        axios.get(`/api/finalize-listing/${user.id}/past-items`).then(response => {
+          setPastItems(response.data.map(item => ({
+            ...item,
+            item_images: item.item_images ? item.item_images.split(',') : []
+          })));
+        });
+      })
+      .catch(err => console.error("Error finalizing item:", err));
+  };  
 
   const responsive = {
     desktop: { breakpoint: { max: 3000, min: 1024 }, items: 1 },
