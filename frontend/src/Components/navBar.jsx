@@ -506,7 +506,7 @@ function NavBar() {
                   
                   <Link 
                     to="/notifications" 
-                    className="block px-3 py-2 text-white font-medium hover:bg-slate-700 rounded-md flex items-center justify-between"
+                    className="px-3 py-2 text-white font-medium hover:bg-slate-700 rounded-md flex items-center justify-between"
                     onClick={() => setIsMobileMenuOpen(false)}
                   >
                     <div className="flex items-center">
