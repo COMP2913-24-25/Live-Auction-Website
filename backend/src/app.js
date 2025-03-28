@@ -19,6 +19,7 @@ const paymentRoutes = require('./routes/payment');
 const notificationsRoutes = require('./routes/notifications');
 const expertRoutes = require('./routes/expert');
 const expertAvailabilityRoutes = require('./routes/expertAvailability');
+const profileRoutes = require('./routes/profile')
 
 const upload = multer({ dest: 'uploads/' });
 
@@ -53,6 +54,7 @@ app.use('/api/notifications', notificationsRoutes);
 app.use('/api/expert', expertRoutes);
 app.use('/api/expert-availability', expertAvailabilityRoutes);
 app.use('/api/categories', categoriesRoutes);
+app.use('api/profiles', profileRoutes)
 
 // Example route
 app.get('/', (req, res) => {

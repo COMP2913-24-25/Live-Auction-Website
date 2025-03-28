@@ -17,8 +17,6 @@ const createNotification = async (userId, auctionId, type) => {
   }
 };
 
-<<<<<<< HEAD
-=======
 const createExpertNotification = async (userId, itemId, type, data = {}) => {
   try {
     const notification = {
@@ -52,34 +50,10 @@ const createExpertNotification = async (userId, itemId, type, data = {}) => {
   }
 };
 
->>>>>>> origin
 // Get user's notifications 
 router.get('/:id', async (req, res) => {
   try {
     const userId = req.params.id;
-<<<<<<< HEAD
-    const notifications = await knex('notifications')
-      .select(
-        'notifications.*',
-        'items.title as auction_title',
-        'items.description as auction_description',
-        'items.min_price',
-        'items.end_time as auction_end_time',
-        'item_current_bids.current_bid',
-        knex.raw('GROUP_CONCAT(item_images.image_url) as image_urls')
-      )
-      .leftJoin('items', 'notifications.auction_id', 'items.id')
-      .leftJoin('item_current_bids', 'items.id', 'item_current_bids.item_id')
-      .leftJoin('item_images', 'items.id', 'item_images.item_id')
-      .where({ 
-        'notifications.user_id': userId,
-        'notifications.deleted': false 
-      })
-      .groupBy('notifications.id')
-      .orderBy('notifications.created_at', 'desc');
-    
-    const formattedNotifications = notifications.map(notification => {
-=======
     const notifications = await knex('notifications as n')
       .select(
         'n.*',
@@ -104,7 +78,6 @@ router.get('/:id', async (req, res) => {
 
     const formattedNotifications = notifications.map(notification => {
       // Format time ago
->>>>>>> origin
       const createdAt = new Date(notification.created_at);
       const now = new Date();
       const diffInMinutes = Math.floor((now - createdAt) / (1000 * 60));

@@ -276,8 +276,6 @@ router.patch('/users/:id/role', async (req, res) => {
     }
 });
 
-<<<<<<< HEAD
-=======
 // Add middleware to check manager role
 const checkManagerRole = async (req, res, next) => {
     try {
@@ -303,5 +301,4 @@ router.use((err, req, res, next) => {
     });
 });
 
->>>>>>> origin
 module.exports = router;
