@@ -5,8 +5,8 @@ import Browse from "./pages/Browse";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 import ManagerDashboard from "./pages/ManagerDashboard";
-import ExpertDashboard from "./pages/ExpertDashboard";  
-import NavBar from "./components/navBar";
+import ExpertDashboard from "./pages/ExpertDashboard";
+import NavBar from "./Components/navBar";
 import ProtectedRoute from "./context/ProtectedRoute";
 import AuctionDetails from './pages/AuctionDetails';
 import AuctionForm from './pages/AuctionForm';
@@ -43,7 +43,7 @@ function App() {
           <Route path="/register" element={<Register />} />
           <Route path="/auctions/:id" element={<AuctionDetails />} />
 
-          
+          {/* Profile Settings */}
           <Route path="/profile-settings" element={<Profile />} />
           <Route path="/my-auctions" element={<Profile />} />
           <Route path="/wishlist" element={<Profile />} />

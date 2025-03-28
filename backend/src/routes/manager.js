@@ -21,7 +21,7 @@ router.get('/authentication-requests/pending-unassigned', async (req, res) => {
         res.json(pendingRequests);
     } catch (error) {
         console.error('Error fetching pending authentication requests:', error);
-        res.status(500).json({ message: 'Server error' });
+        res.status(500).json({ message: 'Failed to fetch pending unassigned authentication requests' });
     }
 });
 
@@ -48,7 +48,7 @@ router.get('/authentication-requests/pending-assigned', async (req, res) => {
         res.json(pendingRequests);
     } catch (error) {
         console.error('Error fetching pending authentication requests with experts:', error);
-        res.status(500).json({ success: false, message: 'Internal server error' });
+        res.status(500).json({ success: false, message: 'Failed to fetch pending rellacation authentication requests' });
     }
 });
 
@@ -71,7 +71,7 @@ router.get('/experts/:category_id', async (req, res) => {
         res.json(experts);
     } catch (error) {
         console.error('Error fetching experts:', error);
-        res.status(500).json({ message: 'Server error' });
+        res.status(500).json({ message: 'Failed to fetch available experts in a category' });
     }
 });
 
@@ -95,7 +95,7 @@ router.get('/experts/:category_id/:current_expert_id', async (req, res) => {
         res.json(experts);
     } catch (error) {
         console.error('Error fetching experts:', error);
-        res.status(500).json({ message: 'Server error' });
+        res.status(500).json({ message: 'Failed to fetch available experts besides the current assigned' });
     }
 });
 
@@ -124,7 +124,7 @@ router.get('/authentication-requests/completed', async (req, res) => {
         res.json(completedRequests);
     } catch (error) {
         console.error('Error fetching completed authentication requests:', error);
-        res.status(500).json({ message: 'Server error' });
+        res.status(500).json({ message: 'Failed to fetch completed authentication requests' });
     }
 });
 
@@ -132,15 +132,23 @@ router.get('/authentication-requests/completed', async (req, res) => {
 router.put('/authentication-requests/assign', async (req, res) => {
     const { item_id, expert_id } = req.body;
 
+    if (!item_id || !expert_id) {
+        return res.status(400).json({ message: 'Both item_id and expert_id are required' });
+    }
+
     try {
-        await knex('authentication_requests')
-            .where({ item_id: item_id })
+        const updatedCount = await knex('authentication_requests')
+            .where({ item_id })
             .update({ expert_id });
+
+        if (updatedCount === 0) {
+            return res.status(404).json({ message: 'Item not found' })
+        }
 
         res.json({ message: 'Expert assigned successfully' });
     } catch (error) {
         console.error('Error assigning expert:', error);
-        res.status(500).json({ message: 'Server error' });
+        res.status(500).json({ message: 'Failed to assign expert' });
     }
 });
 
@@ -148,15 +156,115 @@ router.put('/authentication-requests/assign', async (req, res) => {
 router.put('/authentication-requests/reassign', async (req, res) => {
     const { request_id, new_expert_id } = req.body;
 
+    if (!request_id || !new_expert_id) {
+        return res.status(400).json({ message: 'Both request_id and new_expert_id are required' });
+    }
+
     try {
-        await knex('authentication_requests')
+        const updatedCount = await knex('authentication_requests')
             .where({ item_id: request_id })
-            .update({ new_expert_id: new_expert_id });
+            .update({
+                new_expert_id,
+                second_opinion_requested: true
+            });
+
+        if (updatedCount === 0) {
+            return res.status(404).json({ message: 'Request not found' });
+        }
 
         res.json({ message: 'Expert reassigned successfully' });
     } catch (error) {
         console.error('Error reassigning expert:', error);
-        res.status(500).json({ message: 'Server error' });
+        res.status(500).json({ message: 'Failed to reassign expert' });
+    }
+});
+
+router.get('/posting-fees', async (req, res) => {
+    try {
+        const fees = await knex('posting_fees').first();
+
+        if (!fees) {
+            return res.status(404).json({ error: 'Posting fees not configured' });
+        }
+
+        res.json(fees);
+    } catch (error) {
+        console.error('Error fetching posting fees:', error);
+        res.status(500).json({ error: 'Failed to fetch posting fees' });
+    }
+});
+
+router.put('/posting-fees', async (req, res) => {
+    try {
+        // Basic validation
+        if (!req.body || Object.keys(req.body).length === 0) {
+            return res.status(400).json({ error: 'No update data provided' });
+        }
+
+        // Update fees
+        const updatedCount = await knex('posting_fees')
+            .update(req.body);
+
+        if (updatedCount === 0) {
+            return res.status(404).json({ error: 'No posting fees record found to update' });
+        }
+
+        res.json({ message: 'Posting fees updated successfully' });
+    } catch (error) {
+        console.error('Error updating posting fees:', error);
+        res.status(500).json({ error: 'Failed to update posting fees' });
+    }
+});
+
+router.get('/weekly-income', async (req, res) => {
+    try {
+        const sixMonthsAgo = new Date();
+        sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
+
+        // Get weekly data
+        const weeklyData = await knex('payments')
+            .select(
+                knex.raw('strftime("%Y-%W", created_at) as week'),
+                knex.raw('SUM(amount) as total')
+            )
+            .where('created_at', '>=', sixMonthsAgo.toISOString())
+            .groupBy('week')
+            .orderBy('week', 'desc');
+
+        // Get total
+        const total = await knex('payments')
+            .sum('amount as total')
+            .where('created_at', '>=', sixMonthsAgo)
+            .first();
+
+        // Get breakdown by category
+        const breakdown = await knex('payments as p')
+            .join('items as i', 'p.item_id', 'i.id')
+            .join('categories as c', 'i.category_id', 'c.id')
+            .select('c.name as category')
+            .sum('p.amount as amount')
+            .where('p.created_at', '>=', sixMonthsAgo)
+            .groupBy('c.name');
+
+        res.json({
+            weekly: weeklyData.map(week => ({
+                week: week.week,
+                total: parseFloat(week.total || 0)
+            })),
+            total: parseFloat(total?.total || 0),
+            startDate: sixMonthsAgo.toISOString().split('T')[0],
+            endDate: new Date().toISOString().split('T')[0],
+            breakdown: breakdown.map(item => ({
+                category: item.category,
+                amount: parseFloat(item.amount || 0)
+            }))
+        });
+    } catch (error) {
+        console.error('Error fetching weekly income:', error);
+        res.status(500).json({
+            error: 'Failed to fetch weekly income',
+            details: error.message
+        });
     }
 });
 
@@ -276,8 +384,6 @@ router.patch('/users/:id/role', async (req, res) => {
     }
 });
 
-<<<<<<< HEAD
-=======
 // Add middleware to check manager role
 const checkManagerRole = async (req, res, next) => {
     try {
@@ -303,5 +409,93 @@ router.use((err, req, res, next) => {
     });
 });
 
->>>>>>> origin
+// Get pending items needing expert assignment
+router.get('/pending-items', async (req, res) => {
+    try {
+        const items = await knex('items as i')
+            .select(
+                'i.id',
+                'i.title',
+                'i.description',
+                'i.category_id',
+                'c.name as category_name',
+                'u.username as seller_name',
+                knex.raw('GROUP_CONCAT(DISTINCT ii.image_url) as image_urls')
+            )
+            .leftJoin('categories as c', 'i.category_id', 'c.id')
+            .leftJoin('users as u', 'i.user_id', 'u.id')
+            .leftJoin('item_images as ii', 'i.id', 'ii.item_id')
+            .whereNull('i.assigned_expert_id')
+            .where('i.authentication_status', 'Pending')
+            .groupBy('i.id');
+
+        res.json(items);
+    } catch (error) {
+        console.error('Error fetching pending items:', error);
+        res.status(500).json({ error: 'Failed to fetch pending items' });
+    }
+});
+
+// Get available experts by category
+router.get('/experts-by-category/:categoryId', async (req, res) => {
+    try {
+        const { categoryId } = req.params;
+        const experts = await knex('users as u')
+            .select('u.id', 'u.username')
+            .join('expert_categories as ec', 'u.id', 'ec.expert_id')
+            .where({
+                'ec.category_id': categoryId,
+                'u.role': 'expert'
+            });
+
+        console.log(`Found ${experts.length} experts for category ${categoryId}`); // Debug log
+        res.json(experts);
+    } catch (error) {
+        console.error('Error fetching experts:', error);
+        res.status(500).json({ error: 'Failed to fetch experts' });
+    }
+});
+
+// Assign expert to item
+router.post('/assign-expert', async (req, res) => {
+    const trx = await knex.transaction();
+
+    try {
+        const { itemId, expertId } = req.body;
+
+        // Update item with assigned expert
+        await trx('items')
+            .where('id', itemId)
+            .update({
+                assigned_expert_id: expertId,
+                updated_at: trx.fn.now()
+            });
+
+        // Create authentication request
+        await trx('authentication_requests').insert({
+            item_id: itemId,
+            expert_id: expertId,
+            status: 'Pending',
+            request_time: trx.fn.now()
+        });
+
+        // Create notification for expert
+        await trx('notifications').insert({
+            user_id: expertId,
+            type: 'NEW_ASSIGNMENT',
+            message: `You have been assigned a new item for authentication`,
+            auction_id: itemId,
+            created_at: trx.fn.now()
+        });
+
+        await trx.commit();
+        res.json({ success: true });
+
+    } catch (error) {
+        await trx.rollback();
+        console.error('Error assigning expert:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
 module.exports = router;

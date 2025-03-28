@@ -8,7 +8,6 @@ const path = require('path');
 
 const app = express();
 
-// Import routes
 const uploadRoutes = require('./routes/upload');
 const auctionRoutes = require('./routes/auction');
 const authRoutes = require('./routes/auth');
@@ -69,12 +68,5 @@ app.use((err, req, res, next) => {
     details: process.env.NODE_ENV === 'development' ? err.message : undefined
   });
 });
-
-// 确保这些中间件在路由之前
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
-
-// 添加静态文件服务
-app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 
 module.exports = app;
