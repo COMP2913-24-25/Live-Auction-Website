@@ -599,3 +599,71 @@ describe('GET /api/manager/posting-fees', () => {
         expect(res.body.error).toBe('Failed to fetch posting fees');
     });
 });
+
+describe('PUT /api/manager/posting-fees', () => {
+    afterEach(() => {
+        jest.clearAllMocks();
+    });
+
+    test('should update posting fees successfully', async () => {
+        const mockUpdateData = {
+            standard_fee: 6.99,
+            premium_fee: 11.99
+        };
+
+        const mockKnex = {
+            update: jest.fn().mockResolvedValue(1) // 1 row affected
+        };
+        knex.mockImplementation(() => mockKnex);
+
+        const res = await request(app)
+            .put('/api/manager/posting-fees')
+            .send(mockUpdateData);
+
+        expect(res.status).toBe(200);
+        expect(res.body.message).toBe('Posting fees updated successfully');
+        expect(mockKnex.update).toHaveBeenCalledWith(mockUpdateData);
+    });
+
+    test('should return 500 on database error', async () => {
+        const mockKnex = {
+            update: jest.fn().mockRejectedValue(new Error('Database error'))
+        };
+        knex.mockImplementation(() => mockKnex);
+
+        const res = await request(app)
+            .put('/api/manager/posting-fees')
+            .send({
+                standard_fee: 6.99,
+                premium_fee: 11.99
+            });
+
+        expect(res.status).toBe(500);
+        expect(res.body.error).toBe('Failed to update posting fees');
+    });
+
+    test('should return 400 for empty request body', async () => {
+        const res = await request(app)
+            .put('/api/manager/posting-fees')
+            .send({});
+
+        expect(res.status).toBe(400);
+        expect(res.body.error).toBe('No update data provided');
+    });
+
+    test('should return 404 if no record exists', async () => {
+        const mockKnex = {
+            update: jest.fn().mockResolvedValue(0) // No rows affected
+        };
+        knex.mockImplementation(() => mockKnex);
+
+        const res = await request(app)
+            .put('/api/manager/posting-fees')
+            .send({
+                standard_fee: 6.99
+            });
+
+        expect(res.status).toBe(404);
+        expect(res.body.error).toBe('No posting fees record found to update');
+    });
+});
