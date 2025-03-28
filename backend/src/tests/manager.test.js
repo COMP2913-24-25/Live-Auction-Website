@@ -547,3 +547,55 @@ describe('PUT /api/manager/authentication-requests/reassign', () => {
         expect(res.body.message).toBe('Failed to reassign expert');
     });
 });
+
+describe('GET /api/manager/posting-fees', () => {
+    afterEach(() => {
+        jest.clearAllMocks();
+    });
+
+    test('should return posting fees', async () => {
+        const mockFees = {
+            id: 1,
+            standard_fee: 5.99,
+            premium_fee: 9.99,
+            authentication_fee: 14.99,
+            updated_at: '2023-06-15T10:00:00Z'
+        };
+
+        // Create a mock Knex instance
+        const mockKnex = {
+            first: jest.fn().mockResolvedValue(mockFees)
+        };
+        knex.mockImplementation(() => mockKnex);
+
+        const res = await request(app).get('/api/manager/posting-fees');
+
+        expect(res.status).toBe(200);
+        expect(res.body).toEqual(mockFees);
+        expect(mockKnex.first).toHaveBeenCalledTimes(1);
+    });
+
+    test('should return 404 if no fees are configured', async () => {
+        const mockKnex = {
+            first: jest.fn().mockResolvedValue(undefined)
+        };
+        knex.mockImplementation(() => mockKnex);
+
+        const res = await request(app).get('/api/manager/posting-fees');
+
+        expect(res.status).toBe(404);
+        expect(res.body.error).toBe('Posting fees not configured');
+    });
+
+    test('should return 500 on database error', async () => {
+        const mockKnex = {
+            first: jest.fn().mockRejectedValue(new Error('Database error'))
+        };
+        knex.mockImplementation(() => mockKnex);
+
+        const res = await request(app).get('/api/manager/posting-fees');
+
+        expect(res.status).toBe(500);
+        expect(res.body.error).toBe('Failed to fetch posting fees');
+    });
+});
