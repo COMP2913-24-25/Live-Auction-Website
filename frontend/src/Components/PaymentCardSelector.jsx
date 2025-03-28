@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useContext } from 'react';
 import axios from 'axios';
-import { AuthContext } from '../context/AuthContext';
+import { AuthContext } from '../context/authContext';
 import PaymentForm from './payment/PaymentForm';
 import { useNavigate } from "react-router-dom";
 import PropTypes from "prop-types";
@@ -14,13 +14,13 @@ const PaymentCardSelector = ({ onSelectCard, onCancel, itemId, bidAmount }) => {
   const { currentUser } = useContext(AuthContext);
   const navigate = useNavigate();
   
-  // 从后端获取用户的支付方式
+  // get all payment methods
   const fetchCards = async () => {
     try {
       setLoading(true);
       setError('');
       
-      // 检查用户是否已登录
+      // check if user is logged in
       const token = localStorage.getItem('token');
       if (!token) {
         console.error('No token found, user may not be logged in');
@@ -28,7 +28,7 @@ const PaymentCardSelector = ({ onSelectCard, onCancel, itemId, bidAmount }) => {
         return;
       }
       
-      // 从后端 API 获取支付方式
+      // get API of payment methods
       const response = await axios.get('/api/payment/methods', {
         headers: {
           'Authorization': `Bearer ${token}`
@@ -40,7 +40,7 @@ const PaymentCardSelector = ({ onSelectCard, onCancel, itemId, bidAmount }) => {
       if (response.data && Array.isArray(response.data)) {
         setCards(response.data);
         if (response.data.length > 0) {
-          setSelectedCardId(response.data[0].id); // 默认选择第一张卡
+          setSelectedCardId(response.data[0].id); // select the first card by default
         }
       } else {
         console.error('Invalid response format:', response.data);
@@ -54,7 +54,7 @@ const PaymentCardSelector = ({ onSelectCard, onCancel, itemId, bidAmount }) => {
     }
   };
   
-  // 组件加载时获取支付方式
+  // get all payment methods
   useEffect(() => {
     fetchCards();
   }, []);
@@ -67,20 +67,20 @@ const PaymentCardSelector = ({ onSelectCard, onCancel, itemId, bidAmount }) => {
     setShowAddCard(true);
   };
   
-  // 处理新卡添加成功
+  // handle new card added
   const handleCardAdded = (newCard) => {
     console.log('New card added:', newCard);
     
-    // 重新获取所有卡，确保数据是最新的
+    // add new card to the list
     fetchCards();
     
-    // 关闭添加卡表单
+    // close the modal
     setShowAddCard(false);
   };
   
   const handlePlaceBid = () => {
     if (selectedCardId) {
-      // 查找所选卡的详细信息
+      // get the selected card
       const selectedCard = cards.find(card => card.id === selectedCardId);
       onSelectCard(selectedCardId, selectedCard);
     }
@@ -89,14 +89,14 @@ const PaymentCardSelector = ({ onSelectCard, onCancel, itemId, bidAmount }) => {
   if (showAddCard) {
     return (
       <>
-        {/* 半透明背景 */}
+        {/* Opaque background */}
         <div 
           className="fixed inset-0 z-40" 
           style={{ backgroundColor: 'rgba(0,0,0,0.3)', backdropFilter: 'blur(2px)' }}
           onClick={() => setShowAddCard(false)}
         ></div>
         
-        {/* 模态框内容 */}
+        {/* Modal content*/}
         <div className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-50 shadow-xl">
           <div className="bg-white rounded-lg w-[600px] max-w-[90vw]">
             <div className="flex justify-between items-center p-4 border-b">

@@ -35,14 +35,14 @@ router.post('/login', async (req, res) => {
             return res.status(400).json({ message: 'Email and password are required' });
         }
         
-        // 查询用户
+        // Search for user by email
         const user = await knex('users').where({ email }).first();
         
         if (!user) {
             return res.status(401).json({ message: 'Invalid credentials' });
         }
         
-        // 验证密码
+        // Compare password hashes
         const isPasswordValid = await bcrypt.compare(password, user.password_hash);
         console.log('Password Comparison Result:', isPasswordValid);
         
@@ -50,14 +50,14 @@ router.post('/login', async (req, res) => {
             return res.status(401).json({ message: 'Invalid credentials' });
         }
         
-        // 生成 JWT
+        //  Create JWT token
         const token = jwt.sign(
             { id: user.id, email: user.email, role: user.role },
             process.env.JWT_SECRET || 'your-secret-key',
             { expiresIn: '24h' }
         );
         
-        // 返回用户信息和令牌
+        // Send token and user data
         res.json({
             token,
             user: {

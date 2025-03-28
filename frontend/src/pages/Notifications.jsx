@@ -1,17 +1,26 @@
+import { useEffect } from 'react';
 import { useNotifications } from '../context/notificationContext';
 import { useNavigate } from 'react-router-dom';
-import { Trash2, Bell, Check, Clock, ArrowRight, AlertCircle } from 'lucide-react';
+import { Trash2, Bell, Check, Clock, ArrowRight, AlertCircle, DollarSign } from 'lucide-react';
 
 export default function Notifications() {
-  const { notifications, markAsRead, deleteNotification } = useNotifications();
+  const { notifications, markAsRead, deleteNotification, fetchNotifications } = useNotifications();
   const navigate = useNavigate();
 
+  useEffect(() => {
+    fetchNotifications();
+  }, []);
+
   const handleNotificationClick = async (notification) => {
-    if (!notification.read) {
-      await markAsRead(notification.id);
-    }
-    if (notification.auction_id) {
-      navigate(`/auctions/${notification.auction_id}`);
+    try {
+      if (!notification.read) {
+        await markAsRead(notification.id);
+      }
+      if (notification.auction_id) {
+        navigate(`/auctions/${notification.auction_id}`);
+      }
+    } catch (error) {
+      console.error('Error handling notification:', error);
     }
   };
 
@@ -19,8 +28,9 @@ export default function Notifications() {
   const formatCurrency = (amount) => {
     return new Intl.NumberFormat('en-GB', {
       style: 'currency',
-      currency: 'GBP'
-    }).format(amount);
+      currency: 'GBP',
+      minimumFractionDigits: 2
+    }).format(amount || 0);
   };
 
   const getNotificationIcon = (type) => {
@@ -33,14 +43,45 @@ export default function Notifications() {
     }
   };
 
+  const renderImages = (imageUrls) => {
+    if (!imageUrls) return null;
+    
+    const urls = Array.isArray(imageUrls) ? imageUrls : imageUrls.split(',');
+    
+    return (
+      <div className="mt-3 flex gap-2 overflow-x-auto">
+        {urls.map((url, index) => (
+          <img 
+            key={index}
+            src={url}
+            alt={`Auction image ${index + 1}`}
+            className="h-20 w-20 object-cover rounded-md"
+            onError={(e) => {
+              e.target.src = '/placeholder-image.jpg'; // Add a placeholder image
+              e.target.onerror = null;
+            }}
+          />
+        ))}
+      </div>
+    );
+  };
+
   return (
     <div className="max-w-4xl mx-auto p-4 pt-20">
       <div className="bg-white rounded-lg shadow">
-        <div className="p-4 border-b border-gray-200">
+        <div className="p-4 border-b border-gray-200 flex justify-between items-center">
           <h1 className="text-2xl font-semibold flex items-center gap-2">
             <Bell className="h-6 w-6" />
             Notifications
           </h1>
+          {notifications.length > 0 && (
+            <button
+              onClick={() => notifications.forEach(n => markAsRead(n.id))}
+              className="text-sm text-blue-600 hover:text-blue-800"
+            >
+              Mark all as read
+            </button>
+          )}
         </div>
         
         <div className="divide-y divide-gray-200">
@@ -67,7 +108,7 @@ export default function Notifications() {
                       <div className="mt-1 space-y-1">
                         <p className="text-sm text-gray-500">
                           {new Date(notification.created_at).toLocaleDateString()} at{' '}
-                          {new Date(notification.created_at).toLocaleTimeString()} 
+                          {new Date(notification.created_at).toLocaleTimeString()}
                         </p>
                         {notification.auction_title && (
                           <p className="text-sm text-gray-600 flex items-center gap-1">
@@ -92,18 +133,7 @@ export default function Notifications() {
                         </div>
 
                         {/* Show auction images if available */}
-                        {notification.image_urls && (
-                          <div className="mt-3 flex gap-2 overflow-x-auto">
-                            {notification.image_urls.split(',').map((url, index) => (
-                              <img 
-                                key={index}
-                                src={url}
-                                alt={`${notification.auction_title} - Image ${index + 1}`}
-                                className="h-20 w-20 object-cover rounded-md"
-                              />
-                            ))}
-                          </div>
-                        )}
+                        {renderImages(notification.image_urls)}
                         
                         <button 
                           onClick={() => handleNotificationClick(notification)}

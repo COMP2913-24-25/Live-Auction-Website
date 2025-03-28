@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useAuth } from '../context/AuthContext';
+import { useAuth } from '../context/authContext';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 
@@ -25,11 +25,12 @@ function AuctionForm() {
   useEffect(() => {
     const fetchCategories = async () => {
       try {
-        const response = await fetch(`${import.meta.env.VITE_API_URL}/api/categories`);
-        const data = await response.json();
-        setCategories(data); // Assuming API returns an array of { id, name }
+        const response = await axios.get('/api/categories');
+        console.log('Fetched categories:', response.data); // Add this for debugging
+        setCategories(response.data);
       } catch (error) {
-        console.error("Error fetching categories:", error);
+        console.error('Error fetching categories:', error);
+        alert('Failed to load categories. Please try again later.');
       }
     };
 
@@ -43,8 +44,11 @@ function AuctionForm() {
       alert("You can only upload up to 6 images.");
       return;
     }
+
+    // Allowed file types
+    const allowedTypes = ["image/jpeg", "image/png", "image/webp", "image/jpg"];
   
-    const validFiles = files.filter(file => file.type.match('image.*') && file.size <= 5 * 1024 * 1024);
+    const validFiles = files.filter(file => allowedTypes.includes(file.type) && file.size <= 5 * 1024 * 1024);
   
     if (validFiles.length !== files.length) {
       alert("Some files were invalid (wrong format or size > 5MB). Only valid images were selected.");
@@ -228,7 +232,7 @@ const handleSubmit = async (e) => {
             <div className="border-2 border-dashed border-teal/30 rounded-lg p-6 bg-white">
               <input
                 type="file"
-                accept="image/*"
+                accept="image/jpeg, image/jpg, image/png, image/webp"
                 multiple
                 onChange={handleImageChange}
                 className="hidden"

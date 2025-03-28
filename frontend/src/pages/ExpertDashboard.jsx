@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
-import { useAuth } from "../context/AuthContext";
-import { useLocation } from "react-router-dom";
+import { useAuth } from "../context/authContext";
+import { useParams, useLocation } from "react-router-dom";
 import axios from "axios";
 import Carousel from 'react-multi-carousel';
 import { MessageCircle, X, ArrowLeft, ArrowRight, ChevronRight, ChevronLeft } from "lucide-react";
@@ -8,43 +8,58 @@ import { MessageCircle, X, ArrowLeft, ArrowRight, ChevronRight, ChevronLeft } fr
 const ExpertDashboard = () => {
   const { user } = useAuth();
   const location = useLocation();
+  const { requestId } = useParams();
   const [activeTab, setActiveTab] = useState(
     location.pathname === "/reviewed" ? "reviewed" : "pending"
   );
   const [requests, setRequests] = useState([]);
-  const [reviewedItems, setReviewedItems] = useState([]); // 添加已审核项目状态
+  const [reviewedItems, setReviewedItems] = useState([]); 
   const [comments, setComments] = useState({});
   const [modal, setModal] = useState({ open: false, images: [], index: 0 });
   const [reallocateModal, setShowModal] = useState(false);
   const [selectedRequestId, setSelectedRequestId] = useState(null);
 
   useEffect(() => {
-    // 获取待审核请求
-    if (activeTab === "pending") {
-      axios.get(`/api/expert/pending/${user.id}`)
+    // If there's a requestId, fetch that specific request
+    if (requestId) {
+      axios.get(`/api/expert/requests/${requestId}`)
         .then(response => {
-          const data = Array.isArray(response.data) ? response.data.map(request => ({
-            ...request,
-            imageUrls: request.image_urls ? request.image_urls.split(",") : []
-          })) : [];
-          setRequests(data);
+          const request = {
+            ...response.data,
+            imageUrls: response.data.image_urls ? response.data.image_urls.split(",") : []
+          };
+          setRequests([request]);
+          setActiveTab("pending");
         })
-        .catch((err) => console.error("Error fetching requests:", err));
+        .catch((err) => console.error("Error fetching request:", err));
+    } else {
+      // Fetch all pending requests as before
+      if (activeTab === "pending") {
+        axios.get(`/api/expert/pending/${user.id}`)
+          .then(response => {
+            const data = Array.isArray(response.data) ? response.data.map(request => ({
+              ...request,
+              imageUrls: request.image_urls ? request.image_urls.split(",") : []
+            })) : [];
+            setRequests(data);
+          })
+          .catch((err) => console.error("Error fetching requests:", err));
+      }
+      
+      // 获取已审核项目
+      if (activeTab === "reviewed") {
+        axios.get(`/api/expert/reviewed/${user.id}`)
+          .then(response => {
+            const data = Array.isArray(response.data) ? response.data.map(item => ({
+              ...item,
+              imageUrls: item.image_urls ? item.image_urls.split(",") : []
+            })) : [];
+            setReviewedItems(data);
+          })
+          .catch((err) => console.error("Error fetching reviewed items:", err));
+      }
     }
-    
-    // 获取已审核项目
-    if (activeTab === "reviewed") {
-      axios.get(`/api/expert/reviewed/${user.id}`)
-        .then(response => {
-          const data = Array.isArray(response.data) ? response.data.map(item => ({
-            ...item,
-            imageUrls: item.image_urls ? item.image_urls.split(",") : []
-          })) : [];
-          setReviewedItems(data);
-        })
-        .catch((err) => console.error("Error fetching reviewed items:", err));
-    }
-  }, [user?.id, activeTab]);
+  }, [user?.id, activeTab, requestId]);
 
   const handleCommentChange = (id, value) => {
     setComments({ ...comments, [id]: value });

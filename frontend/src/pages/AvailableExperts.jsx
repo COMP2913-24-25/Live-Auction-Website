@@ -10,7 +10,7 @@ const AvailableExpertsTable = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    axios.get("/api/expertAvailability/available-experts")
+    axios.get("/api/expert-availability/available-experts")
       .then(response => {
         setExperts(response.data.experts);
         setLoading(false);
@@ -22,7 +22,7 @@ const AvailableExpertsTable = () => {
   }, []);
 
   useEffect(() => {
-    axios.get("/api/expertAvailability/soon-available-experts")
+    axios.get("/api/expert-availability/soon-available-experts")
       .then(response => {
         setSoonAvailableExperts(response.data.experts);
       })
@@ -42,16 +42,22 @@ const AvailableExpertsTable = () => {
   }, []);
 
   const formatTimeDifference = (nextAvailable) => {
-    if (!nextAvailable) return "N/A";
-    
-    const now = new Date();
-    const availableTime = new Date(nextAvailable);
-    const diffMs = availableTime - now;
+      if (!nextAvailable) return "N/A";
+      
+      const now = new Date();
+      const availableTime = new Date(nextAvailable);
+      const diffMs = availableTime - now;
 
-    if (diffMs <= 0) return "Available";
+      if (diffMs <= 0) return "Available";
 
-    const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
-    return diffHours === 1 ? "1 hour" : `${diffHours} hours`;
+      const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+
+      if (diffHours >= 48) {
+          const diffDays = Math.floor(diffHours / 24);
+          return diffDays === 1 ? "1 day" : `${diffDays} days`;
+      }
+
+      return diffHours === 1 ? "1 hour" : `${diffHours} hours`;
   };
 
   const filteredExperts = selectedCategoryAvailable === "All Categories"
@@ -96,7 +102,7 @@ const AvailableExpertsTable = () => {
                 <tbody>
                   {filteredExperts.length === 0 ? (
                     <tr>
-                      <td colSpan="5" className="py-3 px-4 text-center">No available experts</td>
+                      <td colSpan="5" className="py-3 px-4 text-center">No available experts.</td>
                     </tr>
                   ) : (
                     filteredExperts.map((expert) => (
@@ -122,7 +128,7 @@ const AvailableExpertsTable = () => {
 
           <div className="border border-gray-300 p-4 rounded-lg">
             <div className="flex flex-col md:flex-row justify-between items-center mb-4">
-              <h3 className="font-semibold text-xl md:text-2xl text-center md:text-left">Soon-to-be Available Experts (3-7 days)</h3>
+              <h3 className="font-semibold text-xl md:text-2xl text-center md:text-left">Soon-to-be Available Experts (2-7 days)</h3>
               <select
                 value={selectedCategorySoon}
                 onChange={(e) => setSelectedCategorySoon(e.target.value)}
@@ -148,7 +154,7 @@ const AvailableExpertsTable = () => {
                 <tbody>
                   {filteredSoonExperts.length === 0 ? (
                     <tr>
-                      <td colSpan="5" className="py-3 px-4 text-center">No soon-to-be available experts</td>
+                      <td colSpan="5" className="py-3 px-4 text-center">No soon-to-be available experts.</td>
                     </tr>
                   ) : (
                     filteredSoonExperts.map((expert) => (
@@ -158,11 +164,7 @@ const AvailableExpertsTable = () => {
                         <td className="p-2 text-center">{expert.category.join(", ")}</td>
                         <td className="p-2 text-center">{expert.workload} request(s)</td>
                         <td className="p-2 text-center">
-                          {expert.available_now ? (
-                            <span className="text-green-600 font-bold">● Available</span>
-                          ) : (
-                            formatTimeDifference(expert.next_available)
-                          )}
+                          { formatTimeDifference(expert.next_available) }
                         </td>
                       </tr>
                     ))

@@ -1,9 +1,141 @@
 import { useState, useRef, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { Menu, Bell, Search, LogOut, AlertCircle, Check, Clock, ArrowRight } from "lucide-react";
-import { Settings, List, Heart, ShoppingCart } from 'lucide-react';
-import { useAuth } from "../context/AuthContext";
+import { Menu, Bell, Search, LogOut, AlertCircle, Check, Clock, ArrowRight, ClipboardCheck, CheckCircle } from "lucide-react";
+import { useAuth } from "../context/authContext";
 import { useNotifications } from "../context/notificationContext";
+import useOnClickOutside from '../hooks/useOnClickOutside';
+
+const getDashboardLink = (role) => {
+    switch (role) {
+        case 2:
+            return '/expert-dashboard';
+        case 3:
+            return '/manager-dashboard';
+        default:
+            return '/browse';
+    }
+};
+
+const defaultNotificationIcon = (type) => {
+  switch (type) {
+    case 'outbid':
+      return <AlertCircle className="h-5 w-5 text-red-500" />;
+    case 'won':
+      return <Check className="h-5 w-5 text-green-500" />;
+    case 'ending_soon':
+      return <Clock className="h-5 w-5 text-orange-500" />;
+    case 'ended':
+      return <Bell className="h-5 w-5 text-gray-500" />;
+    default:
+      return <Bell className="h-5 w-5 text-gray-500" />;
+  }
+};
+
+const NotificationDropdown = ({ notifications, onClose, markAsRead }) => {
+  const navigate = useNavigate();
+  const { user } = useAuth();
+
+  const handleNotificationClick = async (notification) => {
+    if (!notification.read) {
+      await markAsRead(notification.id);
+    }
+
+    // Handle expert-specific notifications
+    if (user?.role === 2) {
+      switch (notification.type) {
+        case 'review_request':
+        case 'review_reminder':
+          navigate(`/expert-dashboard/pending/${notification.auction_id}`);
+          break;
+        case 'review_completed':
+          navigate(`/expert-dashboard/completed/${notification.auction_id}`);
+          break;
+        default:
+          if (notification.auction_id) {
+            navigate(`/auctions/${notification.auction_id}`);
+          }
+      }
+    } else {
+      // Handle regular user notifications
+      if (notification.auction_id) {
+        navigate(`/auctions/${notification.auction_id}`);
+      }
+    }
+    onClose();
+  };
+
+  const getNotificationIcon = (type, role) => {
+    if (role === 2) {
+      switch (type) {
+        case 'review_request':
+          return <ClipboardCheck className="h-5 w-5 text-blue-500" />;
+        case 'review_reminder':
+          return <Clock className="h-5 w-5 text-orange-500" />;
+        case 'review_completed':
+          return <CheckCircle className="h-5 w-5 text-green-500" />;
+        default:
+          return <Bell className="h-5 w-5 text-gray-500" />;
+      }
+    }
+    // Return regular user notification icons
+    return defaultNotificationIcon(type);
+  };
+
+  return (
+    <div className="absolute right-0 mt-2 w-96 bg-white rounded-lg shadow-xl z-50">
+      <div className="px-4 py-3 border-b border-gray-200">
+        <div className="flex justify-between items-center">
+          <h3 className="text-lg font-semibold flex items-center gap-2">
+            <Bell className="h-5 w-5" />
+            Notifications
+            {notifications.filter(n => !n.read).length > 0 && (
+              <span className="text-sm bg-red-500 text-white px-2 py-0.5 rounded-full">
+                {notifications.filter(n => !n.read).length}
+              </span>
+            )}
+          </h3>
+          <Link 
+            to="/notifications" 
+            className="text-sm text-blue-600 hover:text-blue-800 font-medium"
+            onClick={onClose}
+          >
+            View All
+          </Link>
+        </div>
+      </div>
+      
+      <div className="max-h-96 overflow-y-auto">
+        {notifications.slice(0, 5).map((notification) => (
+          <div
+            key={notification.id}
+            onClick={() => handleNotificationClick(notification)}
+            className={`p-4 hover:bg-gray-50 cursor-pointer border-b ${
+              !notification.read ? 'bg-blue-50' : ''
+            }`}
+          >
+            <div className="flex items-start">
+              <div className="flex-shrink-0">
+                {getNotificationIcon(notification.type, user?.role)}
+              </div>
+              <div className="ml-3 flex-1">
+                <p className={`text-sm ${!notification.read ? 'font-semibold' : ''}`}>
+                  {notification.message}
+                </p>
+                <p className="text-xs text-gray-500 mt-1">{notification.timeAgo}</p>
+              </div>
+            </div>
+          </div>
+        ))}
+        
+        {notifications.length === 0 && (
+          <div className="p-4 text-center text-gray-500">
+            No notifications
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
 
 function NavBar() {
     const { isAuthenticated, logout, user } = useAuth();
@@ -11,9 +143,6 @@ function NavBar() {
     const [isNotificationOpen, setIsNotificationOpen] = useState(false);
     const [searchQuery, setSearchQuery] = useState("");
     const notificationRef = useRef(null);
-    const [hasNewNotification, setHasNewNotification] = useState(false);
-    const [previousAuctionCount, setPreviousAuctionCount] = useState(0);
-    const [hasUpdates, setHasUpdates] = useState(false);
     const [isDropdownOpen, setIsDropdownOpen] = useState(false);
     const searchRef = useRef(null);
     const navigate = useNavigate();
@@ -36,30 +165,6 @@ function NavBar() {
       };
     }, [isAuthenticated]);
 
-    useEffect(() => {
-      if (user?.role === 2 || user?.role === 3) { // Only fetch notifications for manager and expert
-          const fetchNotifications = async () => {
-              try {
-                const response = await axios.get('/api/auction/active');
-                const data = await response.json();
-        
-                // Check if new auctions were added
-                if (data.length > previousAuctionCount) {
-                    setHasNewNotification(true);
-                }
-                setPreviousAuctionCount(data.length);
-            } catch (error) {
-                console.error('Failed to fetch notifications', error);
-            }
-          };
-
-  
-          fetchNotifications();
-          const interval = setInterval(fetchNotifications, 10000);
-          return () => clearInterval(interval);
-      }
-    }, [user]);
-
     const handleSearch = (e) => {
       e.preventDefault();
       if (searchQuery.trim()) {
@@ -73,44 +178,6 @@ function NavBar() {
       }
     };
 
-    const fetchUpdates = async () => {
-      try {
-          const response = await axios.get('/api/manager/authentication-requests/check-updates');
-          const { data } = response.data;
-
-          data ? setHasUpdates(true) : setHasUpdates(false);
-
-      } catch (error) {
-          console.error('Error checking for updates:', error);
-      }
-    };
-
-
-    useEffect(() => {
-      if ([2, 3].includes(user?.role)) {
-        
-
-        fetchUpdates();
-        const interval = setInterval(fetchUpdates, 5000); //check every 5 sec
-
-        return () => clearInterval(interval);
-      }
-    }, [user]);
-
-    const handleNotificationClick = () => {
-      if (user?.role === 1) {
-          // For regular users, toggle the notification dropdown
-          setIsNotificationOpen(!isNotificationOpen);
-      } else if (user?.role === 2) {
-          // For experts, navigate to the notifications page
-          navigate('/notifications');
-      } else if (user?.role === 3) {
-          // For managers, perform a different action (e.g., open a different page or modal)
-          // navigate('/manager/notifications');
-      } else {
-          console.warn('Unknown user role, no action taken.');
-      }
-    };
 
     const menuItems = [
       { label: 'Profile Settings', icon: Settings, path: '/profile-settings' },
@@ -154,9 +221,47 @@ function NavBar() {
       navigate('/create-auction');
     };
 
-    const handleAuthenticateItem = (e) => {
-      e.preventDefault();
-      navigate('/authenticate-item');
+    const handleNotificationClick = async (notification) => {
+      if (!notification.read) {
+        await markAsRead(notification.id);
+      }
+      setIsNotificationOpen(false);
+      if (notification.auction_id) {
+        navigate(`/auctions/${notification.auction_id}`);
+      }
+    };
+
+    const NotificationBell = () => {
+      const { notifications, unreadCount, markAsRead } = useNotifications();
+      const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+      const dropdownRef = useRef(null);
+    
+      // Close dropdown when clicking outside
+      useOnClickOutside(dropdownRef, () => setIsDropdownOpen(false));
+    
+      return (
+        <div className="relative" ref={dropdownRef}>
+          <button
+            onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+            className="relative inline-flex items-center p-2 rounded-full hover:bg-gray-100"
+          >
+            <Bell className="h-6 w-6 text-gray-600" />
+            {unreadCount > 0 && (
+              <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center animate-pulse">
+                {unreadCount}
+              </span>
+            )}
+          </button>
+    
+          {isDropdownOpen && (
+            <NotificationDropdown 
+              notifications={notifications} 
+              onClose={() => setIsDropdownOpen(false)}
+              markAsRead={markAsRead}
+            />
+          )}
+        </div>
+      );
     };
 
     return (
@@ -172,7 +277,8 @@ function NavBar() {
               </div>
 
               {/* Desktop Navigation */}
-              <nav className="hidden md:flex items-center w-full ml-6">
+              <nav className="hidden md:flex items-center justify-between w-full ml-6">
+                {/* Left side navigation links */}
                 <div className="flex space-x-8">
                   <Link to="/browse" className="text-white hover:text-blue-200 font-medium transition-colors duration-200">
                     Browse
@@ -180,21 +286,20 @@ function NavBar() {
                   
                   {isAuthenticated && user && (
                     <>
-                      {(user.role === 1 || user.role === '1') && (
+                      {/* Regular user (role 1) */}
+                      {(Number(user.role) === 1) && (
                         <>
                           <Link 
                             to="/create-auction" 
-                            onClick={handleCreateAuction}
                             className="text-white hover:text-blue-200 font-medium transition-colors duration-200"
                           >
                             Create Listing
                           </Link>
                           <Link 
                             to="/authenticate-item" 
-                            onClick={handleAuthenticateItem}
                             className="text-white hover:text-blue-200 font-medium transition-colors duration-200"
                           >
-                            Authenticate Item
+                            Authenticate Items
                           </Link>
                         </>
                       )}
@@ -232,100 +337,28 @@ function NavBar() {
                   )}
                 </div>
 
-                {/* Search Bar*/}
-                <div className="hidden md:flex flex-1 justify-center mx-6">
-                  <div className="w-full max-w-xl relative">
-                    <div className="relative flex items-center w-full">
-                      <Search className="absolute left-3 text-gray-400 h-5 w-5" />
-                      <input
-                        type="text"
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                        onKeyDown={ handleKeyDown }
-                        placeholder="Search auctions..."
-                        className="w-full pl-10 pr-4 py-2 rounded-full bg-white border-0 shadow-sm focus:ring-2 focus:ring-blue-300 focus:outline-none text-gray-700 placeholder-gray-400"
-                        ref={searchRef}
-                      />
-                    </div>
+                {/* Center Search Bar - Keep only this one */}
+                <div className="flex-1 max-w-xl mx-6">
+                  <div className="relative flex items-center w-full">
+                    <Search className="absolute left-3 text-gray-400 h-5 w-5" />
+                    <input
+                      type="text"
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      onKeyDown={handleKeyDown}
+                      placeholder="Search auctions..."
+                      className="w-full pl-10 pr-4 py-2 rounded-full bg-white border-0 shadow-sm focus:ring-2 focus:ring-blue-300 focus:outline-none text-gray-700 placeholder-gray-400"
+                      ref={searchRef}
+                    />
                   </div>
                 </div>
 
-                {/* Right-aligned buttons */}
-                <div className="ml-auto flex items-center space-x-4">
+                {/* Right side buttons */}
+                <div className="flex items-center space-x-4">
                   {isAuthenticated && (
                     <>
                       {/* Notification Bell */}
-                      <div className="relative" ref={notificationRef}>
-                        <button 
-                          className="text-white hover:text-blue-200 transition-colors relative"
-                          onClick={() => setIsNotificationOpen(!isNotificationOpen)}
-                        >
-                          <Bell className={`h-6 w-6 ${(hasNewNotification && hasUpdates) ? 'animate-[bounce_1s_infinite] text-gold' : 'text-white'}`} />
-                          {unreadCount > 0 && (
-                            <span className="absolute -top-1 -right-1 h-5 w-5 bg-orange-500 rounded-full text-xs flex items-center justify-center text-white font-bold">
-                              {unreadCount}
-                            </span>
-                          )}
-                        </button>
-
-                        {/* Notification Dropdown */}
-                        {isNotificationOpen && (
-                          <div className="absolute right-0 mt-2 w-80 bg-white rounded-lg shadow-lg overflow-hidden z-50">
-                            <div className="p-3 border-b border-gray-200 bg-gray-50 flex justify-between items-center">
-                              <h3 className="font-semibold text-gray-800">Notifications</h3>
-                              <span className="text-sm text-gray-500">{unreadCount} unread</span>
-                            </div>
-                            <div className="max-h-96 overflow-y-auto">
-                              {notifications.length > 0 ? (
-                                <>
-                                  {notifications.slice(0, 6).map((notification) => (
-                                    <div 
-                                      key={notification.id} 
-                                      onClick={() => {
-                                        markAsRead(notification.id);
-                                        navigate('/notifications');
-                                        setIsNotificationOpen(false);
-                                      }}
-                                      className={`p-3 hover:bg-gray-50 cursor-pointer border-b border-gray-100 ${
-                                        !notification.read ? 'bg-blue-50' : ''
-                                      }`}
-                                    >
-                                      <div className="flex gap-2 items-start">
-                                        <div className="mt-1">
-                                          {notification.type === 'outbid' && <AlertCircle className="h-4 w-4 text-red-500" />}
-                                          {notification.type === 'won' && <Check className="h-4 w-4 text-green-500" />}
-                                          {notification.type === 'ending_soon' && <Clock className="h-4 w-4 text-orange-500" />}
-                                          {notification.type === 'ended' && <Bell className="h-4 w-4 text-gray-500" />}
-                                        </div>
-                                        <div>
-                                          <p className="text-sm text-gray-800">{notification.message}</p>
-                                          <p className="text-xs text-gray-500 mt-1">
-                                            {notification.timeAgo}
-                                          </p>
-                                        </div>
-                                      </div>
-                                    </div>
-                                  ))}
-                                  <button 
-                                    onClick={() => {
-                                      navigate('/notifications');
-                                      setIsNotificationOpen(false);
-                                    }}
-                                    className="w-full p-3 text-sm text-blue-600 hover:bg-gray-50 font-medium flex items-center justify-center gap-2"
-                                  >
-                                    View all notifications
-                                    <ArrowRight className="h-4 w-4" />
-                                  </button>
-                                </>
-                              ) : (
-                                <div className="p-4 text-center text-gray-500">
-                                  No notifications
-                                </div>
-                              )}
-                            </div>
-                          </div>
-                        )}
-                      </div>
+                      <NotificationBell />
 
                       <div className="relative inline-block ml-36">
                         {/* Profile Main Box */}
@@ -374,13 +407,13 @@ function NavBar() {
                       </div>
 
                       {/* Logout Button */}
-                      {/* <button 
+                      <button 
                         onClick={logout} 
                         className="text-white hover:text-blue-200 font-medium transition-colors duration-200 flex items-center"
                       >
                         <LogOut className="h-4 w-4 mr-1" />
                         Logout
-                      </button> */}
+                      </button>
                     </>
                   )}
                   
@@ -411,7 +444,7 @@ function NavBar() {
                       className="text-white hover:text-blue-200 transition-colors relative"
                       onClick={() => setIsNotificationOpen(!isNotificationOpen)}
                     >
-                      <Bell className={`h-6 w-6 ${(hasNewNotification && hasUpdates) ? 'animate-[bounce_1s_infinite] text-gold' : 'text-white'}`} />
+                      <Bell className="h-6 w-6" />
                       {unreadCount > 0 && (
                         <span className="absolute -top-1 -right-1 h-5 w-5 bg-orange-500 rounded-full text-xs flex items-center justify-center text-white font-bold">
                           {unreadCount}
@@ -519,10 +552,9 @@ function NavBar() {
                       </Link>
                       <Link 
                         to="/authenticate-item" 
-                        onClick={handleAuthenticateItem}
                         className="block px-3 py-2 text-white font-medium hover:bg-slate-700 rounded-md"
                       >
-                        Authenticate Item
+                        Authenticate Items
                       </Link>
                     </>
                   )}

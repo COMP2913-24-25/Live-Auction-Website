@@ -1,10 +1,12 @@
 exports.seed = async function (knex) {
-  // Delete existing data to prevent duplication
+  // Delete existing data in correct order (handling foreign key constraints)
   await knex("item_images").del();
   await knex("notifications").del();
   await knex("watchlist").del();
+  await knex("user_payment_methods").del();
   await knex("payments").del();
   await knex("authentication_requests").del();
+  await knex("expert_categories").del();
   await knex("bids").del();
   await knex("items").del();
   await knex("users").del();
@@ -46,6 +48,7 @@ exports.seed = async function (knex) {
     { expert_id: 2, category_id: 6 },
     { expert_id: 3, category_id: 2 },
     { expert_id: 3, category_id: 5 },
+    { expert_id: 3, category_id: 6 },
     { expert_id: 3, category_id: 11 }
   ]);
 
@@ -84,10 +87,10 @@ exports.seed = async function (knex) {
 
   // Insert Payments
   await knex("user_payment_methods").insert([
-    { 
-      id: 1, 
-      user_id: 2, 
-      payment_provider: "Stripe", 
+    {
+      id: 1,
+      user_id: 2,
+      payment_provider: "Stripe",
       tokenized_card_id: "tok_visa_test1",
       last4: "4242",
       card_type: "Visa",
@@ -95,10 +98,10 @@ exports.seed = async function (knex) {
       exp_year: 2025,
       cvv: "123"
     },
-    { 
-      id: 2, 
-      user_id: 4, 
-      payment_provider: "Stripe", 
+    {
+      id: 2,
+      user_id: 4,
+      payment_provider: "Stripe",
       tokenized_card_id: "tok_mastercard_test1",
       last4: "5678",
       card_type: "MasterCard",
@@ -113,16 +116,62 @@ exports.seed = async function (knex) {
     { id: 1, user_id: 4, item_id: 2 }
   ]);
 
-  // Update the Notifications section to only create notifications for valid actions
+  // Update notifications with correct types for both users and experts
   await knex("notifications").insert([
-    { 
-      id: 1, 
-      user_id: 6, // User who placed the bid
+    // User notifications
+    {
+      id: 1,
+      user_id: 6,
       auction_id: 1,
       type: 'outbid',
-      message: null,
+      message: 'You have been outbid on Vintage Clock',
       read: false,
-      deleted: false,
+      created_at: new Date()
+    },
+    {
+      id: 2,
+      user_id: 6,
+      auction_id: 1,
+      type: 'ended',
+      message: 'Your auction has ended with a final price of £55.00',
+      read: false,
+      created_at: new Date()
+    },
+    {
+      id: 3,
+      user_id: 4,
+      auction_id: 1,
+      type: 'won',
+      message: 'You have won the bid',
+      read: false,
+      created_at: new Date()
+    },
+    // Expert notifications
+    {
+      id: 4,
+      user_id: 2,
+      auction_id: 2,
+      type: 'review_request',
+      message: 'New authentication request for "Antique Vase"',
+      read: false,
+      created_at: new Date()
+    },
+    {
+      id: 5,
+      user_id: 2,
+      auction_id: 4,
+      type: 'review_reminder',
+      message: 'Reminder: Authentication pending for "Vintage Camera"',
+      read: false,
+      created_at: new Date()
+    },
+    {
+      id: 6,
+      user_id: 3,
+      auction_id: 3,
+      type: 'review_completed',
+      message: 'Authentication completed for "Rare Coin"',
+      read: false,
       created_at: new Date()
     }
   ]);
@@ -144,5 +193,15 @@ exports.seed = async function (knex) {
     { id: 13, item_id: 7, image_url: "https://i.imgur.com/3gBPkYp.jpeg" },
     { id: 14, item_id: 7, image_url: "https://i.imgur.com/r9IRuHY.jpeg" },
     { id: 15, item_id: 7, image_url: "https://i.imgur.com/CUEk71d.jpeg" }
+  ]);
+
+  // Insert Expert Availability
+  await knex("expert_availability").insert([
+    { expert_id: 2, date: "2025-03-26", start_time: "09:00", end_time: "20:00", unavailable: false },
+    { expert_id: 2, date: "2025-03-27", start_time: "09:00", end_time: "20:00", unavailable: false },
+    { expert_id: 2, date: "2025-03-28", start_time: "09:00", end_time: "20:00", unavailable: false },
+    { expert_id: 3, date: "2025-03-26", start_time: "09:00", end_time: "20:00", unavailable: false },
+    { expert_id: 3, date: "2025-03-27", start_time: "09:00", end_time: "20:00", unavailable: false },
+    { expert_id: 3, date: "2025-03-28", start_time: "09:00", end_time: "20:00", unavailable: false }
   ]);
 };

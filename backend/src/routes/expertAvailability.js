@@ -24,7 +24,7 @@ router.get('/available-experts', async (req, res) => {
         const availableExperts = await knex('expert_availability')
             .where('date', '>=', start)
             .andWhere('date', '<=', end)
-            .andWhere('is_available', true)
+            .andWhere('unavailable', false)
             .select('expert_id', 'date', 'start_time', 'end_time');
 
         if (!availableExperts.length) {
@@ -94,12 +94,11 @@ router.get('/available-experts', async (req, res) => {
                 // Ensure hours are always two digits
                 const fixTimeFormat = (time) => {
                     if (!time) return null;
-                    const parts = time.split(':');
-                    if (parts.length === 3) {
-                        parts[0] = parts[0].padStart(2, '0'); // Ensure two-digit hour
-                        return parts.join(':');
+                    const parts = time.split(':'); // Split into hours and minutes
+                    if (parts.length === 2) {
+                        return `${parts[0].padStart(2, '0')}:${parts[1]}:00`; // Ensure HH:MM:SS
                     }
-                    return null;
+                    return null; // If it doesn't match the expected format, return null
                 };
 
                 const fixedStart = fixTimeFormat(slot.start_time);
@@ -123,11 +122,14 @@ router.get('/available-experts', async (req, res) => {
                     return; // Skip this entry
                 }
 
+                console.log(`Expert ${slot.expert_id} - Start: ${startTime}, End: ${endTime}`);
+                console.log(`Before update - Next Available: ${expert.next_available}`);
+
                 if (startTime && endTime) {
                     if (now >= startTime && now <= endTime) {
                         expert.available_now = true;
-                    } else if (!expert.next_available || startTime < new Date(expert.next_available)) {
-                        expert.next_available = startTime.toISOString();
+                    } else if (!expert.next_available || new Date(startTime) < new Date(expert.next_available)) {
+                        expert.next_available = new Date(startTime).toISOString();
                     }
                 }
             }
@@ -140,6 +142,7 @@ router.get('/available-experts', async (req, res) => {
             return new Date(a.next_available) - new Date(b.next_available);
         });
 
+        console.log(sortedExperts);
         return res.json({
             experts: sortedExperts
         });
@@ -174,7 +177,7 @@ router.get('/soon-available-experts', async (req, res) => {
         const upcomingAvailability = await knex('expert_availability')
             .where('date', '>=', start)
             .andWhere('date', '<=', end)
-            .andWhere('is_available', true)
+            .andWhere('unavailable', false)
             .select('expert_id', 'date', 'start_time', 'end_time');
 
         if (!upcomingAvailability.length) {
@@ -237,12 +240,11 @@ router.get('/soon-available-experts', async (req, res) => {
                 // Ensure hours are always two digits
                 const fixTimeFormat = (time) => {
                     if (!time) return null;
-                    const parts = time.split(':');
-                    if (parts.length === 3) {
-                        parts[0] = parts[0].padStart(2, '0'); // Ensure two-digit hour
-                        return parts.join(':');
+                    const parts = time.split(':'); // Split into hours and minutes
+                    if (parts.length === 2) {
+                        return `${parts[0].padStart(2, '0')}:${parts[1]}:00`; // Ensure HH:MM:SS
                     }
-                    return null;
+                    return null; // If it doesn't match the expected format, return null
                 };
 
                 const fixedStart = fixTimeFormat(slot.start_time);
