@@ -17,45 +17,22 @@ module.exports = {
     },
     seeds: {
       directory: './database/seeds'
-    }
+    },
+    pool: { min: 2, max: 10 } // Adjust max based on your needs
   },
 
-  staging: {
+  test: {
     client: 'sqlite3',
     connection: {
-      filename: './database/staging.sqlite'
+      filename: ':memory:' // Use in-memory database for tests
     },
     useNullAsDefault: true,
-    pool: {
-      min: 2,
-      max: 10
-    },
     migrations: {
-      directory: './database/migrations',
-      tableName: 'knex_migrations'
+      directory: './database/migrations'
     },
     seeds: {
       directory: './database/seeds'
-    }
+    },
+    pool: { min: 2, max: 10 } // Adjust max based on your needs
   },
-
-  production: {
-    client: 'sqlite3',
-    connection: {
-      filename: './database/production.sqlite'
-    },
-    useNullAsDefault: true,
-    pool: {
-      min: 2,
-      max: 10
-    },
-    migrations: {
-      directory: './database/migrations',
-      tableName: 'knex_migrations'
-    },
-    seeds: {
-      directory: './database/seeds'
-    }
-  }
-
 };

@@ -86,32 +86,18 @@ const savePaymentMethod = async (req, res) => {
   try {
     console.log('接收到保存支付方式请求, 请求体:', req.body);
     
-    // 尝试从多个来源获取userId
-    let userId = req.user?.id || req.body.userId || req.body.user_id;
-    
-    // 检查查询参数
-    if (!userId && req.query && req.query.user_id) {
-      userId = parseInt(req.query.user_id);
-      console.log('从查询参数获取用户ID:', userId);
-    }
-    
-    const { cardNumber, expiry, cvv } = req.body;
-    
-    // 检查必要字段
+    // Check for missing fields
     if (!userId || !cardNumber || !expiry || !cvv) {
-      console.error('缺少必要字段:', { userId, hasCardNumber: !!cardNumber, hasExpiry: !!expiry, hasCvv: !!cvv });
-      return res.status(400).json({ error: '缺少必要字段' });
+      return res.status(400).json({ error: 'Missing required fields' });
     }
     
-    console.log('处理支付方式, 用户ID:', userId);
-    
-    // 获取卡号后四位
+    // Get last 4 digits of card number
     const last4 = cardNumber.slice(-4);
     
-    // 获取过期月份和年份
+    // Get expiry month and year
     const [expMonth, expYear] = expiry.split('/');
     
-    // 确定卡类型
+    // check card type
     let cardType = "Unknown";
     if (cardNumber.startsWith('4')) {
       cardType = "Visa";
@@ -123,10 +109,10 @@ const savePaymentMethod = async (req, res) => {
       cardType = "Discover";
     }
     
-    // 创建一个随机令牌ID
+    // Create a tokenized card ID
     const tokenizedCardId = `tok_${Math.random().toString(36).substring(2, 15)}`;
     
-    // 检查卡是否已存在
+    // Check if card already exists
     const existingCard = await db('user_payment_methods')
       .where({ 
         user_id: userId,
@@ -159,7 +145,7 @@ const savePaymentMethod = async (req, res) => {
         last4: last4,
         card_type: cardType,
         exp_month: parseInt(expMonth, 10),
-        exp_year: parseInt(expYear, 10) + 2000, // 加2000得到完整年份
+        exp_year: parseInt(expYear, 10) + 2000, // Add 2000 to get full year
         cvv: cvv,
         created_at: new Date()
       };
@@ -180,13 +166,18 @@ const savePaymentMethod = async (req, res) => {
         last4: last4
       });
     } catch (error) {
-      console.error('保存支付方式错误:', error);
-      // 记录详细错误信息
-      if (error.code) console.error('错误码:', error.code);
-      if (error.errno) console.error('错误编号:', error.errno);
-      if (error.sql) console.error('SQL:', error.sql);
-      
-      res.status(500).json({ error: '内部服务器错误', details: error.message });
+      console.error('Error saving payment method:', error);
+      // Log detailed error information
+      if (error.code) {
+        console.error('Error code:', error.code);
+      }
+      if (error.errno) {
+        console.error('Error number:', error.errno);
+      }
+      if (error.sql) {
+        console.error('SQL:', error.sql);
+      }
+      res.status(500).json({ error: 'Internal server error', details: error.message });
     }
   } catch (error) {
     console.error('保存支付方式错误:', error);
@@ -608,8 +599,7 @@ router.post('/methods', authenticateToken, async (req, res) => {
     });
   } catch (error) {
     console.error('Error adding payment method:', error);
-    
-    // 详细记录错误信息
+    // Log detailed error information
     if (error.code) console.error('Error code:', error.code);
     if (error.errno) console.error('Error number:', error.errno);
     if (error.sql) console.error('SQL:', error.sql);
@@ -650,6 +640,10 @@ router.get('/methods', authenticateToken, async (req, res) => {
   try {
     const userId = req.user.id;
     console.log(`Getting payment methods for user ${userId}`);
+    // Fetch payment methods
+    const paymentMethods = await db('user_payment_methods')
+      .where({ user_id: req.user.id })
+      .select('id', 'payment_provider', 'last4', 'card_type', 'exp_month', 'exp_year', 'created_at');
     
     // 查询用户的支付方式
     const payments = await db('user_payment_methods')

@@ -10,20 +10,20 @@ const ProtectedRoute = ({ children, allowedRoles = [] }) => {
   console.log("ProtectedRoute - Allowed roles:", allowedRoles);
   console.log("ProtectedRoute - isAuthenticated:", isAuthenticated);
 
-  // 如果正在加载，显示加载指示器
+  // Display loading state while checking authentication
   if (loading) {
     return <div className="flex justify-center items-center h-screen">Loading...</div>;
   }
 
-  // 如果未认证，重定向到登录页面
+  // Red
   if (!isAuthenticated) {
     console.log("Not authenticated, redirecting to login");
     return <Navigate to="/login" replace />;
   }
 
-  // 如果指定了允许的角色，检查用户角色
+  // Check if user has the required role
   if (allowedRoles.length > 0) {
-    // 确保用户角色是数字类型进行比较
+    // Check if user role is a string and parse it to an integer
     const userRole = typeof user?.role === 'string' ? parseInt(user.role) : user?.role;
     
     if (!userRole || !allowedRoles.includes(userRole)) {
@@ -33,7 +33,7 @@ const ProtectedRoute = ({ children, allowedRoles = [] }) => {
     }
   }
 
-  // 用户已认证且有权限，渲染子组件
+  // User is authenticated and has the required role, render the children
   return children;
 };
 

@@ -27,11 +27,11 @@ function AuctionForm() {
     const fetchCategories = async () => {
       try {
         const response = await axios.get('/api/categories');
-        console.log('Fetched categories:', response.data);
+        console.log('Fetched categories:', response.data); // Add this for debugging
         setCategories(response.data);
       } catch (error) {
         console.error('Error fetching categories:', error);
-        setError('Failed to load categories. Please try again later.');
+        alert('Failed to load categories. Please try again later.');
       }
     };
 

@@ -35,7 +35,11 @@ app.use(cors({
   credentials: true,
 }));
 
-// 为 Stripe webhook 特殊处理
+// Middleware
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+
+// Stripe webhook 
 app.use((req, res, next) => {
   if (req.originalUrl === '/api/payments/webhook') {
     next();
@@ -87,5 +91,13 @@ console.log(`SECRET_KEY (first 3 chars): ${process.env.SECRET_KEY?.substring(0, 
 
 // 在 .env 中确保 SECRET_KEY 设置一致
 // SECRET_KEY=your_actual_secret_key
+
+app.use((err, req, res, next) => {
+  console.error('Error:', err);
+  res.status(500).json({
+    error: 'Internal Server Error',
+    details: process.env.NODE_ENV === 'development' ? err.message : undefined
+  });
+});
 
 module.exports = app;

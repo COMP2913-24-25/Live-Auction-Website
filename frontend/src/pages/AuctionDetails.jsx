@@ -368,57 +368,11 @@ const AuctionDetails = () => {
     }
   };
 
-  const fetchAuctionData = async () => {
-    console.log('[Debug] Fetching auction data:', id);
-    try {
-      const auctionData = await fetchAuctionById(id);
-      console.log('[Debug] Auction data fetched successfully:', auctionData);
-      
-      // 检查关键数据
-      console.log('[Debug] Checking auction data structure:');
-      console.log('  - id:', safeAccess(auctionData, 'id'));
-      console.log('  - title:', safeAccess(auctionData, 'title'));
-      console.log('  - current_bid:', safeAccess(auctionData, 'current_bid'));
-      console.log('  - images type:', Array.isArray(safeAccess(auctionData, 'images')) ? 'array' : typeof safeAccess(auctionData, 'images'));
-      console.log('  - images length:', Array.isArray(safeAccess(auctionData, 'images')) ? safeAccess(auctionData, 'images').length : 'N/A');
-
-      setAuction(auctionData);
-      setBidAmount((safeAccess(auctionData, 'current_bid', 0) + 5));
-    } catch (error) {
-      console.error("[Debug] Error fetching auction details:", error);
-      setError("Unable to get auction information");
-    }
-  };
-
-  console.log('[Debug] Current rendering state:', {
-    auction: auction ? 'loaded' : 'not loaded',
-    bidAmount,
-    showPaymentSelector,
-    placingBid,
-    success: success ? 'has message' : 'no message',
-    error: error ? 'has error' : 'no error',
-    paymentMethod: paymentMethod ? 'selected' : 'not selected',
-  });
-
-  if (!auction) {
-    console.log('[Debug] auction is empty, showing loading');
-    return (
-      <div className="flex justify-center items-center min-h-screen">
-        <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-gold"></div>
-        <p className="ml-4 text-xl">Loading auction information...</p>
-      </div>
-    );
+  if (error) {
+    return <div className="error">{error}</div>;
   }
 
-  console.log('[Debug] Preparing to render full interface');
-  console.log('[Debug] auction.images:', auction.images);
-  
-  // 安全处理images - 确保它是数组并且有默认值
-  if (!Array.isArray(auction.images)) {
-    console.error('[Debug] auction.images is not an array:', auction.images);
-    // 安全设置images
-    auction.images = Array.isArray(auction.images) ? auction.images : [];
-  }
+  if (!auction) return <p>Loading auction details...</p>;
 
   return (
     <div className="flex justify-center items-center min-h-screen p-4 -mt-16">
