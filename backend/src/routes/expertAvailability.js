@@ -280,7 +280,7 @@ router.get('/soon-available-experts', async (req, res) => {
 function getWeekStartDates() {
     const today = new Date();
     const dayOfWeek = today.getDay(); // 0 (Sunday) to 6 (Saturday)
-    const diff = dayOfWeek; // Days to subtract to get to Sunday
+    const diff = dayOfWeek === 0 ? 0 : dayOfWeek; // Only subtract if not Sunday
     const startOfCurrentWeek = new Date(today);
     startOfCurrentWeek.setDate(today.getDate() - diff);
     startOfCurrentWeek.setHours(0, 0, 0, 0);
@@ -297,8 +297,10 @@ function generateWeekDates(startDate) {
     for (let i = 0; i < 7; i++) {
         const date = new Date(startDate);
         date.setDate(startDate.getDate() + i);
+        // Format as YYYY-MM-DD without timezone conversion
+        const dateString = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
         dates.push({
-            date: date.toISOString().split('T')[0],
+            date: dateString,
             day: date.toLocaleDateString('en-US', { weekday: 'long' })
         });
     }
@@ -314,8 +316,12 @@ router.get('/:expert_id', async (req, res) => {
         // Fetch existing working hours
         const workingHours = await knex('expert_availability')
             .where('expert_id', expert_id)
-            .andWhere('date', '>=', startOfCurrentWeek.toISOString().split('T')[0])
-            .andWhere('date', '<', new Date(startOfNextWeek.getTime() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]);
+            .andWhere('date', '>=', formatDateForDB(startOfCurrentWeek))
+            .andWhere('date', '<', formatDateForDB(new Date(startOfNextWeek.getTime() + 7 * 24 * 60 * 60 * 1000)));
+
+        function formatDateForDB(date) {
+            return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+        }
 
         const currentWeekDates = generateWeekDates(startOfCurrentWeek);
         const nextWeekDates = generateWeekDates(startOfNextWeek);
@@ -332,9 +338,9 @@ router.get('/:expert_id', async (req, res) => {
                 } : {
                     date,
                     day,
-                    start_time: weekType === 'current' ? 'Unavailable' : null,
-                    end_time: null,
-                    unavailable: weekType === 'current' ? true : false
+                    start_time: '08:00', // Consistent default
+                    end_time: '20:00',  // Consistent default
+                    unavailable: false  // Consistent default
                 };
             });
         };
