@@ -182,7 +182,7 @@ router.put('/authentication-requests/reassign', async (req, res) => {
 router.get('/posting-fees', async (req, res) => {
     try {
         const fees = await knex('posting_fees').first();
-
+      
         if (!fees) {
             return res.status(404).json({ error: 'Posting fees not configured' });
         }

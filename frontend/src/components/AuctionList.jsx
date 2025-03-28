@@ -149,7 +149,6 @@ const AuctionList = ({ filters }) => {
     try {
       setLoading(true);
       setError(null);
-      
       const endpoint = Object.keys(filters || {}).length > 0 ? '/api/search' : '/api/auctions/active';
       const response = await axios.get(`${endpoint}?${queryParams.toString()}`);
       

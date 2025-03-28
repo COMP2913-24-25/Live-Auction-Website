@@ -233,6 +233,7 @@ cron.schedule('* * * * *', async () => {
         .where('end_time', '<=', knex.fn.now());
 
       for (const auction of expiredAuctions) {
+        // Get highest bid
         const highestBid = await trx('bids')
           .where('item_id', auction.id)
           .orderBy('bid_amount', 'desc')
@@ -287,7 +288,7 @@ router.post('/', async (req, res) => {
   try {
     console.log('Received auction creation request body:', req.body);
     console.log('Received files:', req.files);
-
+    
     // Get data from the request
     const {
       user_id,
@@ -311,7 +312,7 @@ router.post('/', async (req, res) => {
       authentication_status: 'Not Requested',
       created_at: knex.raw("datetime('now')")
     });
-
+    
     console.log('Created item with ID:', itemId);
 
     // Handle image uploads
@@ -328,7 +329,7 @@ router.post('/', async (req, res) => {
         });
       }));
     }
-
+    
     // Get the created item data
     const createdItem = await knex('items as i')
       .select(
@@ -349,7 +350,6 @@ router.post('/', async (req, res) => {
       .first();
 
     console.log('Created item details:', createdItem);
-
     res.json({ message: 'Auction item created successfully', item: createdItem });
   } catch (error) {
     console.error('Error creating auction:', error);
@@ -362,7 +362,7 @@ router.post('/', async (req, res) => {
   try {
     console.log('Received auction creation request body:', req.body);
     console.log('Received files:', req.files);
-
+    
     // Get data from the request
     const {
       user_id,
@@ -392,7 +392,7 @@ router.post('/', async (req, res) => {
     // Handle image uploads
     if (req.files && req.files.length > 0) {
       console.log('Processing images:', req.files);
-
+      
       // Save image URLs
       await Promise.all(req.files.map(file => {
         // Construct basic image URL
@@ -403,7 +403,7 @@ router.post('/', async (req, res) => {
         });
       }));
     }
-
+    
     // Get the created item data
     const createdItem = await knex('items as i')
       .select(
@@ -422,9 +422,9 @@ router.post('/', async (req, res) => {
       .where('i.id', itemId)
       .groupBy('i.id')
       .first();
-
+    
     console.log('Created item details:', createdItem);
-
+    
     res.json({ message: 'Auction item created successfully', item: createdItem });
   } catch (error) {
     console.error('Error creating auction:', error);
