@@ -15,6 +15,7 @@ import Notifications from './pages/Notifications';
 import ExpertAvailability from './components/ExpertAvailability';
 import AvailableExperts from './pages/AvailableExperts';
 import Users from './pages/Users';
+import FinalizeItems from './pages/FinalizeItems';
 
 const DashboardRouter = () => {
   const { user } = useAuth();
@@ -80,6 +81,12 @@ function App() {
           <Route path="/authenticate-item" element={
             <ProtectedRoute allowedRoles={[1]}>
               <ItemAuthenticationForm />
+            </ProtectedRoute>
+          } />
+
+          <Route path="/items" element={
+            <ProtectedRoute allowedRoles={[1]}>
+              <FinalizeItems />
             </ProtectedRoute>
           } />
           
