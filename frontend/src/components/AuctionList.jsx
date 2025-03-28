@@ -253,7 +253,7 @@ const AuctionList = ({ filters }) => {
                   className="bg-white shadow-lg overflow-hidden cursor-pointer" 
                   onClick={(e) => {
                     if (!e.target.closest('.react-multi-carousel-arrow') && 
-                        !e.target.closest('.react-multi-carousel-dot')) {
+                        !e.target.closest('.react-multi-carousel-dot') && e.target.closest('img')) {
                       navigate(`/auctions/${auction.id}`);
                     }
                   }}
@@ -274,7 +274,16 @@ const AuctionList = ({ filters }) => {
                         showDots={true}
                         itemClass="w-full"
                         containerClass="relative"
-                      >
+                        renderArrow={({ onClick, ...props }) => (
+                          <div
+                            {...props}
+                            onClick={(e) => {
+                              e.stopPropagation(); // Prevent click from propagating to parent div
+                              onClick(e);
+                            }}
+                          />
+                        )}
+                      >                    
                         {auction.imageUrls.map((url, index) => (
                           <div key={index} className="flex justify-center">
                             <img
