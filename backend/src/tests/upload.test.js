@@ -53,7 +53,6 @@ describe('Upload Routes', () => {
       const response = await request(app)
         .post('/api/create-listing')
         .send({
-          // Missing required fields
           user_id: 1
         });
       
@@ -100,7 +99,6 @@ describe('Upload Routes', () => {
       const response = await request(app)
         .post('/api/authenticate-item')
         .send({
-          // Missing required fields
           user_id: 1
         });
       
